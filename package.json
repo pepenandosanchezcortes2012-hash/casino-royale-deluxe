@@ -1,0 +1,12 @@
+{
+  "name": "casino-royale-deluxe",
+  "version": "1.0.0",
+  "description": "Casino web estático: Blackjack Las Vegas Strip, Ruleta Europea y Slots Matrix 4x4.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "start": "python -m http.server 8080"
+  },
+  "license": "MIT"
+}

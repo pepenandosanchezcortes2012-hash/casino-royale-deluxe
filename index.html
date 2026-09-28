@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="es" data-felt="emerald">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="description" content="Casino Royale Deluxe: Blackjack de Las Vegas Strip, Ruleta Europea y Slots Matrix 4x4 con fichas virtuales. Matemática auditada, RNG criptográfico y audio sintetizado.">
+  <meta name="theme-color" content="#07090c">
+  <meta name="color-scheme" content="dark">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Royale Deluxe">
+  <meta name="format-detection" content="telephone=no">
+  <title>Casino Royale Deluxe</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%23b3001b'/%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%23fff' stroke-width='8' stroke-dasharray='10.5 10.5'/%3E%3Ccircle cx='50' cy='50' r='27' fill='%23d4af37'/%3E%3Cpath d='M32 60 L29 38 L41 48 L50 32 L59 48 L71 38 L68 60Z' fill='%23600'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/tables.css">
+  <link rel="stylesheet" href="css/components.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="g-gold" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fff6c2"/>
+        <stop offset="0.45" stop-color="#f2c94c"/>
+        <stop offset="1" stop-color="#9c6b12"/>
+      </linearGradient>
+      <linearGradient id="g-ruby" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ff6b7d"/>
+        <stop offset="0.5" stop-color="#d0021b"/>
+        <stop offset="1" stop-color="#6d0010"/>
+      </linearGradient>
+      <linearGradient id="g-emerald" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#8ef0a8"/>
+        <stop offset="0.5" stop-color="#1fa24a"/>
+        <stop offset="1" stop-color="#0b5a26"/>
+      </linearGradient>
+      <linearGradient id="g-silver" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset="0.5" stop-color="#b8c2cc"/>
+        <stop offset="1" stop-color="#5d6770"/>
+      </linearGradient>
+      <linearGradient id="g-gem" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#e8fdff"/>
+        <stop offset="0.5" stop-color="#5fd6ff"/>
+        <stop offset="1" stop-color="#1b5fd6"/>
+      </linearGradient>
+      <linearGradient id="card-paper" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset="1" stop-color="#f1ede4"/>
+      </linearGradient>
+      <linearGradient id="face-bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#fff8e1"/>
+        <stop offset="1" stop-color="#f3e2b3"/>
+      </linearGradient>
+      <radialGradient id="chip-shade" cx="0.35" cy="0.3" r="0.8">
+        <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+        <stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
+        <stop offset="1" stop-color="#000000" stop-opacity="0.35"/>
+      </radialGradient>
+      <pattern id="card-back-pattern" width="18" height="18" patternUnits="userSpaceOnUse">
+        <rect width="18" height="18" fill="#7d0b1c"/>
+        <path d="M9 0 L18 9 L9 18 L0 9Z" fill="#9e1228" stroke="#d4af37" stroke-width="0.7"/>
+        <circle cx="9" cy="9" r="1.6" fill="#f2d27a"/>
+      </pattern>
+    </defs>
+
+    <symbol id="suit-S" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M50 5C62 25 94 42 94 63C94 77 83 86 71 86C62 86 56 81 53 76C54 86 58 92 66 96H34C42 92 46 86 47 76C44 81 38 86 29 86C17 86 6 77 6 63C6 42 38 25 50 5Z"/>
+    </symbol>
+    <symbol id="suit-H" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M50 90C20 67 4 49 4 30C4 15 16 5 29 5C39 5 46 11 50 19C54 11 61 5 71 5C84 5 96 15 96 30C96 49 80 67 50 90Z"/>
+    </symbol>
+    <symbol id="suit-D" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M50 3L87 50L50 97L13 50Z"/>
+    </symbol>
+    <symbol id="suit-C" viewBox="0 0 100 100">
+      <circle fill="currentColor" cx="50" cy="28" r="21"/>
+      <circle fill="currentColor" cx="26" cy="58" r="21"/>
+      <circle fill="currentColor" cx="74" cy="58" r="21"/>
+      <path fill="currentColor" d="M44 52H56C56 74 62 88 71 96H29C38 88 44 74 44 52Z"/>
+    </symbol>
+
+    <symbol id="sym-D" viewBox="0 0 100 100">
+      <polygon points="30,20 70,20 90,40 50,90 10,40" fill="url(#g-gem)" stroke="#0d3b8a" stroke-width="2.5" stroke-linejoin="round"/>
+      <polygon points="30,20 50,40 70,20" fill="#ffffff" fill-opacity="0.55"/>
+      <polygon points="10,40 30,20 50,40" fill="#bff1ff" fill-opacity="0.7"/>
+      <polygon points="50,40 70,20 90,40" fill="#7fdcff" fill-opacity="0.6"/>
+      <polygon points="10,40 50,40 50,90" fill="#2d8bff" fill-opacity="0.45"/>
+      <polygon points="50,40 90,40 50,90" fill="#0b3fa8" fill-opacity="0.45"/>
+      <path d="M22 30 L28 24" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="sym-C" viewBox="0 0 100 100">
+      <path d="M14 70L9 28L31 48L50 16L69 48L91 28L86 70Z" fill="url(#g-gold)" stroke="#7a4e06" stroke-width="2.5" stroke-linejoin="round"/>
+      <rect x="13" y="70" width="74" height="14" rx="3" fill="url(#g-gold)" stroke="#7a4e06" stroke-width="2.5"/>
+      <circle cx="50" cy="77" r="4.5" fill="url(#g-ruby)"/>
+      <circle cx="31" cy="77" r="3.5" fill="url(#g-emerald)"/>
+      <circle cx="69" cy="77" r="3.5" fill="url(#g-emerald)"/>
+      <circle cx="9" cy="27" r="5" fill="url(#g-gold)" stroke="#7a4e06" stroke-width="1.5"/>
+      <circle cx="50" cy="14" r="5.5" fill="url(#g-gold)" stroke="#7a4e06" stroke-width="1.5"/>
+      <circle cx="91" cy="27" r="5" fill="url(#g-gold)" stroke="#7a4e06" stroke-width="1.5"/>
+      <circle cx="50" cy="52" r="6" fill="url(#g-ruby)" stroke="#7a4e06" stroke-width="1.5"/>
+    </symbol>
+    <symbol id="sym-S" viewBox="0 0 100 100">
+      <path d="M18 12H84V28C66 46 56 66 52 90H28C32 66 44 46 58 32H18Z" fill="url(#g-ruby)" stroke="url(#g-gold)" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M24 17H76" stroke="#ffd6dc" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+    </symbol>
+    <symbol id="sym-B" viewBox="0 0 100 100">
+      <path d="M50 10C54 10 57 13 57 17C72 21 79 35 79 51C79 63 83 69 91 75H9C17 69 21 63 21 51C21 35 28 21 43 17C43 13 46 10 50 10Z" fill="url(#g-gold)" stroke="#7a4e06" stroke-width="2.5" stroke-linejoin="round"/>
+      <rect x="7" y="74" width="86" height="7" rx="3.5" fill="url(#g-gold)" stroke="#7a4e06" stroke-width="2"/>
+      <circle cx="50" cy="88" r="7" fill="url(#g-gold)" stroke="#7a4e06" stroke-width="2"/>
+      <path d="M33 34C30 42 30 52 31 60" stroke="#fff8d0" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.8"/>
+    </symbol>
+    <symbol id="sym-H" viewBox="0 0 100 100">
+      <path d="M27 88L23 52C20 26 35 12 50 12C65 12 80 26 77 52L73 88" fill="none" stroke="#3b434b" stroke-width="20" stroke-linecap="round"/>
+      <path d="M27 88L23 52C20 26 35 12 50 12C65 12 80 26 77 52L73 88" fill="none" stroke="url(#g-silver)" stroke-width="15" stroke-linecap="round"/>
+      <circle cx="25" cy="70" r="2.6" fill="#2a2f35"/>
+      <circle cx="24" cy="50" r="2.6" fill="#2a2f35"/>
+      <circle cx="31" cy="30" r="2.6" fill="#2a2f35"/>
+      <circle cx="69" cy="30" r="2.6" fill="#2a2f35"/>
+      <circle cx="76" cy="50" r="2.6" fill="#2a2f35"/>
+      <circle cx="75" cy="70" r="2.6" fill="#2a2f35"/>
+    </symbol>
+    <symbol id="sym-T" viewBox="0 0 100 100">
+      <path d="M50 58C56 72 60 82 70 94" stroke="#0b5a26" stroke-width="6" stroke-linecap="round" fill="none"/>
+      <circle cx="50" cy="27" r="17" fill="url(#g-emerald)" stroke="#0b4a20" stroke-width="2"/>
+      <circle cx="27" cy="48" r="17" fill="url(#g-emerald)" stroke="#0b4a20" stroke-width="2"/>
+      <circle cx="73" cy="48" r="17" fill="url(#g-emerald)" stroke="#0b4a20" stroke-width="2"/>
+      <circle cx="50" cy="66" r="15" fill="url(#g-emerald)" stroke="#0b4a20" stroke-width="2"/>
+      <circle cx="50" cy="47" r="7" fill="#136d31"/>
+      <path d="M44 20C46 17 50 16 53 17" stroke="#d6ffe0" stroke-width="3" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <symbol id="sym-R" viewBox="0 0 100 100">
+      <path d="M34 62C38 40 50 24 68 12M66 64C62 44 63 28 68 12" stroke="#2f7a1c" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+      <path d="M68 12C78 8 90 12 94 22C82 26 72 22 68 12Z" fill="url(#g-emerald)"/>
+      <circle cx="33" cy="72" r="17" fill="url(#g-ruby)" stroke="#5a000c" stroke-width="2"/>
+      <circle cx="67" cy="72" r="17" fill="url(#g-ruby)" stroke="#5a000c" stroke-width="2"/>
+      <ellipse cx="27" cy="66" rx="5" ry="3.5" fill="#fff" fill-opacity="0.7"/>
+      <ellipse cx="61" cy="66" rx="5" ry="3.5" fill="#fff" fill-opacity="0.7"/>
+    </symbol>
+
+    <symbol id="icon-sound-on" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M3 9v6h4l5 4V5L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/>
+    </symbol>
+    <symbol id="icon-sound-off" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M3 9v6h4l5 4V5L7 9H3zm13.6 3 2.7-2.7-1.4-1.4-2.7 2.7-2.7-2.7-1.4 1.4 2.7 2.7-2.7 2.7 1.4 1.4 2.7-2.7 2.7 2.7 1.4-1.4z"/>
+    </symbol>
+  </svg>
+
+  <a class="skip-link" href="#main">Saltar al contenido</a>
+
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-crown" viewBox="0 0 100 100" aria-hidden="true"><use href="#sym-C"/></svg>
+      <div class="brand-text">
+        <h1 class="brand-title">Casino Royale <span>Deluxe</span></h1>
+        <p class="brand-sub">Las Vegas · Montecarlo</p>
+      </div>
+    </div>
+
+    <div class="hud" role="group" aria-label="Monedero de fichas">
+      <div class="hud-stat">
+        <span class="hud-label" id="hud-balance-label">Saldo</span>
+        <output id="hud-balance" class="hud-value" aria-labelledby="hud-balance-label">1000</output>
+      </div>
+      <div class="hud-stat hud-stat-dim">
+        <span class="hud-label" id="hud-inplay-label">En juego</span>
+        <output id="hud-inplay" class="hud-value" aria-labelledby="hud-inplay-label">0</output>
+      </div>
+      <button type="button" id="btn-rescue" class="btn btn-rescue" hidden>Rescate +500</button>
+      <button type="button" id="btn-vip" class="btn btn-gold">Tienda VIP</button>
+      <button type="button" id="btn-sound" class="btn btn-icon" aria-pressed="true" aria-label="Sonido activado">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use id="btn-sound-icon" href="#icon-sound-on"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Juegos">
+    <div class="tablist" role="tablist" aria-label="Mesas del casino">
+      <button type="button" role="tab" class="tab" id="tab-blackjack" data-game="blackjack" aria-controls="panel-blackjack" aria-selected="true">
+        <svg viewBox="0 0 100 100" aria-hidden="true"><use href="#suit-S"/></svg><span>Blackjack</span>
+      </button>
+      <button type="button" role="tab" class="tab" id="tab-roulette" data-game="roulette" aria-controls="panel-roulette" aria-selected="false" tabindex="-1">
+        <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" stroke-width="10"/><circle cx="50" cy="50" r="12" fill="currentColor"/></svg><span>Ruleta</span>
+      </button>
+      <button type="button" role="tab" class="tab" id="tab-slots" data-game="slots" aria-controls="panel-slots" aria-selected="false" tabindex="-1">
+        <svg viewBox="0 0 100 100" aria-hidden="true"><use href="#sym-S"/></svg><span>Slots</span>
+      </button>
+    </div>
+  </nav>
+
+  <main id="main" class="stage">
+    <!-- BLACKJACK -->
+    <section id="panel-blackjack" class="panel" role="tabpanel" aria-labelledby="tab-blackjack" data-mode="bet">
+      <h2 class="visually-hidden">Blackjack · Reglas Las Vegas Strip</h2>
+      <div class="bj-table felt">
+        <div class="bj-arc" aria-hidden="true">
+          <span class="bj-arc-title">BLACKJACK PAGA 3 A 2</span>
+          <span class="bj-arc-rule">El crupier pide con 16 y se planta con 17</span>
+          <span class="bj-arc-rule">SEGURO PAGA 2 A 1</span>
+        </div>
+
+        <div class="bj-shoe" id="bj-shoe" aria-label="Zapato de 6 barajas">
+          <div class="shoe-box" aria-hidden="true"><span class="shoe-card"></span><span class="shoe-card"></span><span class="shoe-card"></span></div>
+          <div class="shoe-meter" aria-hidden="true"><span id="bj-shoe-fill" class="shoe-fill"></span><span class="shoe-cut"></span></div>
+          <small id="bj-shoe-count" class="shoe-count">312 cartas</small>
+        </div>
+
+        <div class="bj-dealer">
+          <div class="hand-head"><span class="hand-name">Crupier</span><output id="bj-dealer-total" class="hand-total" aria-label="Total del crupier"></output></div>
+          <div id="bj-dealer-cards" class="hand-cards" aria-label="Cartas del crupier"></div>
+        </div>
+
+        <p id="bj-message" class="table-message" role="status" aria-live="polite">Coloca tu apuesta y pulsa Repartir</p>
+
+        <div class="bj-player">
+          <div id="bj-hands" class="bj-hands" aria-label="Tus manos"></div>
+          <button type="button" id="bj-bet-circle" class="bet-circle" aria-label="Círculo de apuesta: añadir la ficha seleccionada">
+            <span class="bet-circle-ring" aria-hidden="true"></span>
+            <span id="bj-bet-stack" class="bet-stack" aria-hidden="true"></span>
+            <output id="bj-bet-amount" class="bet-amount">0</output>
+          </button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="chip-rack" id="bj-rack" data-mode="place" aria-label="Fichas: pulsa para apostar"></div>
+        <div class="btn-row" id="bj-bet-controls">
+          <button type="button" class="btn" id="bj-clear">Limpiar</button>
+          <button type="button" class="btn" id="bj-rebet">Repetir</button>
+          <button type="button" class="btn btn-primary" id="bj-deal">Repartir</button>
+        </div>
+        <div class="btn-row" id="bj-play-controls">
+          <button type="button" class="btn btn-action" id="bj-hit">Pedir</button>
+          <button type="button" class="btn btn-action" id="bj-stand">Plantarse</button>
+          <button type="button" class="btn btn-action" id="bj-double">Doblar</button>
+          <button type="button" class="btn btn-action" id="bj-split">Dividir</button>
+        </div>
+        <div class="btn-row" id="bj-insurance-controls">
+          <button type="button" class="btn btn-gold" id="bj-insure-yes">Tomar seguro</button>
+          <button type="button" class="btn" id="bj-insure-no">Sin seguro</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RULETA -->
+    <section id="panel-roulette" class="panel" role="tabpanel" aria-labelledby="tab-roulette" hidden>
+      <h2 class="visually-hidden">Ruleta Europea</h2>
+      <div class="rl-top">
+        <div class="rl-wheel-wrap">
+          <canvas id="rl-wheel" class="rl-wheel" role="img" aria-label="Plato de ruleta europea de 37 casillas"></canvas>
+          <div id="rl-result" class="rl-result" aria-live="polite"></div>
+        </div>
+        <aside class="rl-stats" aria-label="Estadísticas de la mesa">
+          <h3 class="stats-title">Últimos 12</h3>
+          <ol id="rl-history" class="rl-history"></ol>
+          <div class="hotcold">
+            <div>
+              <h3 class="stats-title stats-hot">Calientes</h3>
+              <ul id="rl-hot" class="num-list"></ul>
+            </div>
+            <div>
+              <h3 class="stats-title stats-cold">Fríos</h3>
+              <ul id="rl-cold" class="num-list"></ul>
+            </div>
+          </div>
+          <h3 class="stats-title">Frecuencias <small id="rl-sample"></small></h3>
+          <div id="rl-freq" class="freq"></div>
+        </aside>
+      </div>
+
+      <p id="rl-message" class="table-message" role="status" aria-live="polite">Selecciona una ficha y colócala en el tapete</p>
+
+      <div class="rl-board-scroll">
+        <div id="rl-board" class="rl-board felt" aria-label="Tapete de apuestas"></div>
+      </div>
+
+      <div class="controls">
+        <div class="chip-rack" id="rl-rack" data-mode="select" aria-label="Fichas: selecciona una denominación"></div>
+        <div class="btn-row">
+          <span class="bet-total">Apuesta: <output id="rl-total">0</output></span>
+          <button type="button" class="btn" id="rl-undo">Deshacer</button>
+          <button type="button" class="btn" id="rl-clear">Limpiar</button>
+          <button type="button" class="btn" id="rl-rebet">Repetir</button>
+          <button type="button" class="btn" id="rl-double">Doblar</button>
+          <button type="button" class="btn btn-primary" id="rl-spin">Girar</button>
+        </div>
+        <p class="hint">Clic derecho o pulsación larga sobre una apuesta para retirar la ficha seleccionada.</p>
+      </div>
+    </section>
+
+    <!-- SLOTS -->
+    <section id="panel-slots" class="panel" role="tabpanel" aria-labelledby="tab-slots" hidden>
+      <h2 class="visually-hidden">Slots Matrix 4x4</h2>
+      <div class="slot-cabinet">
+        <div class="slot-marquee" aria-hidden="true">
+          <span class="bulbs"></span>
+          <span class="marquee-title">SLOTS MATRIX <b>4×4</b></span>
+          <span class="bulbs"></span>
+        </div>
+        <div id="sl-banner" class="slot-banner" aria-live="polite"></div>
+        <div class="slot-window">
+          <div id="sl-grid" class="slot-grid" aria-label="Rodillos"></div>
+          <svg id="sl-lines" class="slot-lines" viewBox="0 0 400 400" preserveAspectRatio="none" aria-hidden="true"></svg>
+        </div>
+        <div class="slot-panel">
+          <div class="slot-meter">
+            <span class="meter-label">Apuesta</span>
+            <div class="bet-stepper">
+              <button type="button" class="btn btn-icon" id="sl-bet-down" aria-label="Reducir apuesta">−</button>
+              <output id="sl-bet" class="meter-value">20</output>
+              <button type="button" class="btn btn-icon" id="sl-bet-up" aria-label="Aumentar apuesta">+</button>
+            </div>
+            <small class="meter-foot">10 líneas · <output id="sl-linebet">2</output> por línea</small>
+          </div>
+          <button type="button" id="sl-spin" class="spin-button">GIRAR</button>
+          <div class="slot-meter">
+            <span class="meter-label">Premio</span>
+            <output id="sl-win" class="meter-value meter-win">0</output>
+            <small class="meter-foot" id="sl-fs-foot">RTP teórico <output id="sl-rtp">96%</output></small>
+          </div>
+        </div>
+        <p id="sl-message" class="table-message" role="status" aria-live="polite">3 diamantes activan los Giros Gratis</p>
+        <details class="paytable">
+          <summary>Tabla de pagos y reglas</summary>
+          <div id="sl-paytable" class="paytable-body"></div>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Fichas virtuales sin valor monetario. Entretenimiento para mayores de 18 años. Juega con responsabilidad.</p>
+    <p>Azar: <code>crypto.getRandomValues()</code> · Blackjack 6 barajas S17 3:2 · Ruleta europea 2,70 % · Slots RTP ≈ 96 %</p>
+  </footer>
+
+  <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+
+  <dialog id="vip-dialog" class="vip-dialog" aria-labelledby="vip-title">
+    <div class="vip-head">
+      <h2 id="vip-title">Tienda VIP</h2>
+      <button type="button" class="btn btn-icon" id="vip-close" aria-label="Cerrar tienda">✕</button>
+    </div>
+    <p class="vip-sub">Tapetes cosméticos de lujo. Se aplican al instante en todas las mesas.</p>
+    <div id="vip-list" class="vip-list"></div>
+  </dialog>
+
+  <canvas id="fx-canvas" class="fx-canvas" aria-hidden="true"></canvas>
+
+  <noscript><p class="noscript">Casino Royale Deluxe necesita JavaScript para funcionar.</p></noscript>
+</body>
+</html>
