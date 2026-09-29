@@ -5,6 +5,8 @@
 export const FREEDOM_GOAL = 100000;
 export const FAVORS_PER_LEGEND = 3;
 export const CRITICAL_SHARE = 0.5;
+// Con saldos pequeños solo es crítica una apuesta de todo o nada; si no, lo sería cada apuesta mínima.
+export const CRITICAL_MIN_BETS = 10;
 
 export const ZONES = Object.freeze([
   Object.freeze({

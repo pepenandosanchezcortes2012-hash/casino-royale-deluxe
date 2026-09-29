@@ -437,17 +437,26 @@ code {
     display: none;
   }
 
+  /* Cabecera en tres filas: saldo y sonido; Club VIP y expediente; salvavidas (si hace falta). */
   .hud {
-    flex-wrap: wrap;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas:
+      "balance inplay sound"
+      "vip dossier dossier"
+      "lifeline lifeline lifeline";
     width: 100%;
     gap: 6px;
   }
 
   .hud-stat {
+    grid-area: balance;
     min-width: 0;
-    flex: 1 1 0;
     padding: 2px 8px;
+  }
+
+  .hud-stat-dim {
+    grid-area: inplay;
   }
 
   .hud-label {
@@ -465,18 +474,24 @@ code {
   }
 
   .hud .btn-dossier {
-    flex: 0 1 auto;
+    grid-area: dossier;
     min-width: 0;
+    max-width: none;
     padding: 0 10px;
   }
 
-  .hud .btn-favor {
-    order: 5;
-    flex: 1 1 100%;
+  .hud .btn-vip {
+    grid-area: vip;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+
+  .hud .btn-lifeline {
+    grid-area: lifeline;
   }
 
   .hud .btn-icon {
-    flex: none;
+    grid-area: sound;
   }
 
   .tablist {

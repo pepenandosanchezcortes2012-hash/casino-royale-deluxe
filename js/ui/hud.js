@@ -40,6 +40,7 @@ class Hud {
       sndMusicOn: $('snd-music-on'),
       sndMusic: $('snd-music'),
       sndMusicOut: $('snd-music-out'),
+      sndStyle: $('snd-style'),
       sndVoiceOn: $('snd-voice-on'),
       sndVoice: $('snd-voice'),
       sndVoiceOut: $('snd-voice-out'),
@@ -179,6 +180,7 @@ class Hud {
     d.sndSfx.addEventListener('change', () => audio.chip());
     d.sndMusicOn.addEventListener('change', () => audio.update({ musicOn: d.sndMusicOn.checked }));
     d.sndMusic.addEventListener('input', () => audio.update({ music: percent(d.sndMusic) }));
+    d.sndStyle.addEventListener('change', () => audio.update({ style: d.sndStyle.value }));
     d.sndVoiceOn.addEventListener('change', () => audio.update({ voiceOn: d.sndVoiceOn.checked }));
     d.sndVoice.addEventListener('input', () => audio.update({ voice: percent(d.sndVoice) }));
     d.sndLang.addEventListener('change', () => audio.update({ lang: d.sndLang.value }));
@@ -205,6 +207,8 @@ class Hud {
     d.sndMusic.value = String(Math.round(s.music * 100));
     d.sndMusicOut.textContent = `${Math.round(s.music * 100)}%`;
     d.sndMusic.disabled = !s.musicOn;
+    d.sndStyle.value = s.style;
+    d.sndStyle.disabled = !s.musicOn;
     d.sndVoiceOn.checked = s.voiceOn;
     d.sndVoice.value = String(Math.round(s.voice * 100));
     d.sndVoiceOut.textContent = `${Math.round(s.voice * 100)}%`;

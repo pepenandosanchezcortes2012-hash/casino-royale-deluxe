@@ -1,12 +1,13 @@
 // La leyenda de «El Último Crédito»: máquina de estados de la campaña (intro → playing →
-// victory | gameover), zona actual, títulos, logros, encargos, favores del Sindicato,
-// estadísticas y la Bitácora del Crupier. Sin DOM: las mesas le informan de cada ronda y la
-// interfaz escucha sus eventos.
+// victory | gameover), zona actual, títulos, logros, encargos, favores del Sindicato, ayudas
+// del Club VIP (XP, bono diario, rescates y tapetes), estadísticas y la Bitácora del Crupier.
+// Sin DOM: las mesas le informan de cada ronda y la interfaz escucha sus eventos.
 
 import { storage as defaultStore } from '../engine/storage.js';
 import { randomInt } from '../engine/rng.js';
 import { wallet as defaultWallet } from '../engine/wallet.js';
-import { ZONES, zoneById, FREEDOM_GOAL, FAVORS_PER_LEGEND, CRITICAL_SHARE, highestZoneFor } from './zones.js';
+import { vip as defaultVip, feltById } from '../engine/vip.js';
+import { ZONES, zoneById, FREEDOM_GOAL, FAVORS_PER_LEGEND, CRITICAL_SHARE, CRITICAL_MIN_BETS, highestZoneFor } from './zones.js';
 import { TITLES, titleIndexFor } from './titles.js';
 import { ACHIEVEMENTS, achievementById } from './achievements.js';
 import { drawContract, advanceContract, contractType, ACTIVE_CONTRACTS } from './contracts.js';
@@ -44,6 +45,9 @@ function freshStats(balance = 1) {
     favorsUsed: 0,
     contractsDone: 0,
     rewards: 0,
+    vipCredits: 0,
+    vipRescues: 0,
+    dailyBonuses: 0,
   };
 }
 
@@ -106,6 +110,7 @@ function sanitize(raw) {
 
 export class Campaign extends EventTarget {
   #wallet;
+  #vip;
   #store;
   #rand;
   #now;
@@ -116,9 +121,10 @@ export class Campaign extends EventTarget {
   #checkTimer = 0;
   #logSeq = 0;
 
-  constructor({ wallet = defaultWallet, store = defaultStore, rand = randomInt, now = () => Date.now() } = {}) {
+  constructor({ wallet = defaultWallet, vip = defaultVip, store = defaultStore, rand = randomInt, now = () => Date.now() } = {}) {
     super();
     this.#wallet = wallet;
+    this.#vip = vip;
     this.#store = store;
     this.#rand = rand;
     this.#now = now;
@@ -235,11 +241,20 @@ export class Campaign extends EventTarget {
     for (const game of this.#games.values()) game.onZone?.(zone);
   }
 
-  // Aviso previo de una ronda: si se arriesga la mitad o más del saldo, es una jugada crítica.
+  // Jugada crítica: arriesgar la mitad o más del bankroll con al menos 10 apuestas mínimas en
+  // juego, o apostarlo todo. Así el drama no se repite en cada apuesta mínima con poco saldo.
+  #isCritical(stake, bankroll) {
+    if (!(stake > 0) || !(bankroll > 0)) return false;
+    if (stake + EPS >= bankroll) return true;
+    return stake + EPS >= CRITICAL_SHARE * bankroll && stake + EPS >= CRITICAL_MIN_BETS * this.zone.minBet;
+  }
+
+  // Aviso previo de una ronda (con la apuesta ya retenida): anuncia las jugadas críticas.
   beginRound({ game, stake }) {
     if (!this.playable || !(stake > 0)) return false;
-    const share = stake / (this.#wallet.balance + stake);
-    if (share + EPS < CRITICAL_SHARE) return false;
+    const bankroll = this.#wallet.balance + stake;
+    if (!this.#isCritical(stake, bankroll)) return false;
+    const share = stake / bankroll;
     this.#critical = { game, stake, share };
     this.#log('critical-start', { share: Math.round(share * 100) }, 'critical');
     this.#emit('critical', { game, stake, share });
@@ -270,12 +285,20 @@ export class Campaign extends EventTarget {
     st.bestStreak = Math.max(st.bestStreak, st.streak);
     st.worstStreak = Math.min(st.worstStreak, st.streak);
 
-    const critical = this.#critical?.game === game || (stake > 0 && stake + EPS >= CRITICAL_SHARE * bankroll);
+    const critical = this.#critical?.game === game || this.#isCritical(stake, bankroll);
     this.#critical = null;
     if (critical && net > EPS) st.criticalWins += 1;
     if (critical && net < -EPS) st.criticalLosses += 1;
 
     this.#narrateRound({ net, stake, bankroll, critical });
+
+    // Club VIP: 1 XP por crédito apostado; el rango se conserva entre leyendas.
+    const promotion = this.#vip.addXp(stake);
+    if (promotion) {
+      const { rank } = promotion;
+      this.#log('vip-rankup', { rank: rank.name, daily: fmt(rank.daily), rescue: fmt(rank.rescue) }, 'win');
+      this.#emit('rankup', promotion);
+    }
 
     const has = (tag) => tags.includes(tag);
     if (net > EPS) {
@@ -375,10 +398,10 @@ export class Campaign extends EventTarget {
     return true;
   }
 
-  #grant(amount) {
+  #grant(amount, { reason = 'story', stat = 'rewards' } = {}) {
     if (!(amount > 0)) return;
-    this.#wallet.grant(amount, 'story');
-    this.#s.stats.rewards = round2(this.#s.stats.rewards + amount);
+    this.#wallet.grant(amount, reason);
+    this.#s.stats[stat] = round2(this.#s.stats[stat] + amount);
   }
 
   // ---------- Saldo: títulos, desbloqueos y final ----------
@@ -425,12 +448,13 @@ export class Campaign extends EventTarget {
     const zone = this.zone;
     if (zone.stay > 0 && balance + EPS < zone.stay) this.#move(ZONES[highestZoneFor(balance, 'entry')], true);
     if (balance + EPS < ZONES[0].minBet) {
-      if (this.#s.favorsLeft > 0) {
+      const life = this.lifelines();
+      if (life.any) {
         if (!this.#s.brokeNotice) {
           this.#s.brokeNotice = true;
-          this.#log('broke', { amount: fmt(this.favorAmount), n: this.#s.favorsLeft }, 'system');
+          this.#log('broke', { options: this.#lifelineText(life) }, 'system');
           this.#save();
-          this.#emit('broke', this.favorStatus());
+          this.#emit('broke', life);
         }
       } else {
         this.#finish('gameover');
@@ -438,9 +462,86 @@ export class Campaign extends EventTarget {
     }
   }
 
+  #broke() {
+    return this.playable && this.#wallet.balance + EPS < ZONES[0].minBet && !this.#pending();
+  }
+
   favorStatus() {
-    const broke = this.playable && this.#wallet.balance + EPS < ZONES[0].minBet && !this.#pending();
+    const broke = this.#broke();
     return { available: broke && this.#s.favorsLeft > 0, broke, amount: this.favorAmount, left: this.#s.favorsLeft };
+  }
+
+  // Salvavidas de la leyenda: el bono diario del Club VIP (cuando quieras, una vez al día), los
+  // rescates VIP (de 1 a 5 por leyenda según el rango) y los favores del Sindicato (3 por
+  // leyenda). Rescates y favores solo con el saldo a cero. Sin ninguno disponible, Game Over.
+  lifelines() {
+    const broke = this.#broke();
+    const daily = this.#vip.dailyStatus(this.#now());
+    const rescue = this.#vip.rescueStatus(this.#s.legend);
+    const favors = this.#s.favorsLeft;
+    return {
+      broke,
+      daily: { available: this.playable && daily.available, amount: daily.amount, nextAt: daily.nextAt },
+      rescue: { available: broke && rescue.left > 0, left: rescue.left, total: rescue.total, amount: rescue.amount, rank: this.#vip.rank.name },
+      favor: { available: broke && favors > 0, left: favors, amount: this.favorAmount },
+      any: daily.available || rescue.left > 0 || favors > 0,
+    };
+  }
+
+  #lifelineText(life) {
+    const parts = [];
+    if (life.daily.available) parts.push(`el bono diario del Club VIP (+${fmt(life.daily.amount)})`);
+    if (life.rescue.left > 0) parts.push(`${life.rescue.left === 1 ? 'un rescate VIP' : `${life.rescue.left} rescates VIP`} (+${fmt(life.rescue.amount)})`);
+    if (life.favor.left > 0) parts.push(`${life.favor.left === 1 ? 'un favor' : `${life.favor.left} favores`} del Sindicato (+${fmt(life.favor.amount)})`);
+    return parts.join(', ');
+  }
+
+  claimDaily() {
+    if (!this.playable) return 0;
+    const amount = this.#vip.claimDaily(this.#now());
+    if (!(amount > 0)) return 0;
+    this.#s.brokeNotice = false;
+    this.#s.stats.dailyBonuses += 1;
+    this.#grant(amount, { reason: 'daily', stat: 'vipCredits' });
+    this.#log('vip-daily', { amount: fmt(amount) }, 'system');
+    this.#emit('vip', { kind: 'daily', amount });
+    this.#afterBalance();
+    return amount;
+  }
+
+  takeRescue() {
+    const life = this.lifelines();
+    if (!life.rescue.available) return 0;
+    const amount = this.#vip.useRescue(this.#s.legend);
+    if (!(amount > 0)) return 0;
+    const left = life.rescue.left - 1;
+    this.#s.brokeNotice = false;
+    this.#s.stats.vipRescues += 1;
+    this.#grant(amount, { reason: 'rescue', stat: 'vipCredits' });
+    this.#log('vip-rescue', { amount: fmt(amount), rank: life.rescue.rank, n: left }, 'system');
+    this.#emit('vip', { kind: 'rescue', amount, left });
+    this.#afterBalance();
+    return amount;
+  }
+
+  // Tapetes de lujo: se pagan con créditos de la leyenda y quedan en el Club para siempre.
+  buyFelt(id) {
+    const felt = feltById(id);
+    if (!felt) return { ok: false, reason: 'unknown' };
+    if (this.#vip.owns(id)) {
+      this.#vip.equipFelt(id);
+      this.#emit('felt', { felt, bought: false });
+      return { ok: true, bought: false };
+    }
+    if (!this.playable) return { ok: false, reason: 'status' };
+    if (this.#pending()) return { ok: false, reason: 'pending' };
+    if (!this.#wallet.spend(felt.price, 'felt')) return { ok: false, reason: 'funds', need: felt.price };
+    this.#vip.addFelt(id);
+    this.#vip.equipFelt(id);
+    this.#log('felt', { name: felt.name, price: fmt(felt.price) }, 'info');
+    this.#emit('felt', { felt, bought: true });
+    this.#afterBalance();
+    return { ok: true, bought: true };
   }
 
   takeFavor() {

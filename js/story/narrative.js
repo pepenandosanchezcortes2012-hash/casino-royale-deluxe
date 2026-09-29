@@ -8,7 +8,7 @@ export const PROLOGUE = Object.freeze([
   'Bajo el viejo metro, detrás de una puerta sin nombre, late el Casino Royale Deluxe: el tapete donde el Sindicato decide quién vive y quién desaparece.',
   'Tu deuda con ellos ya no cabe en ninguna pantalla. A cambio de tu vida te han concedido una última oportunidad: un solo crédito.',
   'Las reglas son sencillas. Sube del Callejón al Salón de Neón, y del Salón al Penthouse. Reúne 100.000 créditos y el Sindicato te venderá tu libertad.',
-  'El Sindicato puede prestarte tres favores. Si tu saldo llega a cero cuando ya no quede ninguno, nadie volverá a pronunciar tu nombre.',
+  'El Sindicato puede prestarte tres favores, y su Club VIP premia a los clientes fieles con un bono diario y rescates. Si tu saldo llega a cero cuando ya no quede ninguna ayuda, nadie volverá a pronunciar tu nombre.',
   'El crupier baraja. Tienes un crédito. Haz que cuente.',
 ]);
 
@@ -22,7 +22,7 @@ export const FINALE = Object.freeze([
 
 export const GAME_OVER = Object.freeze([
   'La última ficha resbala entre tus dedos y rueda bajo la mesa.',
-  'Ya no quedan favores. El Sindicato no concede segundas oportunidades… y tú ya gastaste la cuarta.',
+  'Ya no quedan favores ni rescates del Club VIP. El Sindicato no concede segundas oportunidades… y tú ya las gastaste todas.',
   'Dos sombras con traje gris te escoltan hacia la salida de servicio. Afuera sigue lloviendo.',
   'Bancarrota perpetua. Tu nombre se borra del registro del casino, ficha a ficha.',
 ]);
@@ -113,10 +113,22 @@ const POOLS = {
     any: ['Encargo cumplido. El Sindicato paga {reward} créditos, como prometió.', 'Trabajo limpio. {reward} créditos transferidos a tu nombre.'],
   },
   broke: {
-    any: ['Sin créditos. Un hombre de traje gris se sienta a tu lado: el Sindicato puede hacerte un favor de {amount}. Te quedan {n}.', 'Tus bolsillos están vacíos. Una voz te susurra al oído: «Pide un favor. Solo te quedan {n}.»'],
+    any: ['Sin créditos. Un hombre de traje gris se sienta a tu lado: «Aún puedes pedir ayuda: {options}.»', 'Tus bolsillos están vacíos. Una voz te susurra al oído: «Te quedan salvavidas: {options}.»'],
   },
   favor: {
     any: ['El Sindicato te presta {amount} créditos. Los favores se pagan, de un modo u otro. Quedan {n}.', 'Un sobre con {amount} créditos cae sobre la mesa. «Nos lo debes», dice el hombre de gris. Quedan {n}.'],
+  },
+  'vip-daily': {
+    any: ['El Club VIP te entrega tu bono diario: +{amount} créditos.', 'Una azafata del Club VIP deja un sobre dorado junto a tu copa: bono diario de {amount} créditos.'],
+  },
+  'vip-rescue': {
+    any: ['Rescate VIP ({rank}): +{amount} créditos. «Los clientes fieles no se quedan en la calle», dice el gerente. Rescates restantes en esta leyenda: {n}.', 'El Club VIP paga tu fianza: +{amount} créditos. Te quedan {n} rescates en esta leyenda.'],
+  },
+  'vip-rankup': {
+    any: ['Ascenso en el Club VIP: rango {rank}. Bono diario de {daily} y rescates de {rescue} créditos.', 'Una tarjeta de {rank} aparece en tu bolsillo. El Club VIP sube tu bono diario a {daily} créditos.'],
+  },
+  felt: {
+    any: ['Estrenas tapete: {name}. {price} créditos bien gastados… o no.', 'Los camareros cambian el paño de tu mesa por uno {name}. Cuesta {price} créditos, pero se nota.'],
   },
   demoted: {
     any: ['Dos gorilas te escoltan hasta {zone}. Sin fondos no hay sitio para ti ahí arriba.', 'Tu saldo ya no alcanza. Te devuelven a {zone} sin ninguna ceremonia.'],
@@ -132,6 +144,7 @@ const POOLS = {
 const SPEAKERS = {
   table: new Set(['arrive', 'win', 'loss', 'big-win', 'big-loss', 'critical-start', 'critical-win', 'critical-loss', 'streak-win', 'streak-loss', 'push']),
   syndicate: new Set(['unlock', 'achievement', 'contract-new', 'contract-done', 'broke', 'favor']),
+  vip: new Set(['vip-daily', 'vip-rescue', 'vip-rankup', 'felt']),
 };
 
 const DEALERS = { alley: 'Moss', neon: 'Vera', penthouse: 'SIBILA' };
@@ -143,7 +156,9 @@ export function narrate(kind, zoneId, params = {}, rand = randomInt) {
   const lines = pool[zoneId] ?? pool.any ?? Object.values(pool)[0];
   const template = lines[rand(lines.length)];
   const text = template.replace(/\{(\w+)\}/g, (_, key) => String(params[key] ?? ''));
-  const speaker = SPEAKERS.table.has(kind) ? DEALERS[zoneId] ?? 'Crupier' : SPEAKERS.syndicate.has(kind) ? 'Sindicato' : 'Narrador';
+  const speaker = SPEAKERS.table.has(kind)
+    ? DEALERS[zoneId] ?? 'Crupier'
+    : SPEAKERS.syndicate.has(kind) ? 'Sindicato' : SPEAKERS.vip.has(kind) ? 'Club VIP' : 'Narrador';
   return { text, speaker };
 }
 

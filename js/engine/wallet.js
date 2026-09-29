@@ -3,7 +3,8 @@
 // → reveal (pendiente → saldo, al terminar la animación). Si la página se recarga, los premios
 // pendientes se abonan y las apuestas sin resolver de ruleta/slots se devuelven: recargar
 // nunca permite anular un resultado ya sorteado ni gastar dos veces el mismo crédito.
-// «El Último Crédito» empieza con un único crédito; las recompensas del Sindicato entran con grant().
+// «El Último Crédito» empieza con un único crédito; las recompensas del Sindicato y las ayudas del
+// Club VIP entran con grant() y los tapetes de lujo se pagan con spend().
 
 import { storage } from './storage.js';
 
@@ -22,7 +23,7 @@ const isAmount = (value) => typeof value === 'number' && Number.isFinite(value) 
 const perGame = (value) => Object.fromEntries(GAMES.map((game) => [game, value]));
 
 function fresh() {
-  return { balance: STARTING_BALANCE, escrow: perGame(0), pending: perGame(0), wagered: 0, paid: 0, granted: 0 };
+  return { balance: STARTING_BALANCE, escrow: perGame(0), pending: perGame(0), wagered: 0, paid: 0, granted: 0, spent: 0 };
 }
 
 function sanitize(raw) {
@@ -33,7 +34,7 @@ function sanitize(raw) {
     if (raw.escrow && isAmount(raw.escrow[game])) state.escrow[game] = money(raw.escrow[game]);
     if (raw.pending && isAmount(raw.pending[game])) state.pending[game] = money(raw.pending[game]);
   }
-  for (const key of ['wagered', 'paid', 'granted']) if (isAmount(raw[key])) state[key] = money(raw[key]);
+  for (const key of ['wagered', 'paid', 'granted', 'spent']) if (isAmount(raw[key])) state[key] = money(raw[key]);
   return state;
 }
 
@@ -90,7 +91,7 @@ class Wallet extends EventTarget {
   }
 
   get totals() {
-    return { wagered: this.#s.wagered, paid: this.#s.paid, granted: this.#s.granted };
+    return { wagered: this.#s.wagered, paid: this.#s.paid, granted: this.#s.granted, spent: this.#s.spent };
   }
 
   escrowOf(game) {
@@ -160,6 +161,16 @@ class Wallet extends EventTarget {
     this.#save();
     this.#emit(reason);
     return amount;
+  }
+
+  // Compras fuera de las mesas (tapetes del Club VIP). Atómico: o se paga todo o nada.
+  spend(amount, reason = 'spend') {
+    if (!isAmount(amount) || amount <= 0 || !this.canAfford(amount)) return false;
+    this.#s.balance = money(this.#s.balance - amount);
+    this.#s.spent = money(this.#s.spent + amount);
+    this.#save();
+    this.#emit(reason);
+    return true;
   }
 
   // Nueva leyenda: un crédito y nada en juego.

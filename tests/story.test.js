@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { Campaign } from '../js/story/campaign.js';
+import { VipClub, RANKS, FELTS, localDayKey } from '../js/engine/vip.js';
 import { ZONES, zoneById, highestZoneFor, FREEDOM_GOAL } from '../js/story/zones.js';
 import { TITLES, titleFor } from '../js/story/titles.js';
 import { ACHIEVEMENTS } from '../js/story/achievements.js';
@@ -28,22 +29,31 @@ function fakeWallet(balance = 1) {
       this.balance += amount;
       return amount;
     },
+    canAfford(amount) {
+      return amount <= this.balance;
+    },
+    spend(amount) {
+      if (amount > this.balance) return false;
+      this.balance -= amount;
+      return true;
+    },
     reset() {
       this.balance = 1;
     },
   };
 }
 
-// Crea una leyenda ya comenzada; `rand` fijo hace deterministas los encargos.
-function legend({ balance = 1, rand = () => 0 } = {}) {
+// Crea una leyenda ya comenzada; `rand` fijo hace deterministas los encargos. El Club VIP
+// comparte el almacenamiento y el reloj de la prueba (`clock.t` se puede adelantar).
+function legend({ balance = 1, rand = () => 0, store = memoryStore(), clock = { t: Date.UTC(2026, 8, 28, 12) } } = {}) {
   const wallet = fakeWallet(balance);
-  const store = memoryStore();
-  let clock = 1_000_000;
-  const campaign = new Campaign({ wallet, store, rand, now: () => (clock += 1000) });
+  const now = () => (clock.t += 1000);
+  const vip = new VipClub({ store, now });
+  const campaign = new Campaign({ wallet, vip, store, rand, now });
   // Una leyenda nueva reinicia el monedero a 1 crédito; el saldo de la prueba se fija después.
   wallet.balance = balance;
   campaign.begin();
-  return { campaign, wallet, store };
+  return { campaign, wallet, store, vip, clock };
 }
 
 // Simula una ronda: aplica el resultado al monedero y la reporta.
@@ -103,18 +113,21 @@ test('Narrativa: todas las voces existen y sustituyen los marcadores', () => {
   assert.ok(PROLOGUE.length >= 5);
   for (const kind of NARRATIVE_KINDS) {
     for (const zone of ['alley', 'neon', 'penthouse']) {
-      const { text, speaker } = narrate(kind, zone, { amount: '12', n: 3, title: 'X', name: 'Y', reward: '5', text: 'Z', zone: 'W', share: 60 }, () => 0);
+      const params = { amount: '12', n: 3, title: 'X', name: 'Y', reward: '5', text: 'Z', zone: 'W', share: 60, options: 'O', rank: 'Oro', daily: '500', rescue: '1.000', price: '1.000' };
+      const { text, speaker } = narrate(kind, zone, params, () => 0);
       assert.ok(text.length > 0, `${kind}/${zone}`);
       assert.ok(!/\{\w+\}/.test(text), `marcador sin sustituir en ${kind}`);
       assert.ok(speaker.length > 0);
     }
   }
   assert.equal(narrate('win', 'penthouse', { amount: '5' }, () => 0).speaker, 'SIBILA');
+  assert.equal(narrate('vip-rescue', 'alley', {}, () => 0).speaker, 'Club VIP');
 });
 
 test('Leyenda nueva: intro → partida, 1 crédito, 3 favores y tablero de encargos', () => {
   const wallet = fakeWallet(1);
-  const campaign = new Campaign({ wallet, store: memoryStore(), rand: () => 0, now: () => 5 });
+  const store = memoryStore();
+  const campaign = new Campaign({ wallet, vip: new VipClub({ store, now: () => 5 }), store, rand: () => 0, now: () => 5 });
   assert.equal(campaign.status, 'intro');
   assert.equal(campaign.playable, false);
   campaign.begin();
@@ -159,6 +172,17 @@ test('Jugada crítica: se detecta al arriesgar la mitad del saldo', () => {
   assert.ok('all-or-nothing' in ctx.campaign.state.achievements);
 });
 
+test('Jugada crítica con poco saldo: solo el todo o nada', () => {
+  const ctx = legend({ balance: 8 });
+  // 5 de 8 créditos es más de la mitad, pero son menos de 10 apuestas mínimas: sin drama.
+  ctx.wallet.balance -= 5;
+  assert.equal(ctx.campaign.beginRound({ game: 'slots', stake: 5 }), false);
+  ctx.wallet.balance += 5;
+  // Apostarlo todo sí es crítico, aunque sea un único crédito.
+  ctx.wallet.balance -= 8;
+  assert.equal(ctx.campaign.beginRound({ game: 'slots', stake: 8 }), true);
+});
+
 test('Encargos cumplidos pagan y se reponen con otro tipo', () => {
   const ctx = legend({ balance: 50 });
   const before = ctx.campaign.contracts;
@@ -175,22 +199,97 @@ test('Encargos cumplidos pagan y se reponen con otro tipo', () => {
   assert.ok(state.stats.rewards >= target.reward);
 });
 
-test('Bancarrota: tres favores del Sindicato y después game over', () => {
+test('Bancarrota: favores, rescate VIP y bono diario antes del Game Over', () => {
   const ctx = legend();
-  play(ctx, { stake: 1, returned: 0 });
-  let favor = ctx.campaign.favorStatus();
-  assert.equal(favor.available, true);
-  assert.equal(favor.amount, zoneById('alley').favor);
+  const bust = () => play(ctx, { stake: ctx.wallet.balance, returned: 0 });
+  bust();
+  let life = ctx.campaign.lifelines();
+  assert.equal(life.broke, true);
+  assert.equal(life.favor.available, true);
+  assert.equal(life.favor.amount, zoneById('alley').favor);
+  assert.equal(life.rescue.available, true);
+  assert.equal(life.rescue.amount, RANKS[0].rescue);
+  assert.equal(life.daily.available, true);
+  assert.ok(ctx.campaign.log.some((entry) => entry.kind === 'broke' && entry.text.includes('rescate VIP')));
+
   for (let i = 0; i < 3; i++) {
     assert.equal(ctx.campaign.takeFavor(), zoneById('alley').favor);
-    play(ctx, { stake: ctx.wallet.balance, returned: 0 });
-    if (i < 2) assert.equal(ctx.campaign.status, 'playing');
+    bust();
+    assert.equal(ctx.campaign.status, 'playing', 'quedan el rescate VIP y el bono diario');
   }
-  favor = ctx.campaign.favorStatus();
-  assert.equal(favor.left, 0);
+  assert.equal(ctx.campaign.favorStatus().left, 0);
+
+  assert.equal(ctx.campaign.takeRescue(), RANKS[0].rescue);
+  assert.equal(ctx.campaign.takeRescue(), 0, 'el rescate no se acumula con saldo');
+  bust();
+  assert.equal(ctx.campaign.status, 'playing', 'queda el bono diario');
+  assert.equal(ctx.campaign.takeRescue(), 0, 'Bronce: un rescate por leyenda');
+
+  assert.equal(ctx.campaign.claimDaily(), RANKS[0].daily);
+  bust();
+  life = ctx.campaign.lifelines();
+  assert.equal(life.any, false);
   assert.equal(ctx.campaign.status, 'gameover');
   assert.equal(ctx.campaign.playable, false);
-  assert.equal(ctx.campaign.hall.legends >= 1, true);
+  const stats = ctx.campaign.state.stats;
+  assert.equal(stats.vipRescues, 1);
+  assert.equal(stats.dailyBonuses, 1);
+  assert.equal(stats.vipCredits, RANKS[0].rescue + RANKS[0].daily);
+});
+
+test('Club VIP: 1 XP por crédito apostado y rangos que sobreviven a la leyenda', () => {
+  const store = memoryStore();
+  const ctx = legend({ balance: 20000, store });
+  let promotion = null;
+  ctx.campaign.addEventListener('rankup', (event) => {
+    promotion = event.detail;
+  });
+  play(ctx, { stake: 4000, returned: 4000 });
+  assert.equal(ctx.vip.xp, 4000);
+  assert.equal(ctx.vip.rank.id, 'bronze');
+  play(ctx, { stake: 1000, returned: 0 });
+  assert.equal(ctx.vip.rank.id, 'silver');
+  assert.equal(promotion?.rank.id, 'silver');
+  assert.ok(ctx.campaign.log.some((entry) => entry.kind === 'vip-rankup' && entry.speaker === 'Club VIP'));
+  // Reiniciar la leyenda no borra la carrera VIP.
+  ctx.campaign.restart();
+  const next = legend({ store });
+  assert.equal(next.campaign.state.legend, 2);
+  assert.equal(next.vip.xp, 5000);
+  assert.equal(next.vip.rank.id, 'silver');
+  assert.equal(next.campaign.lifelines().rescue.total, RANKS[1].rescues);
+});
+
+test('Club VIP: bono diario una vez por día natural', () => {
+  const clock = { t: new Date(2026, 8, 28, 10, 0).getTime() };
+  const ctx = legend({ clock });
+  assert.equal(ctx.campaign.claimDaily(), RANKS[0].daily);
+  assert.equal(ctx.wallet.balance, 1 + RANKS[0].daily);
+  assert.equal(ctx.campaign.claimDaily(), 0, 'solo uno al día');
+  const status = ctx.vip.dailyStatus();
+  assert.equal(status.available, false);
+  assert.equal(localDayKey(new Date(status.nextAt)), '2026-09-29');
+  clock.t = new Date(2026, 8, 29, 0, 5).getTime();
+  assert.equal(ctx.campaign.claimDaily(), RANKS[0].daily, 'al día siguiente vuelve');
+});
+
+test('Tapetes de lujo: se pagan con créditos y se conservan entre leyendas', () => {
+  const store = memoryStore();
+  const ctx = legend({ balance: 1200, store });
+  const sapphire = FELTS.find((felt) => felt.id === 'sapphire');
+  assert.equal(ctx.campaign.buyFelt('crimson').reason, 'funds');
+  const result = ctx.campaign.buyFelt('sapphire');
+  assert.equal(result.ok, true);
+  assert.equal(ctx.wallet.balance, 1200 - sapphire.price);
+  assert.equal(ctx.vip.felt, 'sapphire');
+  assert.ok(ctx.campaign.log.some((entry) => entry.kind === 'felt'));
+  assert.equal(ctx.campaign.buyFelt('zone').ok, true, 'el tapete de la zona es gratis');
+  assert.equal(ctx.vip.felt, 'zone');
+  ctx.campaign.restart();
+  const next = legend({ store });
+  assert.ok(next.vip.owns('sapphire'));
+  assert.equal(next.campaign.buyFelt('sapphire').bought, false, 'ya es tuyo: solo se equipa');
+  assert.equal(next.wallet.balance, 1);
 });
 
 test('Ascenso, degradación con histéresis y logros de zona', () => {
@@ -232,15 +331,16 @@ test('Gran final: 100.000 créditos dan la libertad', () => {
 test('Persistencia: la leyenda se reanuda y reiniciar crea una nueva', () => {
   const wallet = fakeWallet(1);
   const store = memoryStore();
-  const first = new Campaign({ wallet, store, rand: () => 0, now: () => 10 });
+  const vip = new VipClub({ store, now: () => 10 });
+  const first = new Campaign({ wallet, vip, store, rand: () => 0, now: () => 10 });
   first.begin();
   wallet.balance += 1;
   first.report({ game: 'roulette', stake: 1, returned: 2 });
-  const resumed = new Campaign({ wallet, store, rand: () => 0, now: () => 20 });
+  const resumed = new Campaign({ wallet, vip, store, rand: () => 0, now: () => 20 });
   assert.equal(resumed.status, 'playing');
   assert.equal(resumed.state.stats.rounds, 1);
   resumed.restart();
-  const fresh = new Campaign({ wallet, store, rand: () => 0, now: () => 30 });
+  const fresh = new Campaign({ wallet, vip, store, rand: () => 0, now: () => 30 });
   assert.equal(fresh.status, 'intro');
   assert.equal(fresh.state.legend, 2);
 });

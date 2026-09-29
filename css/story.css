@@ -216,7 +216,7 @@ html[data-zone="penthouse"] .ambient::after {
   }
 }
 
-.btn-favor {
+.btn-lifeline {
   border-color: rgba(255, 90, 95, 0.6);
   background: linear-gradient(180deg, #5c1318, #2b0709);
   color: #ffd5d7;
@@ -1149,4 +1149,35 @@ html.is-critical-loss .stage {
     font-size: 0.56rem;
     letter-spacing: 0.05em;
   }
+}
+
+/* ---------- Tapetes de lujo del Club VIP (sustituyen al tapete de la zona) ---------- */
+
+html[data-zone][data-felt="emerald"] {
+  --felt-a: #12744a;
+  --felt-b: #063a21;
+  --felt-glow: rgba(90, 255, 170, 0.08);
+}
+
+html[data-zone][data-felt="sapphire"] {
+  --felt-a: #1b4f96;
+  --felt-b: #0a2550;
+  --felt-glow: rgba(120, 180, 255, 0.1);
+}
+
+html[data-zone][data-felt="crimson"] {
+  --felt-a: #8e1627;
+  --felt-b: #43080f;
+  --felt-glow: rgba(255, 120, 140, 0.08);
+}
+
+html[data-zone][data-felt="onyx"] {
+  --felt-a: #2a2d31;
+  --felt-b: #08090a;
+  --felt-line: rgba(212, 175, 55, 0.6);
+  --felt-glow: rgba(212, 175, 55, 0.07);
+}
+
+.vip-swatch-zone {
+  background: linear-gradient(115deg, #2c5a3b 0 33%, #2d1f66 33% 66%, #22201b 66%);
 }

@@ -817,3 +817,360 @@
   }
 
 }
+
+/* ---------- Club VIP: rango y XP en la cabecera ---------- */
+
+.btn-vip {
+  position: relative;
+  gap: 8px;
+  padding: 0 12px;
+  border-color: rgba(247, 224, 138, 0.45);
+  background: linear-gradient(180deg, #3b2c0e, #1c1405);
+  color: var(--gold-hi);
+}
+
+.vip-meta {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+
+.vip-rank {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.xp-track {
+  display: block;
+  width: 64px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.xp-fill,
+.xp-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--gold-grad);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.6s var(--ease-out);
+}
+
+.vip-badge {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #e0313d;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 0 0 2px var(--bg-0), 0 0 12px rgba(224, 49, 61, 0.7);
+  animation: badge-pop 1.8s ease-in-out infinite;
+}
+
+@keyframes badge-pop {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+.rank-gem {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: #cd7f32;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+
+.btn-vip[data-rank="silver"] .rank-gem,
+.rank-gem[data-rank="silver"] {
+  color: #cfd6de;
+}
+
+.btn-vip[data-rank="gold"] .rank-gem,
+.rank-gem[data-rank="gold"] {
+  color: #f2c94c;
+}
+
+.btn-vip[data-rank="platinum"] .rank-gem,
+.rank-gem[data-rank="platinum"] {
+  color: #a8f0ff;
+}
+
+.btn-vip[data-rank="diamond"] .rank-gem,
+.rank-gem[data-rank="diamond"] {
+  color: #eafcff;
+  filter: drop-shadow(0 0 6px rgba(160, 240, 255, 0.95));
+}
+
+.btn-vip.is-rankup {
+  animation: rankup 1.4s var(--ease-out);
+}
+
+@keyframes rankup {
+  20% {
+    transform: scale(1.18);
+    box-shadow: 0 0 0 4px rgba(247, 224, 138, 0.6), 0 0 36px rgba(247, 224, 138, 0.9);
+  }
+}
+
+/* ---------- Club VIP: diálogo ---------- */
+
+.vip-dialog {
+  width: min(94vw, 680px);
+}
+
+.vip-status-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.rank-gem-lg {
+  width: 64px;
+  height: 64px;
+}
+
+.vip-status-info {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+}
+
+.vip-status-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+.vip-status-rank {
+  font: 700 1.6rem var(--font-display);
+  color: var(--gold-hi);
+}
+
+.xp-bar-lg {
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.vip-status-detail {
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+}
+
+.vip-note {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-mute);
+}
+
+.vip-daily-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 14px;
+  background: linear-gradient(90deg, rgba(212, 175, 55, 0.16), rgba(212, 175, 55, 0.04));
+}
+
+.vip-daily-text {
+  display: grid;
+  gap: 2px;
+  color: var(--ink-dim);
+  font-size: 0.9rem;
+}
+
+.vip-daily-text strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.vip-rescue-note {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+}
+
+.rank-ladder {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rank-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1.2fr) repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink-dim);
+  font-size: 0.84rem;
+}
+
+.rank-row.is-current {
+  background: rgba(212, 175, 55, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.6);
+  color: var(--ink);
+}
+
+.rank-row.is-done {
+  opacity: 0.7;
+}
+
+.rank-row-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.vip-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.vip-item {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  text-align: center;
+}
+
+.vip-item.is-active {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 0 20px rgba(212, 175, 55, 0.3);
+}
+
+.vip-swatch {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 4px solid #3a200c;
+  border-radius: 12px;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.55);
+}
+
+.vip-name {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.vip-price {
+  margin: 0;
+  color: var(--gold-hi);
+  font-size: 0.85rem;
+}
+
+.vip-item .btn {
+  width: 100%;
+}
+
+/* ---------- Salvavidas ---------- */
+
+.lifeline-dialog {
+  width: min(94vw, 520px);
+}
+
+.lifeline-list {
+  display: grid;
+  gap: 10px;
+}
+
+.lifeline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.lifeline.is-vip {
+  border-color: rgba(212, 175, 55, 0.45);
+  background: linear-gradient(90deg, rgba(212, 175, 55, 0.14), rgba(212, 175, 55, 0.03));
+}
+
+.lifeline.is-syndicate {
+  border-color: rgba(255, 90, 95, 0.4);
+  background: linear-gradient(90deg, rgba(160, 20, 30, 0.2), rgba(160, 20, 30, 0.04));
+}
+
+.lifeline.is-spent {
+  opacity: 0.5;
+}
+
+.lifeline-text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+  color: var(--ink-dim);
+  font-size: 0.88rem;
+}
+
+.lifeline-text strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+@media (max-width: 720px) {
+  .btn-vip {
+    padding: 0 10px;
+  }
+
+  .vip-rank {
+    font-size: 0.78rem;
+  }
+
+  .xp-track {
+    width: 52px;
+  }
+
+  .rank-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rank-row-name {
+    grid-column: 1 / -1;
+  }
+
+  .lifeline {
+    flex-wrap: wrap;
+  }
+
+  .lifeline .btn {
+    width: 100%;
+  }
+}

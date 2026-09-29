@@ -1,5 +1,5 @@
 // Inicializador maestro de «El Último Crédito»: HUD, mesas, pestañas accesibles, capa narrativa
-// (campaña, bitácora, cinemáticas) y desbloqueo del audio.
+// (campaña, bitácora, cinemáticas), Club VIP y desbloqueo del audio.
 
 import { audio } from './engine/audio.js';
 import { storage } from './engine/storage.js';
@@ -9,10 +9,11 @@ import { BlackjackGame } from './games/blackjack.js';
 import { RouletteGame } from './games/roulette.js';
 import { SlotsGame } from './games/slots.js';
 import { storyUi } from './ui/story-ui.js';
+import { vipUi } from './ui/vip-ui.js';
 
 const TAB_KEY = 'crd.tab.v1';
 
-// El AudioContext (efectos y música noir) solo puede arrancar tras un gesto del usuario.
+// El AudioContext (efectos y música noir o lounge) solo puede arrancar tras un gesto del usuario.
 function setupAudioUnlock() {
   const events = ['pointerdown', 'keydown', 'touchend'];
   const unlock = () => {
@@ -71,6 +72,7 @@ function boot() {
   setupTabs(games);
   setupAudioUnlock();
   storyUi.init({ games });
+  vipUi.init();
   document.documentElement.classList.add('is-ready');
 }
 

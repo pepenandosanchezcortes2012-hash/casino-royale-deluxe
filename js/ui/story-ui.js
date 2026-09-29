@@ -1,6 +1,7 @@
 // Interfaz narrativa de «El Último Crédito»: prólogo, finales, transiciones de zona, mapa del
-// casino, Bitácora del Crupier, tablero de encargos, expediente con logros y efectos de las
-// jugadas críticas. Todo el texto se escribe con textContent.
+// casino, Bitácora del Crupier, tablero de encargos, salvavidas (bono diario, rescates VIP y
+// favores), expediente con logros y efectos de las jugadas críticas. Todo el texto se escribe
+// con textContent.
 
 import { campaign } from '../story/campaign.js';
 import { ZONES, FREEDOM_GOAL } from '../story/zones.js';
@@ -13,6 +14,8 @@ import { hud, formatChips } from './hud.js';
 import { el } from './svg.js';
 
 const LOG_VISIBLE = 40;
+// La voz de las jugadas críticas no se repite más de una vez por minuto.
+const CRITICAL_VOICE_GAP = 60000;
 const timeFormat = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' });
 const dateFormat = new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
@@ -83,6 +86,8 @@ class StoryUi {
   #games = {};
   #typer = new Typewriter();
   #criticalTimer = 0;
+  #criticalVoiceAt = 0;
+  #brokeTimer = 0;
   #restartArmed = false;
   #replaying = false;
 
@@ -96,7 +101,10 @@ class StoryUi {
       hudLegend: $('hud-legend'),
       hudZone: $('hud-zone'),
       dossierButton: $('btn-dossier'),
-      favor: $('btn-favor'),
+      lifeline: $('btn-lifeline'),
+      lifelineDialog: $('lifeline-dialog'),
+      lifelineList: $('lifeline-list'),
+      lifelineClose: $('lifeline-close'),
       logPanel: $('log-panel'),
       logList: $('log-list'),
       logTicker: $('log-ticker'),
@@ -171,10 +179,16 @@ class StoryUi {
     campaign.addEventListener('unlock', (event) => this.#onUnlock(event.detail.zone));
     campaign.addEventListener('title', (event) => this.#onTitle(event.detail));
     campaign.addEventListener('favor', (event) => this.#onFavor(event.detail));
+    campaign.addEventListener('vip', (event) => this.#onVip(event.detail));
+    campaign.addEventListener('broke', () => this.#onBroke());
     campaign.addEventListener('status', (event) => this.#onStatus(event.detail.status));
     wallet.addEventListener('change', () => this.#renderLight());
 
-    d.favor.addEventListener('click', () => campaign.takeFavor());
+    d.lifeline.addEventListener('click', () => this.#openLifelines());
+    d.lifelineClose.addEventListener('click', () => d.lifelineDialog.close());
+    d.lifelineDialog.addEventListener('click', (event) => {
+      if (event.target === d.lifelineDialog) d.lifelineDialog.close();
+    });
     d.dossierButton.addEventListener('click', () => this.#openDossier());
     d.dossierClose.addEventListener('click', () => d.dossier.close());
     d.dossier.addEventListener('click', (event) => {
@@ -264,8 +278,12 @@ class StoryUi {
     audio.riser(1.4);
     audio.startHeartbeat(zone.id === 'penthouse' ? 96 : 84);
     audio.setTension(1);
-    if (zone.id === 'penthouse') audio.say('sibila', { i: randomInt(4) }, { interrupt: true });
-    else audio.say('critical', {}, { interrupt: true });
+    const now = Date.now();
+    if (now - this.#criticalVoiceAt > CRITICAL_VOICE_GAP) {
+      this.#criticalVoiceAt = now;
+      if (zone.id === 'penthouse') audio.say('sibila', { i: randomInt(4) }, { interrupt: true });
+      else audio.say('critical', {}, { interrupt: true });
+    }
     clearTimeout(this.#criticalTimer);
     this.#criticalTimer = setTimeout(() => this.#endCritical(null), 30000);
     this.#dom.root.style.setProperty('--critical-share', String(Math.min(1, share)));
@@ -331,8 +349,76 @@ class StoryUi {
     audio.chip();
   }
 
+  #onVip({ kind, amount, left }) {
+    const text = kind === 'daily'
+      ? `Bono diario del Club VIP: +${formatChips(amount)} créditos`
+      : `Rescate VIP: +${formatChips(amount)} créditos · quedan ${left} en esta leyenda`;
+    hud.toast(text, 'success', 4200);
+    audio.chip();
+    audio.win(kind === 'daily' ? 2 : 1);
+  }
+
+  // Sin créditos: tras ver el resultado de la ronda se ofrecen los salvavidas disponibles.
+  #onBroke() {
+    clearTimeout(this.#brokeTimer);
+    this.#brokeTimer = setTimeout(() => {
+      if (!campaign.lifelines().broke || document.querySelector('dialog[open]')) return;
+      this.#openLifelines();
+    }, 1400);
+  }
+
+  #openLifelines() {
+    this.#renderLifelines();
+    if (!this.#dom.lifelineDialog.open) this.#dom.lifelineDialog.showModal();
+  }
+
+  #renderLifelines() {
+    const life = campaign.lifelines();
+    const option = ({ kind, title, detail, action, available, onUse }) => {
+      const card = el('div', `lifeline is-${kind}`);
+      if (!available) card.classList.add('is-spent');
+      const text = el('div', 'lifeline-text');
+      text.append(el('strong', '', title), el('span', '', detail));
+      const button = el('button', `btn ${kind === 'vip' ? 'btn-gold' : 'btn-danger'}`, action);
+      button.type = 'button';
+      button.disabled = !available;
+      button.addEventListener('click', () => {
+        if (onUse() > 0) this.#dom.lifelineDialog.close();
+      });
+      card.append(text, button);
+      return card;
+    };
+    const daily = option({
+      kind: 'vip',
+      title: `Bono diario del Club VIP · +${formatChips(life.daily.amount)}`,
+      detail: life.daily.available ? 'Uno al día, también cuando tienes saldo.' : 'Ya lo has cobrado hoy. Vuelve mañana.',
+      action: 'Reclamar',
+      available: life.daily.available,
+      onUse: () => campaign.claimDaily(),
+    });
+    const rescue = option({
+      kind: 'vip',
+      title: `Rescate VIP ${life.rescue.rank} · +${formatChips(life.rescue.amount)}`,
+      detail: `Quedan ${life.rescue.left} de ${life.rescue.total} en esta leyenda. Sube de rango para tener más.`,
+      action: 'Usar rescate',
+      available: life.rescue.available,
+      onUse: () => campaign.takeRescue(),
+    });
+    const favor = option({
+      kind: 'syndicate',
+      title: `Favor del Sindicato · +${formatChips(life.favor.amount)}`,
+      detail: `Quedan ${life.favor.left} de 3. Crece con la zona más alta que hayas pisado.`,
+      action: 'Pedir favor',
+      available: life.favor.available,
+      onUse: () => campaign.takeFavor(),
+    });
+    this.#dom.lifelineList.replaceChildren(daily, rescue, favor);
+  }
+
   #onStatus(status) {
     if (status === 'playing') return;
+    clearTimeout(this.#brokeTimer);
+    if (this.#dom.lifelineDialog.open) this.#dom.lifelineDialog.close();
     for (const game of Object.values(this.#games)) game.onHide?.();
     this.#endCritical(null);
     setTimeout(() => this.#showEnding(status, true), 1800);
@@ -376,6 +462,7 @@ class StoryUi {
       ['Mejor racha', formatChips(st.bestStreak)],
       ['Encargos cumplidos', formatChips(st.contractsDone)],
       ['Favores usados', `${st.favorsUsed} de 3`],
+      ['Club VIP', `${st.dailyBonuses} ${st.dailyBonuses === 1 ? 'bono' : 'bonos'} · ${st.vipRescues} ${st.vipRescues === 1 ? 'rescate' : 'rescates'}`],
       ['Logros', `${Object.keys(s.achievements).length} de ${ACHIEVEMENTS.length}`],
       ['Duración', duration(ended - s.started)],
     ];
@@ -451,7 +538,7 @@ class StoryUi {
     head.append(
       el('p', 'dossier-kicker', `Leyenda nº ${s.legend} · ${zone.name}`),
       el('h3', 'dossier-name', campaign.title.name),
-      el('p', 'dossier-sub', `${formatChips(wallet.balance)} de ${formatChips(FREEDOM_GOAL)} créditos para comprar tu libertad · Favores del Sindicato: ${s.favorsLeft} de 3`),
+      el('p', 'dossier-sub', `${formatChips(wallet.balance)} de ${formatChips(FREEDOM_GOAL)} créditos para comprar tu libertad · Favores del Sindicato: ${s.favorsLeft} de 3 · Rescates VIP: ${campaign.lifelines().rescue.left} de ${campaign.lifelines().rescue.total}`),
     );
     const progress = el('div', 'freedom-track freedom-track-lg');
     const fill = el('span', 'freedom-fill');
@@ -536,7 +623,7 @@ class StoryUi {
     this.#dom.freedom.style.transform = `scaleX(${Math.min(1, balance / FREEDOM_GOAL)})`;
     this.#dom.freedomText.textContent = `${formatChips(balance)} / ${formatChips(FREEDOM_GOAL)}`;
     this.#renderDoors();
-    this.#renderFavor();
+    this.#renderLifeline();
   }
 
   #render() {
@@ -586,11 +673,16 @@ class StoryUi {
     }
   }
 
-  #renderFavor() {
-    const status = campaign.favorStatus();
-    const button = this.#dom.favor;
-    button.hidden = !status.available;
-    if (status.available) button.textContent = `Pedir favor · +${formatChips(status.amount)} (quedan ${status.left})`;
+  #renderLifeline() {
+    const life = campaign.lifelines();
+    const d = this.#dom;
+    const show = life.broke && (life.daily.available || life.rescue.available || life.favor.available);
+    d.lifeline.hidden = !show;
+    if (show) d.lifeline.textContent = 'Sin créditos · Pedir ayuda';
+    if (d.lifelineDialog.open) {
+      if (life.broke) this.#renderLifelines();
+      else d.lifelineDialog.close();
+    }
   }
 }
 

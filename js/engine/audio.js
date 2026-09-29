@@ -1,18 +1,21 @@
 // Motor de audio procedural con Web Audio API: ningún archivo de audio externo.
 // Buses independientes: efectos (SFX) y música, más la voz del crupier (Web Speech API).
+// Dos estilos de música: noir de suspense (cambia con la zona y la tensión) o lounge jazz.
 // El contexto se crea y se reanuda tras el primer gesto del usuario (política de autoplay).
 
 import { storage } from './storage.js';
 import { randomFloat, randomBetween } from './rng.js';
 import { NoirMusic } from './noir.js';
+import { LoungeMusic } from './music.js';
 import { DealerVoice } from './voice.js';
 
 const KEY = 'crd.audio.v2';
 const LEGACY_KEY = 'crd.audio.v1';
 const SILENCE = 0.0001;
 const LANGS = ['es', 'en'];
+export const MUSIC_STYLES = Object.freeze(['noir', 'lounge']);
 
-const DEFAULTS = Object.freeze({ muted: false, sfx: 0.8, musicOn: true, music: 0.3, voiceOn: true, voice: 0.9, lang: 'es' });
+const DEFAULTS = Object.freeze({ muted: false, sfx: 0.8, musicOn: true, music: 0.3, style: 'noir', voiceOn: true, voice: 0.9, lang: 'es' });
 
 const level = (value, fallback) => (typeof value === 'number' && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : fallback);
 
@@ -23,6 +26,7 @@ function sanitize(raw) {
     sfx: level(source.sfx, DEFAULTS.sfx),
     musicOn: typeof source.musicOn === 'boolean' ? source.musicOn : DEFAULTS.musicOn,
     music: level(source.music, DEFAULTS.music),
+    style: MUSIC_STYLES.includes(source.style) ? source.style : DEFAULTS.style,
     voiceOn: typeof source.voiceOn === 'boolean' ? source.voiceOn : DEFAULTS.voiceOn,
     voice: level(source.voice, DEFAULTS.voice),
     lang: LANGS.includes(source.lang) ? source.lang : DEFAULTS.lang,
@@ -35,7 +39,8 @@ class AudioEngine extends EventTarget {
   #sfx = null;
   #musicBus = null;
   #noise = null;
-  #music = null;
+  #noir = null;
+  #lounge = null;
   #hidden = false;
   #mood = 'alley';
   #tension = 0.12;
@@ -111,8 +116,9 @@ class AudioEngine extends EventTarget {
       const data = this.#noise.getChannelData(0);
       for (let i = 0; i < length; i++) data[i] = randomFloat() * 2 - 1;
 
-      this.#music = new NoirMusic(ctx, this.#musicBus, this.#mood);
-      this.#music.setTension(this.#tension);
+      this.#noir = new NoirMusic(ctx, this.#musicBus, this.#mood);
+      this.#noir.setTension(this.#tension);
+      this.#lounge = new LoungeMusic(ctx, this.#musicBus);
     }
     if (this.#ctx.state === 'suspended' && !this.#hidden) {
       this.#ctx.resume().then(() => this.#syncMusic(), () => {});
@@ -126,7 +132,8 @@ class AudioEngine extends EventTarget {
     this.#hidden = hidden;
     if (!this.#ctx) return;
     if (hidden) {
-      this.#music?.stop();
+      this.#noir?.stop();
+      this.#lounge?.stop();
       this.#ctx.suspend().catch(() => {});
     } else {
       this.#ctx.resume().then(() => this.#syncMusic(), () => {});
@@ -147,11 +154,14 @@ class AudioEngine extends EventTarget {
   }
 
   #syncMusic() {
-    if (!this.#music) return;
+    if (!this.#noir) return;
     const s = this.#settings;
     const wanted = s.musicOn && !s.muted && s.music > 0 && !this.#hidden && this.#ctx.state === 'running';
-    if (wanted) this.#music.start();
-    else this.#music.stop();
+    const active = s.style === 'lounge' ? this.#lounge : this.#noir;
+    for (const engine of [this.#noir, this.#lounge]) {
+      if (engine !== active || !wanted) engine.stop();
+    }
+    if (wanted) active.start();
   }
 
   #ready() {
@@ -376,12 +386,12 @@ class AudioEngine extends EventTarget {
 
   setMood(mood) {
     this.#mood = mood;
-    this.#music?.setMood(mood);
+    this.#noir?.setMood(mood);
   }
 
   setTension(value) {
     this.#tension = Math.min(1, Math.max(0, value));
-    this.#music?.setTension(this.#tension);
+    this.#noir?.setTension(this.#tension);
   }
 
   // Latido grave «lub-dub».
