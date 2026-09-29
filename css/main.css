@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Casino Royale Deluxe — base, variables, layout y temas de tapete
+   El Último Crédito — base, variables y layout (los temas por zona viven en story.css)
    ========================================================================== */
 
 :root {
@@ -41,25 +41,6 @@
   color-scheme: dark;
 }
 
-html[data-felt="sapphire"] {
-  --felt-a: #1b4f96;
-  --felt-b: #0a2550;
-  --felt-glow: rgba(120, 180, 255, 0.1);
-}
-
-html[data-felt="crimson"] {
-  --felt-a: #8e1627;
-  --felt-b: #43080f;
-  --felt-glow: rgba(255, 120, 140, 0.08);
-}
-
-html[data-felt="onyx"] {
-  --felt-a: #2a2d31;
-  --felt-b: #08090a;
-  --felt-line: rgba(212, 175, 55, 0.6);
-  --felt-glow: rgba(212, 175, 55, 0.07);
-}
-
 *,
 *::before,
 *::after {
@@ -81,8 +62,8 @@ body {
   color: var(--ink);
   background-color: var(--bg-0);
   background-image:
-    radial-gradient(1200px 600px at 50% -10%, rgba(212, 175, 55, 0.14), transparent 60%),
-    radial-gradient(900px 700px at 100% 100%, rgba(193, 18, 31, 0.1), transparent 60%),
+    radial-gradient(1200px 600px at 50% -10%, var(--ambient-top, rgba(212, 175, 55, 0.14)), transparent 60%),
+    radial-gradient(900px 700px at 100% 100%, var(--ambient-corner, rgba(193, 18, 31, 0.1)), transparent 60%),
     repeating-radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.018) 0 2px, transparent 2px 24px),
     linear-gradient(180deg, var(--bg-1), var(--bg-0));
   background-attachment: fixed;
@@ -321,10 +302,30 @@ code {
 
 /* ---------- Escenario ---------- */
 
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 18px;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
 .stage {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: 16px var(--gutter) 32px;
+}
+
+@media (min-width: 1180px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 330px;
+    padding-right: var(--gutter);
+  }
+
+  .stage {
+    padding-right: 0;
+  }
 }
 
 .panel {
@@ -406,7 +407,7 @@ code {
 /* ---------- Pie ---------- */
 
 .footer {
-  max-width: 1200px;
+  max-width: 1500px;
   margin: 0 auto;
   padding: 18px var(--gutter) max(28px, env(safe-area-inset-bottom));
   border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -437,7 +438,7 @@ code {
   }
 
   .hud {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     justify-content: center;
     width: 100%;
     gap: 6px;
@@ -449,6 +450,12 @@ code {
     padding: 2px 8px;
   }
 
+  .hud-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
   .hud-value {
     font-size: 1.1rem;
   }
@@ -457,11 +464,15 @@ code {
     font-size: 0.95rem;
   }
 
-  .hud .btn-gold,
-  .hud .btn-rescue {
-    flex: none;
+  .hud .btn-dossier {
+    flex: 0 1 auto;
+    min-width: 0;
     padding: 0 10px;
-    font-size: 0.85rem;
+  }
+
+  .hud .btn-favor {
+    order: 5;
+    flex: 1 1 100%;
   }
 
   .hud .btn-icon {

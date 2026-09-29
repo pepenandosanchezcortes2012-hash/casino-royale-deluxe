@@ -1,4 +1,5 @@
-// Inicializador maestro: HUD, mesas, pestañas accesibles y desbloqueo de audio.
+// Inicializador maestro de «El Último Crédito»: HUD, mesas, pestañas accesibles, capa narrativa
+// (campaña, bitácora, cinemáticas) y desbloqueo del audio.
 
 import { audio } from './engine/audio.js';
 import { storage } from './engine/storage.js';
@@ -7,9 +8,11 @@ import { hud } from './ui/hud.js';
 import { BlackjackGame } from './games/blackjack.js';
 import { RouletteGame } from './games/roulette.js';
 import { SlotsGame } from './games/slots.js';
+import { storyUi } from './ui/story-ui.js';
 
 const TAB_KEY = 'crd.tab.v1';
 
+// El AudioContext (efectos y música noir) solo puede arrancar tras un gesto del usuario.
 function setupAudioUnlock() {
   const events = ['pointerdown', 'keydown', 'touchend'];
   const unlock = () => {
@@ -17,6 +20,7 @@ function setupAudioUnlock() {
     if (audio.unlocked) events.forEach((type) => window.removeEventListener(type, unlock, true));
   };
   events.forEach((type) => window.addEventListener(type, unlock, { capture: true, passive: true }));
+  document.addEventListener('visibilitychange', () => audio.setHidden(document.hidden));
 }
 
 function setupTabs(games) {
@@ -66,6 +70,7 @@ function boot() {
   };
   setupTabs(games);
   setupAudioUnlock();
+  storyUi.init({ games });
   document.documentElement.classList.add('is-ready');
 }
 

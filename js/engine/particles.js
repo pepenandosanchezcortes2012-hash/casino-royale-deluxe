@@ -4,8 +4,9 @@
 import { randomFloat, randomBetween, pick } from './rng.js';
 
 const CONFETTI = ['#f7e08a', '#d4af37', '#ff4d6d', '#ffffff', '#4dd0e1', '#7ee081', '#b388ff'];
+const GOLD = ['#fff3b0', '#f7e08a', '#d4af37', '#b8860b', '#ffe37a', '#ffffff'];
 const GRAVITY = 900;
-const MAX_PARTICLES = 900;
+const MAX_PARTICLES = 1400;
 
 export class ParticleSystem {
   #canvas;
@@ -81,6 +82,41 @@ export class ParticleSystem {
       });
     }
     this.#start();
+  }
+
+  // Lluvia de confeti que cae desde arriba (paleta dorada por defecto).
+  rain(count = 40, palette = GOLD) {
+    for (let i = 0; i < this.#scale(count); i++) {
+      this.#add({
+        kind: 'confetti',
+        x: randomFloat() * this.#width,
+        y: -20 - randomFloat() * 60,
+        vx: randomBetween(-60, 60),
+        vy: randomBetween(80, 260),
+        w: randomBetween(5, 10),
+        h: randomBetween(8, 15),
+        rot: randomFloat() * Math.PI * 2,
+        spin: randomBetween(-7, 7),
+        flutter: randomFloat() * Math.PI * 2,
+        color: pick(palette),
+        life: randomBetween(4.5, 6.5),
+        age: 0,
+      });
+    }
+    this.#start();
+  }
+
+  // Tormenta dorada del gran final: lluvia continua, ráfagas de confeti y chispas.
+  goldStorm(seconds = 8) {
+    const end = performance.now() + seconds * 1000;
+    const tick = () => {
+      if (performance.now() > end) return;
+      this.rain(18);
+      if (randomFloat() < 0.35) this.sparks(randomBetween(0.15, 0.85) * this.#width, randomBetween(0.15, 0.6) * this.#height, 40);
+      if (randomFloat() < 0.12) this.confetti(randomBetween(0.2, 0.8) * this.#width, this.#height, 60);
+      setTimeout(tick, 120);
+    };
+    tick();
   }
 
   // Nivel 1: chispas; 2: confeti + chispas; 3: jackpot con ráfagas encadenadas.

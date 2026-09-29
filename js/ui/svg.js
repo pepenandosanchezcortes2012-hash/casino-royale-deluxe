@@ -30,12 +30,15 @@ export function el(tag, className = '', text = null) {
 // ---------- Fichas ----------
 
 const CHIP_COLORS = {
-  10: { base: '#1f5fbf', inner: '#2a70d6', text: '#ffffff' },
-  25: { base: '#1c8a3f', inner: '#23a24b', text: '#ffffff' },
-  50: { base: '#d9661a', inner: '#ef7a2a', text: '#ffffff' },
-  100: { base: '#15171b', inner: '#2a2d33', text: '#f7e08a' },
-  500: { base: '#6a2ea3', inner: '#7d3cbd', text: '#ffffff' },
-  1000: { base: '#c99a16', inner: '#e3b52c', text: '#3a2600' },
+  1: { base: '#e9e4d8', inner: '#f6f2e8', text: '#2b2418', edge: '#8a1c1c' },
+  5: { base: '#b3261e', inner: '#cc3a2f', text: '#ffffff', edge: '#ffffff' },
+  10: { base: '#1f5fbf', inner: '#2a70d6', text: '#ffffff', edge: '#ffffff' },
+  25: { base: '#1c8a3f', inner: '#23a24b', text: '#ffffff', edge: '#ffffff' },
+  100: { base: '#15171b', inner: '#2a2d33', text: '#f7e08a', edge: '#ffffff' },
+  500: { base: '#6a2ea3', inner: '#7d3cbd', text: '#ffffff', edge: '#ffffff' },
+  1000: { base: '#c99a16', inner: '#e3b52c', text: '#3a2600', edge: '#ffffff' },
+  5000: { base: '#0e7c86', inner: '#14939e', text: '#ffffff', edge: '#f7e08a' },
+  10000: { base: '#c6ccd4', inner: '#e3e7ec', text: '#1b1f24', edge: '#b3261e' },
 };
 
 export function chipLabel(value) {
@@ -43,11 +46,11 @@ export function chipLabel(value) {
 }
 
 export function chipSvg(value) {
-  const colors = CHIP_COLORS[value] ?? CHIP_COLORS[10];
+  const colors = CHIP_COLORS[value] ?? CHIP_COLORS[1];
   const label = chipLabel(value);
   return svg('svg', { viewBox: '0 0 100 100', class: 'chip-svg', 'aria-hidden': 'true', focusable: 'false' }, [
     svg('circle', { cx: 50, cy: 50, r: 48, fill: colors.base, stroke: 'rgba(0,0,0,.45)', 'stroke-width': 2 }),
-    svg('circle', { cx: 50, cy: 50, r: 43, fill: 'none', stroke: '#ffffff', 'stroke-width': 9, 'stroke-dasharray': '11.26 11.26' }),
+    svg('circle', { cx: 50, cy: 50, r: 43, fill: 'none', stroke: colors.edge, 'stroke-width': 9, 'stroke-dasharray': '11.26 11.26' }),
     svg('circle', { cx: 50, cy: 50, r: 33, fill: colors.inner, stroke: 'rgba(255,255,255,.75)', 'stroke-width': 1.6, 'stroke-dasharray': '3 2.4' }),
     svg('circle', { cx: 50, cy: 50, r: 28, fill: 'none', stroke: 'rgba(0,0,0,.25)', 'stroke-width': 1 }),
     svg('circle', { cx: 50, cy: 50, r: 48, fill: 'url(#chip-shade)' }),
@@ -65,7 +68,7 @@ export function chipSvg(value) {
 }
 
 // Desglose voraz de un importe en fichas, para pintar pilas realistas.
-export function breakdown(amount, denominations = [1000, 500, 100, 50, 25, 10]) {
+export function breakdown(amount, denominations = [10000, 5000, 1000, 500, 100, 25, 10, 5, 1]) {
   const chips = [];
   let rest = amount;
   for (const value of denominations) {
@@ -74,7 +77,7 @@ export function breakdown(amount, denominations = [1000, 500, 100, 50, 25, 10]) 
       rest -= value;
     }
   }
-  if (rest > 0 && chips.length === 0) chips.push(10);
+  if (rest > 0 && chips.length === 0) chips.push(1);
   return chips;
 }
 
@@ -123,19 +126,20 @@ function pip(suit, x, y, size, flip = false) {
   return useRef(`suit-${suit}`, attrs);
 }
 
+// Índices grandes ("jumbo") para que el rango se lea aunque la carta mida menos de 50 px.
 function corner(rank, suit) {
   return svg('g', {}, [
     svgText(rank, {
-      x: 30,
-      y: 50,
+      x: 34,
+      y: 64,
       'text-anchor': 'middle',
-      'font-size': rank === '10' ? 38 : 44,
+      'font-size': rank === '10' ? 46 : 62,
       'font-weight': 700,
       'font-family': 'Georgia, "Times New Roman", serif',
-      'letter-spacing': rank === '10' ? -3 : 0,
+      'letter-spacing': rank === '10' ? -5 : 0,
       fill: 'currentColor',
     }),
-    pip(suit, 30, 80, 30),
+    pip(suit, 34, 98, 38),
   ]);
 }
 

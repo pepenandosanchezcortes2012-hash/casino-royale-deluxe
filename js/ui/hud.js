@@ -1,11 +1,12 @@
-// HUD: saldo, fichas en juego, racks de fichas, rescate por bancarrota, sonido, tienda VIP y avisos.
+// HUD: créditos y fichas en juego, racks de fichas de la zona, panel de sonido y voz,
+// avisos y efectos. La parte narrativa (título, zona, favores, expediente) vive en story-ui.js.
 
-import { wallet, DENOMINATIONS, FELTS, MIN_BET, RESCUE_AMOUNT } from '../engine/wallet.js';
+import { wallet, DENOMINATIONS } from '../engine/wallet.js';
 import { audio } from '../engine/audio.js';
 import { storage } from '../engine/storage.js';
 import { chipSvg, chipLabel, el } from './svg.js';
 
-const CHIP_KEY = 'crd.chip.v1';
+const CHIP_KEY = 'crd.chip.v2';
 const numberFormat = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2 });
 
 export function formatChips(value) {
@@ -15,26 +16,36 @@ export function formatChips(value) {
 class Hud {
   #dom = null;
   #fx = null;
-  #selected = 25;
+  #selected = 1;
+  #available = [...DENOMINATIONS];
   #racks = [];
   #chipListeners = new Set();
   #shown = { balance: 0, inPlay: 0 };
   #tween = 0;
-  #rescueTimer = 0;
 
   init({ fx }) {
     this.#fx = fx;
+    const $ = (id) => document.getElementById(id);
     this.#dom = {
-      balance: document.getElementById('hud-balance'),
-      inPlay: document.getElementById('hud-inplay'),
-      rescue: document.getElementById('btn-rescue'),
-      vip: document.getElementById('btn-vip'),
-      sound: document.getElementById('btn-sound'),
-      soundIcon: document.getElementById('btn-sound-icon'),
-      toasts: document.getElementById('toasts'),
-      dialog: document.getElementById('vip-dialog'),
-      vipList: document.getElementById('vip-list'),
-      vipClose: document.getElementById('vip-close'),
+      balance: $('hud-balance'),
+      inPlay: $('hud-inplay'),
+      sound: $('btn-sound'),
+      soundIcon: $('btn-sound-icon'),
+      toasts: $('toasts'),
+      soundDialog: $('sound-dialog'),
+      soundClose: $('sound-close'),
+      sndMute: $('snd-mute'),
+      sndSfx: $('snd-sfx'),
+      sndSfxOut: $('snd-sfx-out'),
+      sndMusicOn: $('snd-music-on'),
+      sndMusic: $('snd-music'),
+      sndMusicOut: $('snd-music-out'),
+      sndVoiceOn: $('snd-voice-on'),
+      sndVoice: $('snd-voice'),
+      sndVoiceOut: $('snd-voice-out'),
+      sndLang: $('snd-lang'),
+      sndTest: $('snd-test'),
+      sndNote: $('snd-voice-note'),
     };
 
     const saved = storage.read(CHIP_KEY, null);
@@ -45,22 +56,13 @@ class Hud {
     this.#dom.inPlay.textContent = formatChips(wallet.inPlay);
 
     wallet.addEventListener('change', () => this.#onWalletChange());
-    this.#dom.rescue.addEventListener('click', () => this.#rescue());
-    this.#dom.vip.addEventListener('click', () => this.openShop());
-    this.#dom.vipClose.addEventListener('click', () => this.#dom.dialog.close());
-    this.#dom.dialog.addEventListener('click', (event) => {
-      if (event.target === this.#dom.dialog) this.#dom.dialog.close();
+    this.#dom.sound.addEventListener('click', () => this.#openSound());
+    this.#dom.soundDialog.addEventListener('click', (event) => {
+      if (event.target === this.#dom.soundDialog) this.#dom.soundDialog.close();
     });
-    this.#dom.sound.addEventListener('click', () => {
-      audio.unlock();
-      audio.setMuted(!audio.muted);
-      this.#renderSound();
-      audio.click();
-    });
-
-    document.documentElement.dataset.felt = wallet.felt;
+    this.#dom.soundClose.addEventListener('click', () => this.#dom.soundDialog.close());
+    this.#bindSound();
     this.#renderSound();
-    this.#renderRescue();
   }
 
   // ---------- Racks de fichas ----------
@@ -73,7 +75,7 @@ class Hud {
     this.#chipListeners.add(listener);
   }
 
-  // mode "place": pulsar una ficha la selecciona y la apuesta (onPlace). mode "select": solo selecciona.
+  // Con onPlace, pulsar una ficha también la apuesta; sin él, solo la selecciona.
   mountRack(container, { onPlace = null } = {}) {
     const rack = { container, onPlace, buttons: new Map() };
     for (const value of DENOMINATIONS) {
@@ -94,10 +96,18 @@ class Hud {
     return rack;
   }
 
+  // Fichas que admite la zona actual (el resto se oculta).
+  setDenominations(values) {
+    this.#available = DENOMINATIONS.filter((value) => values.includes(value));
+    if (!this.#available.includes(this.#selected)) this.#selected = this.#available[0];
+    this.#renderRacks();
+  }
+
   selectChip(value) {
-    if (!DENOMINATIONS.includes(value)) return;
+    if (!this.#available.includes(value)) return;
     this.#selected = value;
     storage.write(CHIP_KEY, value);
+    audio.click();
     this.#renderRacks();
     for (const listener of this.#chipListeners) listener(value);
   }
@@ -105,12 +115,13 @@ class Hud {
   #renderRacks() {
     const balance = wallet.balance;
     if (this.#selected > balance) {
-      const affordable = DENOMINATIONS.filter((value) => value <= balance);
+      const affordable = this.#available.filter((value) => value <= balance);
       if (affordable.length) this.#selected = affordable[affordable.length - 1];
     }
     for (const rack of this.#racks) {
       for (const [value, button] of rack.buttons) {
         const selected = value === this.#selected;
+        button.hidden = !this.#available.includes(value);
         button.classList.toggle('is-selected', selected);
         button.setAttribute('aria-pressed', String(selected));
         button.disabled = value > balance;
@@ -123,8 +134,6 @@ class Hud {
   #onWalletChange() {
     this.#animateNumbers();
     this.#renderRacks();
-    this.#renderRescue();
-    if (this.#dom.dialog.open) this.#renderShop();
   }
 
   #animateNumbers() {
@@ -132,8 +141,7 @@ class Hud {
     const to = { balance: wallet.balance, inPlay: wallet.inPlay };
     const start = performance.now();
     const duration = 450;
-    const gained = to.balance > from.balance;
-    this.#dom.balance.classList.toggle('is-up', gained);
+    this.#dom.balance.classList.toggle('is-up', to.balance > from.balance);
     this.#dom.balance.classList.toggle('is-down', to.balance < from.balance);
     cancelAnimationFrame(this.#tween);
     const step = (now) => {
@@ -143,8 +151,8 @@ class Hud {
         balance: from.balance + (to.balance - from.balance) * ease,
         inPlay: from.inPlay + (to.inPlay - from.inPlay) * ease,
       };
-      this.#dom.balance.textContent = formatChips(k < 1 ? Math.round(this.#shown.balance) : to.balance);
-      this.#dom.inPlay.textContent = formatChips(k < 1 ? Math.round(this.#shown.inPlay) : to.inPlay);
+      this.#dom.balance.textContent = formatChips(k < 1 ? Math.round(this.#shown.balance * 10) / 10 : to.balance);
+      this.#dom.inPlay.textContent = formatChips(k < 1 ? Math.round(this.#shown.inPlay * 10) / 10 : to.inPlay);
       if (k < 1) {
         this.#tween = requestAnimationFrame(step);
       } else {
@@ -155,98 +163,60 @@ class Hud {
     this.#tween = requestAnimationFrame(step);
   }
 
-  // ---------- Rescate por bancarrota ----------
+  // ---------- Sonido y voz ----------
 
-  #renderRescue() {
-    const status = wallet.rescueStatus();
-    const button = this.#dom.rescue;
-    button.hidden = !status.busted;
-    clearTimeout(this.#rescueTimer);
-    if (!status.busted) return;
-    if (status.eligible) {
-      button.disabled = false;
-      button.textContent = `Rescate +${RESCUE_AMOUNT}`;
-      button.classList.add('is-pulsing');
-    } else {
-      const seconds = Math.ceil(status.remaining / 1000);
-      const mm = Math.floor(seconds / 60);
-      const ss = String(seconds % 60).padStart(2, '0');
-      button.disabled = true;
-      button.classList.remove('is-pulsing');
-      button.textContent = `Rescate en ${mm}:${ss}`;
-      this.#rescueTimer = setTimeout(() => this.#renderRescue(), 1000);
-    }
+  #openSound() {
+    audio.unlock();
+    this.#renderSound();
+    if (!this.#dom.soundDialog.open) this.#dom.soundDialog.showModal();
   }
 
-  #rescue() {
-    if (wallet.rescue()) {
-      audio.chip();
-      audio.win(1);
-      this.toast(`Rescate concedido: +${RESCUE_AMOUNT} fichas`, 'success');
-      const rect = this.#dom.balance.getBoundingClientRect();
-      this.celebrate(1, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
-    }
-    this.#renderRescue();
+  #bindSound() {
+    const d = this.#dom;
+    const percent = (input) => Number(input.value) / 100;
+    d.sndMute.addEventListener('change', () => audio.update({ muted: d.sndMute.checked }));
+    d.sndSfx.addEventListener('input', () => audio.update({ sfx: percent(d.sndSfx) }));
+    d.sndSfx.addEventListener('change', () => audio.chip());
+    d.sndMusicOn.addEventListener('change', () => audio.update({ musicOn: d.sndMusicOn.checked }));
+    d.sndMusic.addEventListener('input', () => audio.update({ music: percent(d.sndMusic) }));
+    d.sndVoiceOn.addEventListener('change', () => audio.update({ voiceOn: d.sndVoiceOn.checked }));
+    d.sndVoice.addEventListener('input', () => audio.update({ voice: percent(d.sndVoice) }));
+    d.sndLang.addEventListener('change', () => audio.update({ lang: d.sndLang.value }));
+    d.sndTest.addEventListener('click', () => {
+      audio.unlock();
+      if (!audio.say('test', {}, { interrupt: true })) {
+        this.toast(audio.voice.supported ? 'Activa la voz y el sonido para escucharla' : 'Tu navegador no admite síntesis de voz', 'warn');
+      }
+    });
+    audio.addEventListener('change', () => this.#renderSound());
   }
-
-  // ---------- Sonido ----------
 
   #renderSound() {
-    const on = !audio.muted;
-    this.#dom.sound.setAttribute('aria-pressed', String(on));
-    this.#dom.sound.setAttribute('aria-label', on ? 'Sonido activado' : 'Sonido silenciado');
-    this.#dom.soundIcon.setAttribute('href', on ? '#icon-sound-on' : '#icon-sound-off');
-  }
-
-  // ---------- Tienda VIP ----------
-
-  openShop() {
-    this.#renderShop();
-    if (!this.#dom.dialog.open) this.#dom.dialog.showModal();
-  }
-
-  #renderShop() {
-    const list = this.#dom.vipList;
-    const owned = wallet.owned;
-    const items = FELTS.map((felt) => {
-      const card = el('article', 'vip-item');
-      if (felt.id === wallet.felt) card.classList.add('is-active');
-      const swatch = el('div', 'vip-swatch');
-      swatch.style.background = `radial-gradient(circle at 50% 40%, ${felt.swatch[0]}, ${felt.swatch[1]})`;
-      const name = el('h3', 'vip-name', felt.name);
-      const price = el('p', 'vip-price', felt.price === 0 ? 'Incluido' : `${formatChips(felt.price)} fichas`);
-      const button = el('button', 'btn');
-      button.type = 'button';
-      if (felt.id === wallet.felt) {
-        button.textContent = 'En uso';
-        button.disabled = true;
-      } else if (owned.includes(felt.id)) {
-        button.textContent = 'Equipar';
-      } else {
-        button.textContent = 'Comprar';
-        button.classList.add('btn-gold');
-        button.disabled = !wallet.canAfford(felt.price);
-      }
-      button.addEventListener('click', () => this.#equip(felt));
-      card.append(swatch, name, price, button);
-      return card;
-    });
-    list.replaceChildren(...items);
-  }
-
-  #equip(felt) {
-    const buying = !wallet.owned.includes(felt.id);
-    if (!wallet.buyFelt(felt.id)) {
-      this.toast(`Necesitas ${formatChips(felt.price)} fichas para ${felt.name}`, 'warn');
-      return;
-    }
-    document.documentElement.dataset.felt = felt.id;
-    audio.chip();
-    if (buying) {
-      audio.win(1);
-      this.toast(`¡${felt.name} desbloqueado!`, 'success');
-    }
-    this.#renderShop();
+    const d = this.#dom;
+    const s = audio.settings;
+    const on = !s.muted;
+    d.sound.setAttribute('aria-label', on ? 'Sonido y voz (activado)' : 'Sonido y voz (silenciado)');
+    d.sound.classList.toggle('is-muted', !on);
+    d.soundIcon.setAttribute('href', on ? '#icon-sound-on' : '#icon-sound-off');
+    d.sndMute.checked = s.muted;
+    d.sndSfx.value = String(Math.round(s.sfx * 100));
+    d.sndSfxOut.textContent = `${Math.round(s.sfx * 100)}%`;
+    d.sndMusicOn.checked = s.musicOn;
+    d.sndMusic.value = String(Math.round(s.music * 100));
+    d.sndMusicOut.textContent = `${Math.round(s.music * 100)}%`;
+    d.sndMusic.disabled = !s.musicOn;
+    d.sndVoiceOn.checked = s.voiceOn;
+    d.sndVoice.value = String(Math.round(s.voice * 100));
+    d.sndVoiceOut.textContent = `${Math.round(s.voice * 100)}%`;
+    d.sndLang.value = s.lang;
+    const voice = audio.voice.supported;
+    d.sndVoiceOn.disabled = !voice;
+    d.sndVoice.disabled = !voice || !s.voiceOn;
+    d.sndLang.disabled = !voice;
+    d.sndTest.disabled = !voice;
+    d.sndNote.textContent = voice
+      ? 'La voz usa las voces instaladas en tu dispositivo (Web Speech API).'
+      : 'Este navegador no ofrece síntesis de voz: los anuncios se muestran solo en pantalla.';
   }
 
   // ---------- Avisos y efectos ----------
@@ -267,8 +237,16 @@ class Hud {
     this.#fx?.celebrate(level, origin);
   }
 
-  minBetNotice() {
-    this.toast(`La apuesta mínima es ${MIN_BET} fichas`, 'warn');
+  sparks(x, y, count = 24) {
+    this.#fx?.sparks(x, y, count);
+  }
+
+  goldStorm(seconds) {
+    this.#fx?.goldStorm(seconds);
+  }
+
+  minBetNotice(minBet) {
+    this.toast(`La apuesta mínima de esta zona es ${formatChips(minBet)} créditos`, 'warn');
   }
 }
 

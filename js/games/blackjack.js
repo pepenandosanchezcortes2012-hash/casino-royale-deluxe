@@ -1,99 +1,56 @@
-// Blackjack, reglas Las Vegas Strip: zapato de 6 barajas, corte al 75 %, BJ 3:2,
-// crupier se planta en todos los 17 (S17), revisa BJ con As o figura (peek), seguro 2:1,
-// doblar con dos cartas (también tras dividir), dividir hasta 4 manos, ases divididos reciben una carta.
+// Blackjack multimano (Las Vegas Strip): hasta 3 asientos con apuesta principal, Perfect Pairs
+// y 21+3 independientes; zapato de 6 barajas con corte al 75 %, BJ 3:2, S17, peek, seguro 2:1
+// por asiento, doblar y dividir por mano. Modo didáctico: coach de estrategia básica y
+// entrenador de conteo Hi-Lo (Running Count y True Count).
 
-import { shuffle } from '../engine/rng.js';
 import { Store, PHASE, wait } from '../engine/store.js';
-import { wallet, MIN_BET, money } from '../engine/wallet.js';
+import { wallet, money } from '../engine/wallet.js';
+import { campaign } from '../story/campaign.js';
 import { audio } from '../engine/audio.js';
 import { storage } from '../engine/storage.js';
 import { hud, formatChips } from '../ui/hud.js';
 import { cardElement, setCardFaceUp, chipStack, el } from '../ui/svg.js';
+import { bindRemoveGesture } from '../ui/input.js';
+import {
+  SHOE_SIZE, CUT_CARD, newShuffledShoe, rankOf, cardValue, handValue, isBlackjack, isNatural,
+  dealerShouldHit, canSplitHand, canDoubleHand, settleHand, perfectPairsResult, twentyOnePlusThreeResult,
+  basicStrategy, hiLoValue, trueCount, INSURANCE_TRUE_COUNT, SIDE_BET_HOUSE_EDGE,
+} from './blackjack-rules.js';
 
-export const DECKS = 6;
-export const SHOE_SIZE = DECKS * 52;
-export const CUT_CARD = Math.floor(SHOE_SIZE * 0.75);
-export const MAX_BET = 5000;
-export const MAX_HANDS = 4;
-export const BLACKJACK_PAYS = 1.5;
+export * from './blackjack-rules.js';
 
-const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-const SUITS = ['S', 'H', 'D', 'C'];
-const SAVE_KEY = 'crd.blackjack.v1';
-const DEAL_STEP = 380;
+export const SEATS = 3;
+
+const SAVE_KEY = 'crd.blackjack.v2';
+const LEGACY_KEY = 'crd.blackjack.v1';
+const PREFS_KEY = 'crd.blackjack.prefs.v1';
+const DEAL_STEP = 360;
 const FLIP_TIME = 560;
+const SPOTS = ['pp', 'main', 't213'];
+const SPOT_NAMES = { main: 'Apuesta principal', pp: 'Perfect Pairs', t213: '21+3' };
+const ACTION_NAMES = { hit: 'Pedir', stand: 'Plantarse', double: 'Doblar', split: 'Dividir' };
+const RESULT_TEXT = { blackjack: 'BLACKJACK', win: 'GANA', lose: 'PIERDE', push: 'EMPATE', bust: 'SE PASA' };
 
-// ---------- Reglas puras ----------
+const emptySeats = () => Array.from({ length: SEATS }, () => ({ main: 0, pp: 0, t213: 0 }));
+const seatStake = (seat) => seat.main + seat.pp + seat.t213;
+const seatsTotal = (seats) => money(seats.reduce((sum, seat) => sum + seatStake(seat), 0));
 
-export function buildShoe(decks = DECKS) {
-  const cards = [];
-  for (let d = 0; d < decks; d++) {
-    for (const suit of SUITS) for (const rank of RANKS) cards.push(rank + suit);
-  }
-  return cards;
-}
-
-export const newShuffledShoe = () => shuffle(buildShoe());
-export const rankOf = (card) => card.slice(0, -1);
-
-export function cardValue(card) {
-  const rank = rankOf(card);
-  if (rank === 'A') return 11;
-  if (rank === 'K' || rank === 'Q' || rank === 'J') return 10;
-  return Number(rank);
-}
-
-export function handValue(cards) {
-  let total = 0;
-  let aces = 0;
-  for (const card of cards) {
-    const value = cardValue(card);
-    if (value === 11) aces++;
-    total += value;
-  }
-  while (total > 21 && aces > 0) {
-    total -= 10;
-    aces--;
-  }
-  return { total, soft: aces > 0 };
-}
-
-export const isBlackjack = (cards) => cards.length === 2 && handValue(cards).total === 21;
-export const dealerShouldHit = (cards) => handValue(cards).total < 17;
-
-export function canSplitHand(hand, handCount) {
-  return (
-    hand.cards.length === 2 &&
-    !hand.splitAces &&
-    !hand.doubled &&
-    handCount < MAX_HANDS &&
-    cardValue(hand.cards[0]) === cardValue(hand.cards[1])
-  );
-}
-
-export const canDoubleHand = (hand) => hand.cards.length === 2 && !hand.splitAces && !hand.doubled;
-
-// Devuelve el resultado y el importe total devuelto al jugador (apuesta incluida).
-export function settleHand(hand, dealerCards) {
-  const player = handValue(hand.cards).total;
-  const dealer = handValue(dealerCards).total;
-  const natural = !hand.fromSplit && isBlackjack(hand.cards);
-  const dealerNatural = isBlackjack(dealerCards);
-  if (natural && dealerNatural) return { result: 'push', payout: hand.bet };
-  if (natural) return { result: 'blackjack', payout: money(hand.bet * (1 + BLACKJACK_PAYS)) };
-  if (dealerNatural) return { result: 'lose', payout: 0 };
-  if (player > 21) return { result: 'bust', payout: 0 };
-  if (dealer > 21 || player > dealer) return { result: 'win', payout: hand.bet * 2 };
-  if (player === dealer) return { result: 'push', payout: hand.bet };
-  return { result: 'lose', payout: 0 };
-}
-
-function newHand(bet, extra = {}) {
-  return { cards: [], bet, doubled: false, done: false, fromSplit: false, splitAces: false, result: null, payout: 0, ...extra };
+function newHand(seat, bet, extra = {}) {
+  return { seat, cards: [], bet, doubled: false, done: false, fromSplit: false, splitAces: false, result: null, payout: 0, ...extra };
 }
 
 function freshRound() {
-  return { hands: [], active: 0, dealer: [], dealerFinal: null, holeRevealed: false, insurance: 0, insurancePaid: null };
+  return {
+    hands: [],
+    active: -1,
+    dealer: [],
+    dealerFinal: null,
+    holeRevealed: false,
+    insurance: [0, 0, 0],
+    insuranceSeat: -1,
+    insurancePaid: null,
+    sides: null,
+  };
 }
 
 function initialState() {
@@ -103,14 +60,15 @@ function initialState() {
     stage: 'bet',
     shoe: newShuffledShoe(),
     pos: 0,
-    bet: 0,
-    lastBet: 0,
-    message: 'Coloca tu apuesta y pulsa Repartir',
+    seats: emptySeats(),
+    lastSeats: emptySeats(),
+    message: 'Toca el círculo de apuesta para jugar',
     ...freshRound(),
   };
 }
 
-const RESULT_TEXT = { blackjack: 'BLACKJACK', win: 'GANA', lose: 'PIERDE', push: 'EMPATE', bust: 'SE PASA' };
+const isSeatList = (list) => Array.isArray(list) && list.length === SEATS &&
+  list.every((seat) => seat && SPOTS.every((spot) => typeof seat[spot] === 'number' && seat[spot] >= 0));
 
 function isValidSave(s) {
   return (
@@ -118,34 +76,56 @@ function isValidSave(s) {
     Object.values(PHASE).includes(s.phase) &&
     Array.isArray(s.shoe) && s.shoe.length === SHOE_SIZE && s.shoe.every((c) => typeof c === 'string') &&
     Number.isInteger(s.pos) && s.pos >= 0 && s.pos <= SHOE_SIZE &&
-    Array.isArray(s.hands) && s.hands.every((h) => h && Array.isArray(h.cards) && typeof h.bet === 'number') &&
-    Array.isArray(s.dealer)
+    isSeatList(s.seats) && isSeatList(s.lastSeats) &&
+    Array.isArray(s.hands) && s.hands.every((h) => h && Number.isInteger(h.seat) && h.seat >= 0 && h.seat < SEATS && Array.isArray(h.cards) && typeof h.bet === 'number') &&
+    Array.isArray(s.dealer) && Array.isArray(s.insurance) && s.insurance.length === SEATS
   );
 }
 
-// ---------- Mesa ----------
+function loadPrefs() {
+  const saved = storage.read(PREFS_KEY, null) ?? {};
+  return {
+    coach: saved.coach === true,
+    count: saved.count === true,
+    right: Number.isInteger(saved.right) && saved.right >= 0 ? saved.right : 0,
+    total: Number.isInteger(saved.total) && saved.total >= 0 ? saved.total : 0,
+  };
+}
+
+const signed = (value) => (value > 0 ? `+${value}` : String(value));
 
 export class BlackjackGame {
   #store;
   #dom;
-  #view = { dealer: [], hands: [] };
+  #view = { dealer: [], seats: [] };
   #clock = 0;
   #instant = true;
+  #prefs = loadPrefs();
+  #feedback = '';
+  #countTimer = 0;
 
   constructor(root) {
     this.root = root;
     const $ = (id) => document.getElementById(id);
     this.#dom = {
+      table: $('bj-table'),
       shoe: $('bj-shoe'),
       shoeFill: $('bj-shoe-fill'),
       shoeCount: $('bj-shoe-count'),
+      count: $('bj-count'),
+      countRunning: $('bj-count-running'),
+      countTrue: $('bj-count-true'),
+      countDecks: $('bj-count-decks'),
       dealerCards: $('bj-dealer-cards'),
       dealerTotal: $('bj-dealer-total'),
-      hands: $('bj-hands'),
+      seats: $('bj-seats'),
       message: $('bj-message'),
-      betCircle: $('bj-bet-circle'),
-      betStack: $('bj-bet-stack'),
-      betAmount: $('bj-bet-amount'),
+      coach: $('bj-coach'),
+      coachTip: $('bj-coach-tip'),
+      coachFeedback: $('bj-coach-feedback'),
+      coachScore: $('bj-coach-score'),
+      coachToggle: $('bj-coach-toggle'),
+      countToggle: $('bj-count-toggle'),
       clear: $('bj-clear'),
       rebet: $('bj-rebet'),
       deal: $('bj-deal'),
@@ -153,11 +133,17 @@ export class BlackjackGame {
       stand: $('bj-stand'),
       double: $('bj-double'),
       split: $('bj-split'),
+      insureLabel: $('bj-insurance-label'),
       insureYes: $('bj-insure-yes'),
       insureNo: $('bj-insure-no'),
       rack: $('bj-rack'),
+      edges: $('bj-side-edges'),
     };
+    storage.remove(LEGACY_KEY);
+    const pct = (value) => `${(value * 100).toFixed(2).replace('.', ',')} %`;
+    this.#dom.edges.textContent = `Ventaja de la casa (6 barajas): Perfect Pairs ${pct(SIDE_BET_HOUSE_EDGE.perfectPairs)} · 21+3 ${pct(SIDE_BET_HOUSE_EDGE.twentyOnePlusThree)}`;
 
+    this.#buildSeats();
     this.#store = new Store('blackjack', this.#restore());
     this.#store.subscribe((state) => {
       storage.write(SAVE_KEY, state);
@@ -166,9 +152,18 @@ export class BlackjackGame {
     wallet.addEventListener('change', () => this.#renderControls(this.state));
 
     this.#bind();
+    campaign.register('blackjack', {
+      hasPendingPlay: () => this.state.phase === PHASE.DEALING || this.state.phase === PHASE.RESOLVING,
+      onZone: () => this.#render(this.state),
+    });
     this.#render(this.state);
     this.#instant = false;
     this.#resume();
+  }
+
+  // Límites de la zona actual: asientos, apuestas laterales, mínimo y máximos.
+  #limits() {
+    return campaign.limits('blackjack');
   }
 
   get state() {
@@ -189,10 +184,14 @@ export class BlackjackGame {
       return initialState();
     }
     const state = { ...saved, busy: false };
-    if (state.phase === PHASE.IDLE || state.phase === PHASE.PAYOUT || state.phase === PHASE.BETTING) {
+    if (state.phase === PHASE.IDLE || state.phase === PHASE.BETTING || state.phase === PHASE.PAYOUT) {
       if (escrow > 0) wallet.refund('blackjack');
-      if (state.phase === PHASE.BETTING) Object.assign(state, { phase: PHASE.IDLE, bet: 0 });
-      if (state.phase === PHASE.IDLE) Object.assign(state, freshRound(), { stage: 'bet', message: 'Coloca tu apuesta y pulsa Repartir' });
+      Object.assign(state, freshRound(), {
+        phase: PHASE.IDLE,
+        stage: 'bet',
+        seats: emptySeats(),
+        message: 'Toca el círculo de apuesta para jugar',
+      });
     }
     return state;
   }
@@ -209,13 +208,51 @@ export class BlackjackGame {
     }
   }
 
+  // ---------- Construcción de asientos ----------
+
+  #buildSeats() {
+    for (let seat = 0; seat < SEATS; seat++) {
+      const node = el('section', 'bj-seat');
+      node.dataset.seat = String(seat);
+      node.setAttribute('aria-label', `Asiento ${seat + 1}`);
+      const hands = el('div', 'seat-hands');
+      const sides = el('div', 'seat-sides');
+      sides.setAttribute('aria-live', 'polite');
+      const bets = el('div', 'seat-bets');
+      const spots = {};
+      for (const spot of SPOTS) {
+        const button = el('button', `bet-spot is-${spot}`);
+        button.type = 'button';
+        button.dataset.seat = String(seat);
+        button.dataset.spot = spot;
+        const ring = el('span', 'bet-spot-ring');
+        ring.setAttribute('aria-hidden', 'true');
+        const label = el('span', 'bet-spot-label', spot === 'main' ? String(seat + 1) : spot === 'pp' ? 'PP' : '21+3');
+        label.setAttribute('aria-hidden', 'true');
+        const stack = el('span', 'bet-spot-stack');
+        stack.setAttribute('aria-hidden', 'true');
+        const amount = el('output', 'bet-spot-amount');
+        button.append(ring, label, stack, amount);
+        bets.append(button);
+        spots[spot] = { button, stack, amount, shown: -1 };
+      }
+      node.append(hands, sides, bets, el('span', 'seat-lock', 'Reservado · Salón de Neón'));
+      this.#dom.seats.append(node);
+      this.#view.seats.push({ node, hands, sides, spots, handViews: [], sidesKey: '' });
+    }
+  }
+
   // ---------- Entrada ----------
 
   #bind() {
     const d = this.#dom;
-    hud.mountRack(d.rack, { onPlace: (value) => this.addChip(value) });
-    d.betCircle.addEventListener('click', () => this.addChip(hud.selectedChip));
-    d.clear.addEventListener('click', () => this.clearBet());
+    hud.mountRack(d.rack);
+    d.seats.addEventListener('click', (event) => {
+      const spot = event.target.closest('[data-spot]');
+      if (spot) this.addChip(Number(spot.dataset.seat), spot.dataset.spot, hud.selectedChip);
+    });
+    bindRemoveGesture(d.seats, '[data-spot]', (spot) => this.removeChip(Number(spot.dataset.seat), spot.dataset.spot));
+    d.clear.addEventListener('click', () => this.clearBets());
     d.rebet.addEventListener('click', () => this.rebet());
     d.deal.addEventListener('click', () => this.deal());
     d.hit.addEventListener('click', () => this.hit());
@@ -224,6 +261,16 @@ export class BlackjackGame {
     d.split.addEventListener('click', () => this.split());
     d.insureYes.addEventListener('click', () => this.insurance(true));
     d.insureNo.addEventListener('click', () => this.insurance(false));
+    d.coachToggle.addEventListener('click', () => this.#togglePref('coach'));
+    d.countToggle.addEventListener('click', () => this.#togglePref('count'));
+  }
+
+  #togglePref(key) {
+    this.#prefs[key] = !this.#prefs[key];
+    storage.write(PREFS_KEY, this.#prefs);
+    audio.click();
+    this.#feedback = '';
+    this.#render(this.state);
   }
 
   #canBet() {
@@ -236,12 +283,37 @@ export class BlackjackGame {
     return !s.busy && s.phase === PHASE.DEALING && s.stage === 'player';
   }
 
-  addChip(value) {
-    if (!this.#canBet()) return;
+  #bettingSeats() {
     const s = this.state;
-    const current = s.phase === PHASE.BETTING ? s.bet : 0;
-    if (current + value > MAX_BET) {
-      hud.toast(`Apuesta máxima de la mesa: ${formatChips(MAX_BET)}`, 'warn');
+    return s.phase === PHASE.BETTING ? structuredClone(s.seats) : emptySeats();
+  }
+
+  #startBetting(action, seats, message) {
+    const s = this.state;
+    const reset = s.phase === PHASE.BETTING ? {} : { ...freshRound(), stage: 'bet' };
+    this.#set(action, { ...reset, phase: PHASE.BETTING, seats, message });
+  }
+
+  addChip(seat, spot, value) {
+    if (!this.#canBet() || !campaign.playable) return;
+    const limits = this.#limits();
+    if (seat >= limits.seats) {
+      hud.toast('Asiento reservado: la mesa multimano se abre en el Salón de Neón', 'warn');
+      return;
+    }
+    if (spot !== 'main' && !limits.sideBets) {
+      hud.toast('Perfect Pairs y 21+3 se abren en el Salón de Neón', 'warn');
+      return;
+    }
+    const seats = this.#bettingSeats();
+    const target = seats[seat];
+    if (spot !== 'main' && target.main <= 0) {
+      hud.toast(`Coloca primero la apuesta principal del asiento ${seat + 1}`, 'warn');
+      return;
+    }
+    const limit = spot === 'main' ? limits.maxMain : limits.maxSide;
+    if (target[spot] + value > limit) {
+      hud.toast(`Máximo en ${SPOT_NAMES[spot]}: ${formatChips(limit)}`, 'warn');
       return;
     }
     if (!wallet.hold('blackjack', value)) {
@@ -249,27 +321,68 @@ export class BlackjackGame {
       return;
     }
     audio.chip();
-    const reset = s.phase === PHASE.BETTING ? {} : { ...freshRound(), stage: 'bet' };
-    this.#set('ADD_CHIP', { ...reset, phase: PHASE.BETTING, bet: current + value, message: 'Pulsa Repartir cuando estés listo' });
+    target[spot] += value;
+    this.#startBetting('ADD_CHIP', seats, `Asiento ${seat + 1} · ${SPOT_NAMES[spot]}: ${formatChips(target[spot])}`);
   }
 
-  clearBet() {
+  removeChip(seat, spot) {
     const s = this.state;
     if (s.busy || s.phase !== PHASE.BETTING) return;
-    wallet.refund('blackjack', s.bet);
+    const seats = structuredClone(s.seats);
+    const target = seats[seat];
+    if (target[spot] <= 0) return;
+    const amount = Math.min(hud.selectedChip, target[spot]);
+    target[spot] = money(target[spot] - amount);
+    let refund = amount;
+    // Sin apuesta principal no puede haber apuestas laterales en el asiento.
+    if (spot === 'main' && target.main <= 0) {
+      refund += target.pp + target.t213;
+      target.pp = 0;
+      target.t213 = 0;
+    }
+    wallet.refund('blackjack', refund);
     audio.chip();
-    this.#set('CLEAR_BET', { phase: PHASE.IDLE, bet: 0, message: 'Coloca tu apuesta y pulsa Repartir' });
+    const empty = seatsTotal(seats) === 0;
+    this.#set('REMOVE_CHIP', {
+      seats,
+      phase: empty ? PHASE.IDLE : PHASE.BETTING,
+      message: empty ? 'Toca el círculo de apuesta para jugar' : 'Ficha retirada',
+    });
+  }
+
+  clearBets() {
+    const s = this.state;
+    if (s.busy || s.phase !== PHASE.BETTING) return;
+    wallet.refund('blackjack', seatsTotal(s.seats));
+    audio.chip();
+    this.#set('CLEAR_BETS', { phase: PHASE.IDLE, seats: emptySeats(), message: 'Apuestas retiradas' });
   }
 
   rebet() {
     const s = this.state;
-    if (!this.#canBet() || s.phase === PHASE.BETTING || s.lastBet <= 0) return;
-    if (!wallet.hold('blackjack', s.lastBet)) {
-      hud.toast('Saldo insuficiente para repetir la apuesta', 'warn');
+    if (!this.#canBet() || s.phase === PHASE.BETTING || !campaign.playable) return;
+    const total = seatsTotal(s.lastSeats);
+    if (total <= 0) return;
+    if (!this.#fitsLimits(s.lastSeats)) {
+      hud.toast('Tu apuesta anterior no cabe en los límites de esta mesa', 'warn');
+      return;
+    }
+    if (!wallet.hold('blackjack', total)) {
+      hud.toast('Saldo insuficiente para repetir las apuestas', 'warn');
       return;
     }
     audio.chip();
-    this.#set('REBET', { ...freshRound(), stage: 'bet', phase: PHASE.BETTING, bet: s.lastBet, message: 'Pulsa Repartir cuando estés listo' });
+    this.#startBetting('REBET', structuredClone(s.lastSeats), 'Apuestas anteriores repetidas: pulsa Repartir');
+  }
+
+  #fitsLimits(seats) {
+    const limits = this.#limits();
+    return seats.every((seat, i) => {
+      if (seatStake(seat) === 0) return true;
+      if (i >= limits.seats || seat.main < limits.minBet || seat.main > limits.maxMain) return false;
+      if (!limits.sideBets) return seat.pp === 0 && seat.t213 === 0;
+      return seat.pp <= limits.maxSide && seat.t213 <= limits.maxSide;
+    });
   }
 
   // ---------- Reparto ----------
@@ -307,9 +420,11 @@ export class BlackjackGame {
 
   async deal() {
     const s = this.state;
-    if (s.busy || s.phase !== PHASE.BETTING) return;
-    if (s.bet < MIN_BET) {
-      hud.minBetNotice();
+    if (s.busy || s.phase !== PHASE.BETTING || !campaign.playable) return;
+    const { minBet } = this.#limits();
+    const seatsInPlay = s.seats.map((seat, i) => (seat.main >= minBet ? i : -1)).filter((i) => i >= 0);
+    if (!seatsInPlay.length) {
+      hud.minBetNotice(minBet);
       return;
     }
     const reshuffle = s.pos >= CUT_CARD;
@@ -320,58 +435,119 @@ export class BlackjackGame {
       busy: true,
       shoe: reshuffle ? newShuffledShoe() : s.shoe,
       pos: reshuffle ? 0 : s.pos,
-      lastBet: s.bet,
-      bet: 0,
-      hands: [newHand(s.bet)],
+      lastSeats: structuredClone(s.seats),
+      hands: seatsInPlay.map((seat) => newHand(seat, s.seats[seat].main)),
       message: reshuffle ? 'Carta de corte alcanzada: barajando un zapato nuevo…' : 'Repartiendo…',
     });
     if (reshuffle) {
       audio.shuffle();
+      audio.say('shuffle');
       this.#dom.shoe.classList.add('is-shuffling');
       setTimeout(() => this.#dom.shoe.classList.remove('is-shuffling'), 1300);
       this.#clock = performance.now() + 1300;
     }
-    for (const target of [0, 'dealer', 0, 'dealer']) this.#draw(target);
+    campaign.beginRound({ game: 'blackjack', stake: seatsTotal(s.seats) });
+    const order = this.state.hands.map((_, i) => i);
+    for (const target of [...order, 'dealer', ...order, 'dealer']) this.#draw(target);
     await this.#afterInitialDeal();
   }
 
   async #afterInitialDeal() {
     this.#set('INITIAL_DEAL', { busy: true });
     await wait(this.#settleTime());
+    this.#settleSides();
     const s = this.state;
+    if (s.hands.some((hand) => isNatural(hand))) audio.say('blackjack');
     if (rankOf(s.dealer[0]) === 'A') {
-      const natural = isBlackjack(s.hands[0].cards);
-      this.#set('OFFER_INSURANCE', {
-        stage: 'insurance',
-        busy: false,
-        message: natural
-          ? '¡Blackjack! El crupier muestra un As: el seguro equivale a cobrar 1 a 1 ahora'
-          : 'El crupier muestra un As. ¿Tomas seguro? Cuesta media apuesta y paga 2 a 1',
-      });
+      audio.say('insurance');
+      this.#offerInsurance(-1);
       return;
     }
     await this.#peek();
   }
 
+  // Perfect Pairs y 21+3 se resuelven con las dos primeras cartas y la carta visible del crupier.
+  #settleSides() {
+    const s = this.state;
+    if (s.sides) return;
+    const up = s.dealer[0];
+    let stake = 0;
+    let payout = 0;
+    const sides = s.seats.map((seat, i) => {
+      const hand = s.hands.find((h) => h.seat === i);
+      if (!hand) return null;
+      const [first, second] = hand.cards;
+      const bet = (amount, result) => {
+        if (amount <= 0) return null;
+        const paid = result ? amount * (result.pays + 1) : 0;
+        stake += amount;
+        payout += paid;
+        return { amount, kind: result?.kind ?? null, name: result?.name ?? null, pays: result?.pays ?? 0, paid };
+      };
+      return { pp: bet(seat.pp, perfectPairsResult(first, second)), t213: bet(seat.t213, twentyOnePlusThreeResult(first, second, up)) };
+    });
+    if (stake > 0) {
+      wallet.settle('blackjack', stake, payout);
+      wallet.reveal('blackjack');
+    }
+    this.#set('SIDES', { sides });
+    if (payout > 0) {
+      const winners = sides.flatMap((side, i) => [side?.pp, side?.t213]
+        .filter((bet) => bet && bet.paid > 0)
+        .map((bet) => `Asiento ${i + 1}: ${bet.name} ${bet.pays}:1`));
+      audio.chip();
+      audio.win(payout >= stake * 20 ? 3 : 2);
+      hud.toast(`Apuestas laterales: ${winners.join(' · ')} (+${formatChips(payout)})`, 'success', 4200);
+      const rect = this.#dom.seats.getBoundingClientRect();
+      hud.celebrate(payout >= stake * 20 ? 2 : 1, { x: rect.left + rect.width / 2, y: rect.top });
+    }
+  }
+
+  #offerInsurance(afterSeat) {
+    const s = this.state;
+    const seats = [...new Set(s.hands.map((hand) => hand.seat))];
+    const next = seats.find((seat) => seat > afterSeat);
+    if (next === undefined) {
+      this.#peek();
+      return;
+    }
+    const hand = s.hands.find((h) => h.seat === next);
+    const cost = money(hand.bet / 2);
+    this.#set('OFFER_INSURANCE', {
+      stage: 'insurance',
+      insuranceSeat: next,
+      busy: false,
+      message: isNatural(hand)
+        ? `Asiento ${next + 1}: ¡Blackjack! El seguro (${formatChips(cost)}) equivale a cobrar 1 a 1 ahora`
+        : `Asiento ${next + 1}: el crupier muestra un As. ¿Seguro por ${formatChips(cost)}? Paga 2 a 1`,
+    });
+  }
+
   insurance(take) {
     const s = this.state;
     if (s.busy || s.phase !== PHASE.DEALING || s.stage !== 'insurance') return;
-    let stake = 0;
+    const seat = s.insuranceSeat;
+    const hand = s.hands.find((h) => h.seat === seat);
+    if (!hand) return;
+    const advice = this.#insuranceAdvice(s);
+    const insurance = [...s.insurance];
     if (take) {
-      stake = money(s.hands[0].bet / 2);
-      if (!wallet.hold('blackjack', stake)) {
+      const cost = money(hand.bet / 2);
+      if (!wallet.hold('blackjack', cost)) {
         hud.toast('Saldo insuficiente para el seguro', 'warn');
         return;
       }
+      insurance[seat] = cost;
       audio.chip();
     }
-    this.#set('INSURANCE', { insurance: stake, stage: 'peek', busy: true });
-    this.#peek();
+    this.#score(take ? 'take' : 'decline', advice);
+    this.#set('INSURANCE', { insurance, busy: true });
+    this.#offerInsurance(seat);
   }
 
-  // Dealer Peek: con As o carta de 10 visible el crupier revisa la oculta antes de que juegues.
+  // Dealer Peek: con As o carta de 10 visible el crupier revisa la oculta antes de que se juegue.
   async #peek() {
-    this.#set('PEEK', { stage: 'peek', busy: true });
+    this.#set('PEEK', { stage: 'peek', busy: true, insuranceSeat: -1 });
     const needsPeek = cardValue(this.state.dealer[0]) >= 10;
     if (needsPeek) {
       this.#set('PEEK_MSG', { message: 'El crupier revisa su carta oculta…' });
@@ -382,21 +558,26 @@ export class BlackjackGame {
     }
     const s = this.state;
     const dealerNatural = isBlackjack(s.dealer);
-    if (s.insurance > 0 && s.insurancePaid === null) {
-      const paid = dealerNatural ? s.insurance * 3 : 0;
-      wallet.settle('blackjack', s.insurance, paid);
+    const insured = s.insurance.reduce((sum, value) => sum + value, 0);
+    if (insured > 0 && s.insurancePaid === null) {
+      const paid = s.insurance.map((value) => (dealerNatural ? value * 3 : 0));
+      wallet.settle('blackjack', insured, paid.reduce((sum, value) => sum + value, 0));
       this.#set('INSURANCE_SETTLED', { insurancePaid: paid });
     }
-    if (dealerNatural || isBlackjack(s.hands[0].cards)) {
+    if (dealerNatural) {
       await this.#resolve();
       return;
     }
-    this.#set('PLAYER_TURN', {
-      stage: 'player',
-      busy: false,
-      active: 0,
-      message: needsPeek ? 'El crupier no tiene Blackjack. Tu turno' : 'Tu turno: ¿pides o te plantas?',
-    });
+    const hands = this.state.hands.map((hand) => (isNatural(hand) ? { ...hand, done: true } : hand));
+    this.#set('NATURALS', { hands });
+    if (hands.every((hand) => hand.done)) {
+      await this.#resolve();
+      return;
+    }
+    const first = hands.findIndex((hand) => !hand.done);
+    const intro = needsPeek ? 'El crupier no tiene Blackjack. ' : '';
+    this.#set('PLAYER_TURN', { stage: 'player', active: first, busy: true, message: `${intro}Turno del asiento ${hands[first].seat + 1}` });
+    await this.#continuePlayer();
   }
 
   // ---------- Decisiones del jugador ----------
@@ -407,24 +588,30 @@ export class BlackjackGame {
     this.#set('HAND_DONE', { hands });
   }
 
+  #beforeAction(action) {
+    this.#score(action, this.#advice(this.state));
+  }
+
   async hit() {
     if (!this.#canAct()) return;
+    this.#beforeAction('hit');
     const index = this.state.active;
     this.#set('HIT', { busy: true });
     this.#draw(index);
     await wait(this.#settleTime());
     const { total } = handValue(this.state.hands[index].cards);
     if (total >= 21) {
-      if (total > 21) this.#set('BUST', { message: `Te pasas con ${total}` });
+      if (total > 21) this.#set('BUST', { message: `Asiento ${this.state.hands[index].seat + 1}: te pasas con ${total}` });
       this.#markDone(index);
       await this.#advance();
     } else {
-      this.#set('HIT_DONE', { busy: false, message: `Tienes ${this.#totalText(this.state.hands[index].cards)}` });
+      this.#set('HIT_DONE', { busy: false, message: this.#turnMessage() });
     }
   }
 
   async stand() {
     if (!this.#canAct()) return;
+    this.#beforeAction('stand');
     this.#set('STAND', { busy: true });
     this.#markDone(this.state.active);
     await this.#advance();
@@ -440,11 +627,12 @@ export class BlackjackGame {
       hud.toast('Saldo insuficiente para doblar', 'warn');
       return;
     }
+    this.#beforeAction('double');
     audio.chip();
     const hands = structuredClone(s.hands);
     hands[index].bet = hand.bet * 2;
     hands[index].doubled = true;
-    this.#set('DOUBLE', { hands, busy: true, message: 'Doblas: recibes una sola carta' });
+    this.#set('DOUBLE', { hands, busy: true, message: `Asiento ${hand.seat + 1} dobla: una sola carta` });
     this.#draw(index);
     await wait(this.#settleTime());
     this.#markDone(index);
@@ -456,11 +644,13 @@ export class BlackjackGame {
     const s = this.state;
     const index = s.active;
     const hand = s.hands[index];
-    if (!canSplitHand(hand, s.hands.length)) return;
+    const seatHands = s.hands.filter((h) => h.seat === hand.seat).length;
+    if (!canSplitHand(hand, seatHands)) return;
     if (!wallet.hold('blackjack', hand.bet)) {
       hud.toast('Saldo insuficiente para dividir', 'warn');
       return;
     }
+    this.#beforeAction('split');
     audio.chip();
     const [first, second] = hand.cards;
     const splitAces = rankOf(first) === 'A';
@@ -468,8 +658,8 @@ export class BlackjackGame {
     hands.splice(
       index,
       1,
-      newHand(hand.bet, { cards: [first], fromSplit: true, splitAces }),
-      newHand(hand.bet, { cards: [second], fromSplit: true, splitAces }),
+      newHand(hand.seat, hand.bet, { cards: [first], fromSplit: true, splitAces }),
+      newHand(hand.seat, hand.bet, { cards: [second], fromSplit: true, splitAces }),
     );
     this.#instant = true;
     this.#set('SPLIT', { hands, busy: true, message: splitAces ? 'Ases divididos: una carta para cada uno' : 'Pareja dividida' });
@@ -487,7 +677,7 @@ export class BlackjackGame {
     await this.#continuePlayer();
   }
 
-  // Tras recargar o dividir: completa la mano activa si solo tiene una carta y decide si sigue.
+  // Completa la mano activa si viene de una división y decide si el jugador debe actuar.
   async #continuePlayer() {
     const s = this.state;
     const hand = s.hands[s.active];
@@ -506,12 +696,16 @@ export class BlackjackGame {
       await this.#advance();
       return;
     }
-    const many = this.state.hands.length > 1;
-    this.#set('PLAYER_TURN', {
-      stage: 'player',
-      busy: false,
-      message: many ? `Mano ${this.state.active + 1} de ${this.state.hands.length}: ${this.#totalText(current.cards)}` : `Tienes ${this.#totalText(current.cards)}`,
-    });
+    this.#set('PLAYER_TURN', { stage: 'player', busy: false, message: this.#turnMessage() });
+  }
+
+  #turnMessage() {
+    const s = this.state;
+    const hand = s.hands[s.active];
+    if (!hand) return '';
+    const seatHands = s.hands.filter((h) => h.seat === hand.seat);
+    const part = seatHands.length > 1 ? ` · mano ${seatHands.indexOf(hand) + 1}/${seatHands.length}` : '';
+    return `Asiento ${hand.seat + 1}${part}: tienes ${this.#totalText(hand.cards)}`;
   }
 
   async #advance() {
@@ -531,10 +725,8 @@ export class BlackjackGame {
     const s = this.state;
     const dealer = [...s.dealer];
     let { shoe, pos } = s;
-    const needsDealer =
-      !isBlackjack(dealer) &&
-      s.hands.some((hand) => handValue(hand.cards).total <= 21 && !(!hand.fromSplit && isBlackjack(hand.cards)));
-    if (needsDealer) {
+    const live = s.hands.some((hand) => handValue(hand.cards).total <= 21 && !isNatural(hand));
+    if (!isBlackjack(dealer) && live) {
       while (dealerShouldHit(dealer)) {
         if (pos >= shoe.length) {
           shoe = newShuffledShoe();
@@ -548,7 +740,7 @@ export class BlackjackGame {
     const payout = hands.reduce((sum, hand) => sum + hand.payout, 0);
     wallet.settle('blackjack', stake, payout);
 
-    this.#set('RESOLVE', { phase: PHASE.RESOLVING, stage: 'dealer', busy: true, hands, shoe, pos, dealerFinal: dealer, message: 'Juega el crupier…' });
+    this.#set('RESOLVE', { phase: PHASE.RESOLVING, stage: 'dealer', busy: true, active: -1, hands, shoe, pos, dealerFinal: dealer, message: 'Juega el crupier…' });
     this.#set('REVEAL_HOLE', { holeRevealed: true });
     audio.cardSlide();
     await wait(FLIP_TIME + 250);
@@ -561,19 +753,27 @@ export class BlackjackGame {
 
   async #payout() {
     const s = this.state;
-    this.#set('PAYOUT', { phase: PHASE.PAYOUT, stage: 'done', busy: true, dealer: s.dealerFinal ?? s.dealer, holeRevealed: true });
+    this.#set('PAYOUT', { phase: PHASE.PAYOUT, stage: 'done', busy: true, active: -1, dealer: s.dealerFinal ?? s.dealer, holeRevealed: true });
     wallet.reveal('blackjack');
 
-    const hands = this.state.hands;
-    const stake = hands.reduce((sum, hand) => sum + hand.bet, 0) + s.insurance;
-    const returned = hands.reduce((sum, hand) => sum + hand.payout, 0) + (s.insurancePaid ?? 0);
+    const { hands, dealer } = this.state;
+    const insured = s.insurance.reduce((sum, value) => sum + value, 0);
+    const insurancePaid = (s.insurancePaid ?? []).reduce((sum, value) => sum + value, 0);
+    const sideBets = (s.sides ?? []).flatMap((side) => [side?.pp, side?.t213]).filter(Boolean);
+    const sideStake = sideBets.reduce((sum, bet) => sum + bet.amount, 0);
+    const sidePaid = sideBets.reduce((sum, bet) => sum + bet.paid, 0);
+    const stake = hands.reduce((sum, hand) => sum + hand.bet, 0) + insured + sideStake;
+    const returned = hands.reduce((sum, hand) => sum + hand.payout, 0) + insurancePaid + sidePaid;
     const net = money(returned - stake);
-    const dealerTotal = handValue(this.state.dealer).total;
-    const dealerText = isBlackjack(this.state.dealer) ? 'Blackjack del crupier' : dealerTotal > 21 ? `El crupier se pasa (${dealerTotal})` : `Crupier: ${dealerTotal}`;
-    const netText = net > 0 ? `Ganas +${formatChips(net)}` : net < 0 ? `Pierdes ${formatChips(-net)}` : 'Recuperas tu apuesta';
+    const dealerTotal = handValue(dealer).total;
+    const dealerBust = dealerTotal > 21;
+    const dealerText = isBlackjack(dealer) ? 'Blackjack del crupier' : dealerBust ? `El crupier se pasa (${dealerTotal})` : `Crupier: ${dealerTotal}`;
+    const netText = net > 0 ? `Ganas +${formatChips(net)}` : net < 0 ? `Pierdes ${formatChips(-net)}` : 'Recuperas lo apostado';
 
-    const circle = this.#dom.betCircle.getBoundingClientRect();
-    const origin = { x: circle.left + circle.width / 2, y: circle.top };
+    const rect = this.#dom.seats.getBoundingClientRect();
+    const origin = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 3 };
+    const allLost = hands.every((hand) => hand.result === 'lose' || hand.result === 'bust');
+    const allPush = hands.every((hand) => hand.result === 'push');
     if (hands.some((hand) => hand.result === 'blackjack')) {
       audio.win(2);
       hud.celebrate(2, origin);
@@ -584,10 +784,118 @@ export class BlackjackGame {
     } else if (net < 0) {
       audio.lose();
     }
+    if (dealerBust) audio.say('dealerBust');
+    else if (allLost) audio.say('houseWins');
+    else if (allPush) audio.say('push');
+    else if (net > 0) audio.say('playerWins');
 
     this.#set('PAYOUT_MSG', { message: `${dealerText}. ${netText}` });
+    const tags = [];
+    if (hands.some((hand) => hand.result === 'blackjack')) tags.push('natural');
+    if (hands.some((hand) => hand.doubled && hand.result === 'win')) tags.push('double-win');
+    if (hands.some((hand) => hand.fromSplit && hand.result === 'win')) tags.push('split-win');
+    if (sidePaid > 0) tags.push('side-win');
+    if (insurancePaid > 0) tags.push('insurance-win');
+    if (dealerBust) tags.push('dealer-bust');
+    campaign.report({ game: 'blackjack', stake, returned, tags, coach: { right: this.#prefs.right, total: this.#prefs.total } });
     await wait(450);
     this.#set('READY', { busy: false });
+  }
+
+  // ---------- Coach y conteo ----------
+
+  #countInfo(s) {
+    let running = 0;
+    for (let i = 0; i < s.pos; i++) running += hiLoValue(s.shoe[i]);
+    const hidden = [];
+    if (s.dealer.length > 1 && !s.holeRevealed) hidden.push(s.dealer[1]);
+    if (s.dealerFinal) hidden.push(...s.dealerFinal.slice(s.dealer.length));
+    for (const card of hidden) running -= hiLoValue(card);
+    const remaining = s.shoe.length - s.pos + hidden.length;
+    return { running, true: trueCount(running, remaining), decks: remaining / 52 };
+  }
+
+  #advice(s) {
+    if (!(s.phase === PHASE.DEALING && s.stage === 'player')) return null;
+    const hand = s.hands[s.active];
+    if (!hand || hand.done || hand.cards.length < 2) return null;
+    const seatHands = s.hands.filter((h) => h.seat === hand.seat).length;
+    const affordable = wallet.canAfford(hand.bet);
+    return basicStrategy(hand.cards, s.dealer[0], {
+      canDouble: canDoubleHand(hand) && affordable,
+      canSplit: canSplitHand(hand, seatHands) && affordable,
+    });
+  }
+
+  #insuranceAdvice(s) {
+    const tc = this.#countInfo(s).true;
+    const take = this.#prefs.count && tc >= INSURANCE_TRUE_COUNT;
+    return { action: take ? 'take' : 'decline', tc };
+  }
+
+  #score(action, advice) {
+    if (!this.#prefs.coach || !advice) return;
+    const right = advice.action === action;
+    this.#prefs.total += 1;
+    if (right) this.#prefs.right += 1;
+    storage.write(PREFS_KEY, this.#prefs);
+    const names = { ...ACTION_NAMES, take: 'tomar seguro', decline: 'rechazar el seguro' };
+    this.#feedback = right ? '✔ Jugada correcta' : `✘ La estrategia básica indicaba ${names[advice.action].toLowerCase()}`;
+  }
+
+  #renderCoach(s) {
+    const d = this.#dom;
+    const on = this.#prefs.coach;
+    d.coachToggle.setAttribute('aria-pressed', String(on));
+    d.coach.hidden = !on;
+    for (const button of [d.hit, d.stand, d.double, d.split, d.insureYes, d.insureNo]) button.classList.remove('is-coach-pick');
+    if (!on) return;
+
+    const { right, total } = this.#prefs;
+    d.coachScore.textContent = total ? `Precisión ${Math.round((right / total) * 100)}% (${right}/${total})` : 'Precisión: —';
+    d.coachFeedback.textContent = this.#feedback;
+
+    if (s.phase === PHASE.DEALING && s.stage === 'insurance' && !s.busy) {
+      const advice = this.#insuranceAdvice(s);
+      (advice.action === 'take' ? d.insureYes : d.insureNo).classList.add('is-coach-pick');
+      d.coachTip.textContent = advice.action === 'take'
+        ? `Tomar seguro: con True Count ${advice.tc.toFixed(1)} (≥ +3) el seguro tiene valor esperado positivo.`
+        : 'No tomes seguro: sin conteo favorable su ventaja de la casa ronda el 7,4 %.';
+      return;
+    }
+    const advice = this.#advice(s);
+    if (!advice || s.busy) {
+      d.coachTip.textContent = s.phase === PHASE.DEALING ? 'Esperando tu turno…' : 'Estrategia básica 6 barajas · S17 · doblar tras dividir.';
+      return;
+    }
+    const button = { hit: d.hit, stand: d.stand, double: d.double, split: d.split }[advice.action];
+    button.classList.add('is-coach-pick');
+    const hand = s.hands[s.active];
+    const up = cardValue(s.dealer[0]) === 11 ? 'As' : String(cardValue(s.dealer[0]));
+    const kinds = { hard: 'dura', soft: 'blanda', pair: 'pareja' };
+    const handText = advice.kind === 'pair' ? `pareja de ${rankOf(hand.cards[0])}` : `${advice.total} ${kinds[advice.kind]}`;
+    d.coachTip.textContent = `${ACTION_NAMES[advice.action]}: ${handText} contra ${up} del crupier.`;
+  }
+
+  #renderCount(s) {
+    const d = this.#dom;
+    const on = this.#prefs.count;
+    d.countToggle.setAttribute('aria-pressed', String(on));
+    d.count.hidden = !on;
+    d.table.classList.toggle('is-counting', on);
+    if (!on) return;
+    const info = this.#countInfo(s);
+    const paint = () => {
+      d.countRunning.textContent = signed(info.running);
+      d.countTrue.textContent = signed(Math.round(info.true * 10) / 10);
+      d.countDecks.textContent = info.decks.toFixed(1);
+      d.count.dataset.trend = info.true >= 2 ? 'hot' : info.true <= -2 ? 'cold' : 'neutral';
+    };
+    // El marcador se actualiza cuando la carta termina de aparecer en la mesa.
+    clearTimeout(this.#countTimer);
+    const delay = this.#instant ? 0 : Math.max(0, this.#clock - performance.now()) + 450;
+    if (delay === 0) paint();
+    else this.#countTimer = setTimeout(paint, delay);
   }
 
   // ---------- Render ----------
@@ -600,10 +908,11 @@ export class BlackjackGame {
   #render(s) {
     this.#dom.message.textContent = s.message;
     this.#renderShoe(s);
-    this.#renderBet(s);
+    this.#renderSeats(s);
     this.#renderDealer(s);
     this.#renderHands(s);
     this.#renderControls(s);
+    this.#renderCount(s);
   }
 
   #renderShoe(s) {
@@ -612,16 +921,50 @@ export class BlackjackGame {
     this.#dom.shoeCount.textContent = `${remaining} cartas`;
   }
 
-  #renderBet(s) {
-    const betting = s.phase === PHASE.IDLE || s.phase === PHASE.BETTING;
-    const amount = betting ? s.bet : s.hands.reduce((sum, hand) => sum + hand.bet, 0);
-    if (this.#dom.betAmount.dataset.amount !== String(amount)) {
-      this.#dom.betAmount.dataset.amount = String(amount);
-      this.#dom.betAmount.textContent = formatChips(amount);
-      this.#dom.betStack.replaceChildren(amount > 0 ? chipStack(amount) : '');
+  #renderSeats(s) {
+    const betting = this.#canBet();
+    const round = s.phase !== PHASE.IDLE;
+    const limits = this.#limits();
+    this.#dom.seats.dataset.seats = String(limits.seats);
+    s.seats.forEach((seat, i) => {
+      const view = this.#view.seats[i];
+      const playing = s.hands.some((hand) => hand.seat === i);
+      const locked = i >= limits.seats && !playing;
+      view.node.classList.toggle('is-playing', playing);
+      view.node.classList.toggle('is-locked', locked);
+      view.node.classList.toggle('is-idle', round && !playing && seat.main <= 0 && s.phase !== PHASE.BETTING);
+      for (const spot of SPOTS) {
+        const item = view.spots[spot];
+        const amount = round ? seat[spot] : 0;
+        const spotLocked = locked || (spot !== 'main' && !limits.sideBets && amount === 0);
+        if (item.shown !== amount) {
+          item.shown = amount;
+          item.amount.textContent = amount > 0 ? formatChips(amount) : '';
+          item.stack.replaceChildren(...(amount > 0 ? [chipStack(amount, spot === 'main' ? 6 : 3)] : []));
+        }
+        item.button.classList.toggle('has-bet', amount > 0);
+        item.button.classList.toggle('is-locked', spotLocked);
+        item.button.disabled = !betting || spotLocked;
+        const current = amount > 0 ? `, apuesta ${formatChips(amount)}` : '';
+        const lockNote = spotLocked ? ', se desbloquea en el Salón de Neón' : '';
+        item.button.setAttribute('aria-label', `Asiento ${i + 1}, ${SPOT_NAMES[spot]}${current}${lockNote}`);
+      }
+      this.#renderSides(view, s.sides?.[i] ?? null);
+    });
+  }
+
+  #renderSides(view, side) {
+    const key = JSON.stringify(side);
+    if (key === view.sidesKey) return;
+    view.sidesKey = key;
+    const badges = [];
+    for (const [label, bet] of [['PP', side?.pp], ['21+3', side?.t213]]) {
+      if (!bet) continue;
+      const won = bet.paid > 0;
+      const badge = el('span', `side-badge ${won ? 'is-won' : 'is-lost'}`, won ? `${label} · ${bet.name} ${bet.pays}:1` : `${label} ✗`);
+      badges.push(badge);
     }
-    this.#dom.betCircle.classList.toggle('is-empty', amount === 0);
-    this.#dom.betCircle.disabled = !this.#canBet();
+    view.sides.replaceChildren(...badges);
   }
 
   #sync(container, rendered, codes, hiddenIndex = -1) {
@@ -634,6 +977,7 @@ export class BlackjackGame {
     const instant = this.#instant || rebuild || this.root.hidden;
     for (let i = rendered.length; i < codes.length; i++) {
       const card = cardElement(codes[i]);
+      card.dataset.hilo = signed(hiLoValue(codes[i]));
       container.append(card);
       rendered.push({ code: codes[i], el: card });
       const faceUp = i !== hiddenIndex;
@@ -643,6 +987,7 @@ export class BlackjackGame {
         this.#animateDeal(card, faceUp);
       }
     }
+    container.dataset.n = String(codes.length);
   }
 
   #animateDeal(card, faceUp) {
@@ -674,57 +1019,70 @@ export class BlackjackGame {
     } else if (s.holeRevealed) {
       this.#dom.dealerTotal.textContent = this.#totalText(s.dealer);
     } else {
-      this.#dom.dealerTotal.textContent = String(cardValue(s.dealer[0]) === 11 ? '1/11' : cardValue(s.dealer[0]));
+      this.#dom.dealerTotal.textContent = cardValue(s.dealer[0]) === 11 ? '1/11' : String(cardValue(s.dealer[0]));
     }
   }
 
   #renderHands(s) {
-    const view = this.#view.hands;
-    while (view.length > s.hands.length) view.pop().el.remove();
-    s.hands.forEach((hand, i) => {
-      let v = view[i];
-      if (!v) {
-        const node = el('div', 'bj-hand');
-        const cards = el('div', 'hand-cards');
-        const meta = el('div', 'hand-meta');
-        const total = el('output', 'hand-total');
-        const bet = el('span', 'hand-bet');
-        const result = el('span', 'hand-result');
-        meta.append(total, bet);
-        node.append(result, cards, meta);
-        this.#dom.hands.append(node);
-        v = { el: node, cards, total, bet, result, rendered: [] };
-        view.push(v);
-      }
-      this.#sync(v.cards, v.rendered, hand.cards);
-      v.total.textContent = hand.cards.length ? this.#totalText(hand.cards) : '';
-      v.bet.textContent = `${formatChips(hand.bet)}${hand.doubled ? ' ×2' : ''}`;
-      const showResult = s.phase === PHASE.PAYOUT && hand.result;
-      v.result.textContent = showResult ? RESULT_TEXT[hand.result] : '';
-      v.el.dataset.result = showResult ? hand.result : '';
-      v.el.classList.toggle('is-active', s.phase === PHASE.DEALING && s.stage === 'player' && i === s.active && s.hands.length > 1);
-    });
+    const activeHand = s.hands[s.active] ?? null;
+    for (let seat = 0; seat < SEATS; seat++) {
+      const view = this.#view.seats[seat];
+      const hands = s.hands.filter((hand) => hand.seat === seat);
+      while (view.handViews.length > hands.length) view.handViews.pop().node.remove();
+      hands.forEach((hand, j) => {
+        let v = view.handViews[j];
+        if (!v) {
+          const node = el('div', 'bj-hand');
+          const cards = el('div', 'hand-cards');
+          const meta = el('div', 'hand-meta');
+          const total = el('output', 'hand-total');
+          const bet = el('span', 'hand-bet');
+          const result = el('span', 'hand-result');
+          meta.append(total, bet);
+          node.append(result, cards, meta);
+          view.hands.append(node);
+          v = { node, cards, total, bet, result, rendered: [] };
+          view.handViews.push(v);
+        }
+        this.#sync(v.cards, v.rendered, hand.cards);
+        v.total.textContent = hand.cards.length ? this.#totalText(hand.cards) : '';
+        v.bet.textContent = `${formatChips(hand.bet)}${hand.doubled ? ' ×2' : ''}`;
+        const showResult = s.phase === PHASE.PAYOUT && hand.result;
+        v.result.textContent = showResult ? RESULT_TEXT[hand.result] : '';
+        v.node.dataset.result = showResult ? hand.result : '';
+        v.node.classList.toggle('is-active', s.phase === PHASE.DEALING && s.stage === 'player' && hand === activeHand);
+      });
+      view.hands.dataset.count = String(hands.length);
+    }
+    this.#dom.seats.dataset.playing = String(new Set(s.hands.map((hand) => hand.seat)).size);
   }
 
   #renderControls(s) {
     const d = this.#dom;
     const canBet = this.#canBet();
-    d.deal.disabled = !(canBet && s.phase === PHASE.BETTING && s.bet >= MIN_BET);
+    const anyMain = s.seats.some((seat) => seat.main >= this.#limits().minBet);
+    d.deal.disabled = !(canBet && s.phase === PHASE.BETTING && anyMain);
     d.clear.disabled = !(canBet && s.phase === PHASE.BETTING);
-    d.rebet.disabled = !(canBet && s.phase !== PHASE.BETTING && s.lastBet > 0 && wallet.canAfford(s.lastBet));
+    const lastTotal = seatsTotal(s.lastSeats);
+    d.rebet.disabled = !(canBet && s.phase !== PHASE.BETTING && lastTotal > 0 && wallet.canAfford(lastTotal));
 
     const acting = this.#canAct();
     const hand = s.hands[s.active];
+    const seatHands = hand ? s.hands.filter((h) => h.seat === hand.seat).length : 0;
     d.hit.disabled = !acting;
     d.stand.disabled = !acting;
     d.double.disabled = !(acting && hand && canDoubleHand(hand) && wallet.canAfford(hand.bet));
-    d.split.disabled = !(acting && hand && canSplitHand(hand, s.hands.length) && wallet.canAfford(hand.bet));
+    d.split.disabled = !(acting && hand && canSplitHand(hand, seatHands) && wallet.canAfford(hand.bet));
 
     const insuring = s.phase === PHASE.DEALING && s.stage === 'insurance';
-    d.insureYes.disabled = !(insuring && !s.busy && wallet.canAfford(money((s.hands[0]?.bet ?? 0) / 2)));
+    const insuredHand = insuring ? s.hands.find((h) => h.seat === s.insuranceSeat) : null;
+    const cost = insuredHand ? money(insuredHand.bet / 2) : 0;
+    d.insureLabel.textContent = insuredHand ? `Asiento ${s.insuranceSeat + 1} · seguro ${formatChips(cost)}` : '';
+    d.insureYes.disabled = !(insuring && !s.busy && wallet.canAfford(cost));
     d.insureNo.disabled = !(insuring && !s.busy);
 
     this.root.dataset.mode = insuring ? 'insurance' : s.phase === PHASE.DEALING || s.phase === PHASE.RESOLVING ? 'play' : 'bet';
+    this.#renderCoach(s);
   }
 
   onShow() {}
