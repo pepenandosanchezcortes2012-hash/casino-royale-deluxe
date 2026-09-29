@@ -3,15 +3,25 @@
 // → reveal (pendiente → saldo, al terminar la animación). Si la página se recarga, los premios
 // pendientes se abonan y las apuestas sin resolver de ruleta/slots se devuelven: recargar
 // nunca permite anular un resultado ya sorteado ni gastar dos veces la misma ficha.
+// Cada ficha apostada y liquidada suma 1 XP; el XP determina el rango VIP.
 
 import { storage } from './storage.js';
 
 export const STARTING_BALANCE = 1000;
-export const RESCUE_AMOUNT = 500;
 export const RESCUE_COOLDOWN_MS = 3 * 60 * 1000;
 export const MIN_BET = 10;
 export const DENOMINATIONS = Object.freeze([10, 25, 50, 100, 500, 1000]);
 export const GAMES = Object.freeze(['blackjack', 'roulette', 'slots']);
+export const XP_PER_CHIP = 1;
+
+// Rangos VIP: umbral de XP, rescate por bancarrota y bono diario.
+export const RANKS = Object.freeze([
+  Object.freeze({ id: 'bronze', name: 'Bronce', xp: 0, rescue: 500, daily: 100 }),
+  Object.freeze({ id: 'silver', name: 'Plata', xp: 5000, rescue: 750, daily: 250 }),
+  Object.freeze({ id: 'gold', name: 'Oro', xp: 25000, rescue: 1000, daily: 500 }),
+  Object.freeze({ id: 'platinum', name: 'Platino', xp: 100000, rescue: 1500, daily: 1000 }),
+  Object.freeze({ id: 'diamond', name: 'Diamante', xp: 400000, rescue: 2500, daily: 2500 }),
+]);
 
 // La mesa de blackjack reanuda su mano tras recargar, así que su escrow se conserva.
 const RESUMABLE = new Set(['blackjack']);
@@ -25,10 +35,29 @@ export const FELTS = Object.freeze([
 
 const KEY = 'crd.wallet.v1';
 const EPSILON = 1e-9;
+const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
 export const money = (value) => Math.round(value * 100) / 100;
 const isAmount = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 const perGame = (value) => Object.fromEntries(GAMES.map((game) => [game, value]));
+
+export function rankIndexFor(xp) {
+  let index = 0;
+  while (index + 1 < RANKS.length && xp >= RANKS[index + 1].xp) index++;
+  return index;
+}
+
+// Día natural local (AAAA-MM-DD): el bono diario se renueva a medianoche del jugador.
+export function localDayKey(date = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function nextMidnight(now) {
+  const date = new Date(now);
+  date.setHours(24, 0, 0, 0);
+  return date.getTime();
+}
 
 function sanitize(raw) {
   const state = {
@@ -41,6 +70,7 @@ function sanitize(raw) {
     felt: 'emerald',
     wagered: 0,
     paid: 0,
+    dailyDay: null,
   };
   if (!raw || typeof raw !== 'object') return state;
 
@@ -53,6 +83,7 @@ function sanitize(raw) {
   if (Number.isInteger(raw.rescues) && raw.rescues >= 0) state.rescues = raw.rescues;
   if (isAmount(raw.wagered)) state.wagered = money(raw.wagered);
   if (isAmount(raw.paid)) state.paid = money(raw.paid);
+  if (typeof raw.dailyDay === 'string' && DAY_KEY.test(raw.dailyDay)) state.dailyDay = raw.dailyDay;
   if (Array.isArray(raw.owned)) {
     const valid = raw.owned.filter((id) => FELTS.some((felt) => felt.id === id));
     state.owned = [...new Set(['emerald', ...valid])];
@@ -125,6 +156,27 @@ class Wallet extends EventTarget {
     return { wagered: this.#s.wagered, paid: this.#s.paid, rescues: this.#s.rescues };
   }
 
+  // ---------- XP y rangos ----------
+
+  get xp() {
+    return Math.floor(this.#s.wagered * XP_PER_CHIP);
+  }
+
+  get rank() {
+    return RANKS[rankIndexFor(this.xp)];
+  }
+
+  rankProgress() {
+    const xp = this.xp;
+    const index = rankIndexFor(xp);
+    const rank = RANKS[index];
+    const next = RANKS[index + 1] ?? null;
+    const ratio = next ? (xp - rank.xp) / (next.xp - rank.xp) : 1;
+    return { xp, index, rank, next, ratio: Math.min(1, Math.max(0, ratio)), missing: next ? next.xp - xp : 0 };
+  }
+
+  // ---------- Movimientos de fichas ----------
+
   escrowOf(game) {
     return this.#s.escrow[this.#game(game)];
   }
@@ -162,6 +214,7 @@ class Wallet extends EventTarget {
     if (stake > this.#s.escrow[game] + EPSILON) {
       throw new Error(`settle: el escrow de ${game} (${this.#s.escrow[game]}) no cubre ${stake}`);
     }
+    const before = rankIndexFor(this.xp);
     this.#s.escrow[game] = money(Math.max(0, this.#s.escrow[game] - stake));
     this.#s.pending[game] = money(this.#s.pending[game] + payout);
     this.#staked[game] = money(this.#staked[game] + stake);
@@ -169,6 +222,10 @@ class Wallet extends EventTarget {
     this.#s.paid = money(this.#s.paid + payout);
     this.#save();
     this.#emit('settle');
+    const after = rankIndexFor(this.xp);
+    if (after > before) {
+      this.dispatchEvent(new CustomEvent('rankup', { detail: { rank: RANKS[after], previous: RANKS[before] } }));
+    }
   }
 
   reveal(game) {
@@ -184,21 +241,39 @@ class Wallet extends EventTarget {
     return amount;
   }
 
+  // ---------- Rescate por bancarrota y bono diario ----------
+
   rescueStatus(now = Date.now()) {
     const idle = GAMES.every((game) => this.#s.escrow[game] === 0 && this.#s.pending[game] === 0 && this.#staked[game] === 0);
     const busted = this.#s.balance < MIN_BET && idle;
     const remaining = Math.max(0, this.#s.lastRescue + RESCUE_COOLDOWN_MS - now);
-    return { busted, remaining, eligible: busted && remaining === 0 };
+    return { busted, remaining, eligible: busted && remaining === 0, amount: this.rank.rescue };
   }
 
   rescue(now = Date.now()) {
-    if (!this.rescueStatus(now).eligible) return false;
-    this.#s.balance = money(this.#s.balance + RESCUE_AMOUNT);
+    const status = this.rescueStatus(now);
+    if (!status.eligible) return 0;
+    this.#s.balance = money(this.#s.balance + status.amount);
     this.#s.lastRescue = now;
     this.#s.rescues += 1;
     this.#save();
     this.#emit('rescue');
-    return true;
+    return status.amount;
+  }
+
+  dailyStatus(now = Date.now()) {
+    const available = this.#s.dailyDay !== localDayKey(new Date(now));
+    return { available, amount: this.rank.daily, nextAt: available ? now : nextMidnight(now) };
+  }
+
+  claimDaily(now = Date.now()) {
+    const status = this.dailyStatus(now);
+    if (!status.available) return 0;
+    this.#s.balance = money(this.#s.balance + status.amount);
+    this.#s.dailyDay = localDayKey(new Date(now));
+    this.#save();
+    this.#emit('daily');
+    return status.amount;
   }
 
   buyFelt(id) {

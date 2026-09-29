@@ -1,37 +1,80 @@
-// Sintetizador procedural con Web Audio API: ningún archivo de audio externo.
+// Motor de audio procedural con Web Audio API: ningún archivo de audio externo.
+// Buses independientes: efectos (SFX) y música, más la voz del crupier (Web Speech API).
 // El contexto se crea y se reanuda tras el primer gesto del usuario (política de autoplay).
 
 import { storage } from './storage.js';
 import { randomFloat, randomBetween } from './rng.js';
+import { LoungeMusic } from './music.js';
+import { DealerVoice } from './voice.js';
 
-const KEY = 'crd.audio.v1';
+const KEY = 'crd.audio.v2';
+const LEGACY_KEY = 'crd.audio.v1';
 const SILENCE = 0.0001;
+const LANGS = ['es', 'en'];
 
-class AudioEngine {
+const DEFAULTS = Object.freeze({ muted: false, sfx: 0.8, musicOn: true, music: 0.3, voiceOn: true, voice: 0.9, lang: 'es' });
+
+const level = (value, fallback) => (typeof value === 'number' && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : fallback);
+
+function sanitize(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  return {
+    muted: typeof source.muted === 'boolean' ? source.muted : DEFAULTS.muted,
+    sfx: level(source.sfx, DEFAULTS.sfx),
+    musicOn: typeof source.musicOn === 'boolean' ? source.musicOn : DEFAULTS.musicOn,
+    music: level(source.music, DEFAULTS.music),
+    voiceOn: typeof source.voiceOn === 'boolean' ? source.voiceOn : DEFAULTS.voiceOn,
+    voice: level(source.voice, DEFAULTS.voice),
+    lang: LANGS.includes(source.lang) ? source.lang : DEFAULTS.lang,
+  };
+}
+
+class AudioEngine extends EventTarget {
   #ctx = null;
   #master = null;
+  #sfx = null;
+  #musicBus = null;
   #noise = null;
-  #muted;
-  #volume = 0.75;
+  #music = null;
+  #hidden = false;
+  #settings;
+  voice;
 
   constructor() {
-    this.#muted = storage.read(KEY, null)?.muted === true;
+    super();
+    const legacy = storage.read(LEGACY_KEY, null);
+    const saved = storage.read(KEY, null) ?? (legacy ? { muted: legacy.muted === true } : null);
+    this.#settings = sanitize(saved);
+    this.voice = new DealerVoice(() => this.#settings);
+  }
+
+  get settings() {
+    return { ...this.#settings };
   }
 
   get muted() {
-    return this.#muted;
+    return this.#settings.muted;
   }
 
   get unlocked() {
     return this.#ctx !== null && this.#ctx.state === 'running';
   }
 
+  update(patch) {
+    this.#settings = sanitize({ ...this.#settings, ...patch });
+    storage.write(KEY, this.#settings);
+    this.#applyLevels();
+    this.#syncMusic();
+    if (this.#settings.muted || !this.#settings.voiceOn) this.voice.cancel();
+    this.dispatchEvent(new Event('change'));
+  }
+
   setMuted(muted) {
-    this.#muted = Boolean(muted);
-    storage.write(KEY, { muted: this.#muted });
-    if (this.#master) {
-      this.#master.gain.setTargetAtTime(this.#muted ? 0 : this.#volume, this.#ctx.currentTime, 0.03);
-    }
+    this.update({ muted: Boolean(muted) });
+  }
+
+  say(key, params, options) {
+    return this.voice.say(key, params, options);
   }
 
   unlock() {
@@ -51,21 +94,63 @@ class AudioEngine {
       compressor.attack.value = 0.003;
       compressor.release.value = 0.2;
       this.#master = ctx.createGain();
-      this.#master.gain.value = this.#muted ? 0 : this.#volume;
       this.#master.connect(compressor).connect(ctx.destination);
+      this.#sfx = ctx.createGain();
+      this.#sfx.connect(this.#master);
+      this.#musicBus = ctx.createGain();
+      this.#musicBus.connect(this.#master);
+      this.#applyLevels(true);
 
       // 2 s de ruido blanco reutilizable como fuente de fricción, barajeo y rodadura.
       const length = Math.floor(ctx.sampleRate * 2);
       this.#noise = ctx.createBuffer(1, length, ctx.sampleRate);
       const data = this.#noise.getChannelData(0);
       for (let i = 0; i < length; i++) data[i] = randomFloat() * 2 - 1;
+
+      this.#music = new LoungeMusic(ctx, this.#musicBus);
     }
-    if (this.#ctx.state === 'suspended') this.#ctx.resume().catch(() => {});
+    if (this.#ctx.state === 'suspended' && !this.#hidden) {
+      this.#ctx.resume().then(() => this.#syncMusic(), () => {});
+    }
+    this.#syncMusic();
     return true;
   }
 
+  // Con la pestaña oculta se suspende el contexto (ahorro de batería) y se detiene la música.
+  setHidden(hidden) {
+    this.#hidden = hidden;
+    if (!this.#ctx) return;
+    if (hidden) {
+      this.#music?.stop();
+      this.#ctx.suspend().catch(() => {});
+    } else {
+      this.#ctx.resume().then(() => this.#syncMusic(), () => {});
+    }
+  }
+
+  #applyLevels(immediate = false) {
+    if (!this.#ctx) return;
+    const s = this.#settings;
+    const now = this.#ctx.currentTime;
+    const set = (param, value) => {
+      if (immediate) param.value = value;
+      else param.setTargetAtTime(value, now, 0.04);
+    };
+    set(this.#master.gain, s.muted ? 0 : 1);
+    set(this.#sfx.gain, s.sfx);
+    set(this.#musicBus.gain, s.music);
+  }
+
+  #syncMusic() {
+    if (!this.#music) return;
+    const s = this.#settings;
+    const wanted = s.musicOn && !s.muted && s.music > 0 && !this.#hidden && this.#ctx.state === 'running';
+    if (wanted) this.#music.start();
+    else this.#music.stop();
+  }
+
   #ready() {
-    return this.#ctx !== null && this.#ctx.state === 'running' && !this.#muted;
+    return this.#ctx !== null && this.#ctx.state === 'running' && !this.#settings.muted && this.#settings.sfx > 0;
   }
 
   #time(delay = 0) {
@@ -90,7 +175,7 @@ class AudioEngine {
     if (freqEnd) filter.frequency.exponentialRampToValueAtTime(freqEnd, t + attack + decay);
     const gain = ctx.createGain();
     this.#envelope(gain.gain, t, attack, peak, decay);
-    src.connect(filter).connect(gain).connect(this.#master);
+    src.connect(filter).connect(gain).connect(this.#sfx);
     src.start(t, randomFloat() * 1.5);
     src.stop(t + attack + decay + 0.05);
   }
@@ -103,7 +188,7 @@ class AudioEngine {
     if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, t + attack + decay);
     const gain = ctx.createGain();
     this.#envelope(gain.gain, t, attack, peak, decay);
-    osc.connect(gain).connect(this.#master);
+    osc.connect(gain).connect(this.#sfx);
     osc.start(t);
     osc.stop(t + attack + decay + 0.05);
   }
@@ -132,10 +217,10 @@ class AudioEngine {
     if (!this.#ready()) return;
     const t = this.#time(delay);
     const base = randomBetween(2500, 3100);
-    for (const [hit, level] of [[0, 1], [0.042, 0.45]]) {
-      this.#tone(t + hit, { freq: base, peak: 0.26 * level, decay: 0.075 });
-      this.#tone(t + hit, { freq: base * 1.53, peak: 0.18 * level, decay: 0.05 });
-      this.#noiseBurst(t + hit, { type: 'highpass', freq: 3500, attack: 0.001, peak: 0.22 * level, decay: 0.014 });
+    for (const [hit, amount] of [[0, 1], [0.042, 0.45]]) {
+      this.#tone(t + hit, { freq: base, peak: 0.26 * amount, decay: 0.075 });
+      this.#tone(t + hit, { freq: base * 1.53, peak: 0.18 * amount, decay: 0.05 });
+      this.#noiseBurst(t + hit, { type: 'highpass', freq: 3500, attack: 0.001, peak: 0.22 * amount, decay: 0.014 });
     }
   }
 
@@ -173,7 +258,7 @@ class AudioEngine {
     depth.gain.setValueAtTime(0.09, t);
     depth.gain.linearRampToValueAtTime(0, end + 0.2);
     lfo.connect(depth).connect(amp.gain);
-    src.connect(band).connect(amp).connect(this.#master);
+    src.connect(band).connect(amp).connect(this.#sfx);
     src.start(t);
     lfo.start(t);
     src.stop(end + 0.3);
@@ -197,9 +282,9 @@ class AudioEngine {
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(SILENCE, t);
     gain.gain.exponentialRampToValueAtTime(0.06, t + 0.1);
-    gain.gain.setValueAtTime(0.06, t + duration - 0.2);
+    gain.gain.setValueAtTime(0.06, Math.max(t + 0.15, t + duration - 0.2));
     gain.gain.exponentialRampToValueAtTime(SILENCE, t + duration);
-    motor.connect(low).connect(gain).connect(this.#master);
+    motor.connect(low).connect(gain).connect(this.#sfx);
     motor.start(t);
     motor.stop(t + duration + 0.05);
   }
@@ -211,29 +296,62 @@ class AudioEngine {
     this.#noiseBurst(t, { type: 'lowpass', freq: 500, q: 0.8, attack: 0.001, peak: 0.25, decay: 0.07 });
   }
 
+  // Explosión de símbolos ganadores en la avalancha: estallido filtrado + golpe grave.
+  explode(strength = 1) {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#noiseBurst(t, { freq: 1800, freqEnd: 300, q: 0.7, attack: 0.004, peak: 0.3 * strength, decay: 0.28 });
+    this.#tone(t, { freq: 110, freqEnd: 42, peak: 0.35 * strength, decay: 0.2 });
+    this.#noiseBurst(t + 0.02, { type: 'highpass', freq: 5200, attack: 0.001, peak: 0.12 * strength, decay: 0.12 });
+  }
+
+  // Caída de símbolos nuevos: golpecitos de madera escalonados.
+  drop(count = 4) {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    for (let i = 0; i < count; i++) {
+      this.#tone(t + i * 0.045, { type: 'triangle', freq: randomBetween(520, 700), freqEnd: 260, peak: 0.12, decay: 0.07 });
+    }
+  }
+
+  // Escalón del multiplicador de cascada: tono ascendente según el nivel.
+  cascade(step) {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    const base = [660, 880, 1046.5, 1318.5][Math.min(step, 3)];
+    this.#tone(t, { type: 'triangle', freq: base, freqEnd: base * 1.5, attack: 0.01, peak: 0.14, decay: 0.22 });
+    this.bell(base * 2, 0.08, 0.1);
+  }
+
+  // Brillo del multiplicador dorado: barrido de campanillas agudas.
+  shimmer() {
+    if (!this.#ready()) return;
+    for (let i = 0; i < 7; i++) this.bell(1567.98 * 2 ** (i / 12), i * 0.05, 0.08);
+  }
+
   // Campana armónica: parciales inarmónicos de una campana real (1, 2, 2.76, 4.07, 5.4).
   bell(freq = 880, delay = 0, peak = 0.22) {
     if (!this.#ready()) return;
     const t = this.#time(delay);
     const partials = [[1, 1, 1.6], [2, 0.5, 1.1], [2.76, 0.42, 0.9], [4.07, 0.24, 0.6], [5.4, 0.14, 0.4]];
-    for (const [ratio, level, decay] of partials) {
-      this.#tone(t, { freq: freq * ratio, peak: peak * level, decay });
+    for (const [ratio, amount, decay] of partials) {
+      this.#tone(t, { freq: freq * ratio, peak: peak * amount, decay });
     }
   }
 
-  win(level = 1) {
+  win(tier = 1) {
     if (!this.#ready()) return;
     const scale = [1046.5, 1318.5, 1568, 2093];
-    if (level <= 1) {
+    if (tier <= 1) {
       this.bell(1318.5, 0, 0.18);
       this.bell(1975.5, 0.12, 0.14);
       return;
     }
-    const rounds = level >= 3 ? 3 : 1;
+    const rounds = tier >= 3 ? 3 : 1;
     for (let r = 0; r < rounds; r++) {
       scale.forEach((freq, i) => this.bell(freq, r * 0.6 + i * 0.1, 0.2));
     }
-    if (level >= 3) {
+    if (tier >= 3) {
       for (let i = 0; i < 14; i++) this.chip(1.8 + i * 0.07);
     }
   }

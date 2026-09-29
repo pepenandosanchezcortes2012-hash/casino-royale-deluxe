@@ -123,19 +123,20 @@ function pip(suit, x, y, size, flip = false) {
   return useRef(`suit-${suit}`, attrs);
 }
 
+// Índices grandes ("jumbo") para que el rango se lea aunque la carta mida menos de 50 px.
 function corner(rank, suit) {
   return svg('g', {}, [
     svgText(rank, {
-      x: 30,
-      y: 50,
+      x: 34,
+      y: 64,
       'text-anchor': 'middle',
-      'font-size': rank === '10' ? 38 : 44,
+      'font-size': rank === '10' ? 46 : 62,
       'font-weight': 700,
       'font-family': 'Georgia, "Times New Roman", serif',
-      'letter-spacing': rank === '10' ? -3 : 0,
+      'letter-spacing': rank === '10' ? -5 : 0,
       fill: 'currentColor',
     }),
-    pip(suit, 30, 80, 30),
+    pip(suit, 34, 98, 38),
   ]);
 }
 

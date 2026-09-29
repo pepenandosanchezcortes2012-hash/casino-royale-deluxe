@@ -10,6 +10,7 @@ import { SlotsGame } from './games/slots.js';
 
 const TAB_KEY = 'crd.tab.v1';
 
+// El AudioContext (efectos y música lounge) solo puede arrancar tras un gesto del usuario.
 function setupAudioUnlock() {
   const events = ['pointerdown', 'keydown', 'touchend'];
   const unlock = () => {
@@ -17,6 +18,7 @@ function setupAudioUnlock() {
     if (audio.unlocked) events.forEach((type) => window.removeEventListener(type, unlock, true));
   };
   events.forEach((type) => window.addEventListener(type, unlock, { capture: true, passive: true }));
+  document.addEventListener('visibilitychange', () => audio.setHidden(document.hidden));
 }
 
 function setupTabs(games) {

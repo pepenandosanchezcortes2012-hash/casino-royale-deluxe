@@ -437,7 +437,7 @@ code {
   }
 
   .hud {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     justify-content: center;
     width: 100%;
     gap: 6px;
@@ -457,11 +457,14 @@ code {
     font-size: 0.95rem;
   }
 
-  .hud .btn-gold,
-  .hud .btn-rescue {
+  .hud .btn-vip {
     flex: none;
     padding: 0 10px;
-    font-size: 0.85rem;
+  }
+
+  .hud .btn-rescue {
+    order: 5;
+    flex: 1 1 100%;
   }
 
   .hud .btn-icon {
