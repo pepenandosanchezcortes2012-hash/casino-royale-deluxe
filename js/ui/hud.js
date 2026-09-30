@@ -1,5 +1,5 @@
-// HUD: créditos y fichas en juego, racks de fichas de la zona, panel de sonido y voz,
-// avisos y efectos. La parte narrativa (título, zona, favores, expediente) vive en story-ui.js.
+// HUD: créditos y fichas en juego, racks de fichas de la zona, interruptores de música y de
+// efectos, avisos y efectos visuales. La parte narrativa vive en story-ui.js.
 
 import { wallet, DENOMINATIONS } from '../engine/wallet.js';
 import { audio } from '../engine/audio.js';
@@ -29,24 +29,9 @@ class Hud {
     this.#dom = {
       balance: $('hud-balance'),
       inPlay: $('hud-inplay'),
-      sound: $('btn-sound'),
-      soundIcon: $('btn-sound-icon'),
+      music: $('btn-music'),
+      sfx: $('btn-sfx'),
       toasts: $('toasts'),
-      soundDialog: $('sound-dialog'),
-      soundClose: $('sound-close'),
-      sndMute: $('snd-mute'),
-      sndSfx: $('snd-sfx'),
-      sndSfxOut: $('snd-sfx-out'),
-      sndMusicOn: $('snd-music-on'),
-      sndMusic: $('snd-music'),
-      sndMusicOut: $('snd-music-out'),
-      sndStyle: $('snd-style'),
-      sndVoiceOn: $('snd-voice-on'),
-      sndVoice: $('snd-voice'),
-      sndVoiceOut: $('snd-voice-out'),
-      sndLang: $('snd-lang'),
-      sndTest: $('snd-test'),
-      sndNote: $('snd-voice-note'),
     };
 
     const saved = storage.read(CHIP_KEY, null);
@@ -57,13 +42,7 @@ class Hud {
     this.#dom.inPlay.textContent = formatChips(wallet.inPlay);
 
     wallet.addEventListener('change', () => this.#onWalletChange());
-    this.#dom.sound.addEventListener('click', () => this.#openSound());
-    this.#dom.soundDialog.addEventListener('click', (event) => {
-      if (event.target === this.#dom.soundDialog) this.#dom.soundDialog.close();
-    });
-    this.#dom.soundClose.addEventListener('click', () => this.#dom.soundDialog.close());
-    this.#bindSound();
-    this.#renderSound();
+    this.#bindAudio();
   }
 
   // ---------- Racks de fichas ----------
@@ -164,63 +143,33 @@ class Hud {
     this.#tween = requestAnimationFrame(step);
   }
 
-  // ---------- Sonido y voz ----------
+  // ---------- Música y efectos ----------
 
-  #openSound() {
-    audio.unlock();
-    this.#renderSound();
-    if (!this.#dom.soundDialog.open) this.#dom.soundDialog.showModal();
-  }
-
-  #bindSound() {
+  // Cada interruptor es independiente y guarda su estado; el clic también desbloquea el audio.
+  #bindAudio() {
     const d = this.#dom;
-    const percent = (input) => Number(input.value) / 100;
-    d.sndMute.addEventListener('change', () => audio.update({ muted: d.sndMute.checked }));
-    d.sndSfx.addEventListener('input', () => audio.update({ sfx: percent(d.sndSfx) }));
-    d.sndSfx.addEventListener('change', () => audio.chip());
-    d.sndMusicOn.addEventListener('change', () => audio.update({ musicOn: d.sndMusicOn.checked }));
-    d.sndMusic.addEventListener('input', () => audio.update({ music: percent(d.sndMusic) }));
-    d.sndStyle.addEventListener('change', () => audio.update({ style: d.sndStyle.value }));
-    d.sndVoiceOn.addEventListener('change', () => audio.update({ voiceOn: d.sndVoiceOn.checked }));
-    d.sndVoice.addEventListener('input', () => audio.update({ voice: percent(d.sndVoice) }));
-    d.sndLang.addEventListener('change', () => audio.update({ lang: d.sndLang.value }));
-    d.sndTest.addEventListener('click', () => {
+    d.music.addEventListener('click', () => {
       audio.unlock();
-      if (!audio.say('test', {}, { interrupt: true })) {
-        this.toast(audio.voice.supported ? 'Activa la voz y el sonido para escucharla' : 'Tu navegador no admite síntesis de voz', 'warn');
-      }
+      audio.toggleMusic();
     });
-    audio.addEventListener('change', () => this.#renderSound());
+    d.sfx.addEventListener('click', () => {
+      audio.unlock();
+      if (audio.toggleSfx()) audio.chip();
+    });
+    audio.addEventListener('change', () => this.#renderAudio());
+    this.#renderAudio();
   }
 
-  #renderSound() {
-    const d = this.#dom;
-    const s = audio.settings;
-    const on = !s.muted;
-    d.sound.setAttribute('aria-label', on ? 'Sonido y voz (activado)' : 'Sonido y voz (silenciado)');
-    d.sound.classList.toggle('is-muted', !on);
-    d.soundIcon.setAttribute('href', on ? '#icon-sound-on' : '#icon-sound-off');
-    d.sndMute.checked = s.muted;
-    d.sndSfx.value = String(Math.round(s.sfx * 100));
-    d.sndSfxOut.textContent = `${Math.round(s.sfx * 100)}%`;
-    d.sndMusicOn.checked = s.musicOn;
-    d.sndMusic.value = String(Math.round(s.music * 100));
-    d.sndMusicOut.textContent = `${Math.round(s.music * 100)}%`;
-    d.sndMusic.disabled = !s.musicOn;
-    d.sndStyle.value = s.style;
-    d.sndStyle.disabled = !s.musicOn;
-    d.sndVoiceOn.checked = s.voiceOn;
-    d.sndVoice.value = String(Math.round(s.voice * 100));
-    d.sndVoiceOut.textContent = `${Math.round(s.voice * 100)}%`;
-    d.sndLang.value = s.lang;
-    const voice = audio.voice.supported;
-    d.sndVoiceOn.disabled = !voice;
-    d.sndVoice.disabled = !voice || !s.voiceOn;
-    d.sndLang.disabled = !voice;
-    d.sndTest.disabled = !voice;
-    d.sndNote.textContent = voice
-      ? 'La voz usa las voces instaladas en tu dispositivo (Web Speech API).'
-      : 'Este navegador no ofrece síntesis de voz: los anuncios se muestran solo en pantalla.';
+  #renderAudio() {
+    const { music, sfx } = audio.prefs;
+    const paint = (button, on, icons) => {
+      button.setAttribute('aria-pressed', String(on));
+      button.classList.toggle('is-off', !on);
+      button.querySelector('.audio-icon').textContent = on ? icons[0] : icons[1];
+      button.querySelector('.audio-state').textContent = on ? 'ON' : 'OFF';
+    };
+    paint(this.#dom.music, music, ['🎵', '🎵']);
+    paint(this.#dom.sfx, sfx, ['🔊', '🔇']);
   }
 
   // ---------- Avisos y efectos ----------

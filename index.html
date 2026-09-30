@@ -29,11 +29,9 @@
   <link rel="modulepreload" href="js/ui/story-ui.js">
   <link rel="modulepreload" href="js/ui/vip-ui.js">
   <link rel="modulepreload" href="js/engine/music.js">
-  <link rel="modulepreload" href="js/engine/noir.js">
   <link rel="modulepreload" href="js/engine/rng.js">
   <link rel="modulepreload" href="js/engine/store.js">
   <link rel="modulepreload" href="js/engine/vip.js">
-  <link rel="modulepreload" href="js/engine/voice.js">
   <link rel="modulepreload" href="js/engine/wallet.js">
   <link rel="modulepreload" href="js/games/blackjack-rules.js">
   <link rel="modulepreload" href="js/games/slots-engine.js">
@@ -178,13 +176,6 @@
       <polygon points="6,38 50,38 50,92" fill="#000" fill-opacity="0.1"/>
       <polygon points="50,38 94,38 50,92" fill="#000" fill-opacity="0.28"/>
     </symbol>
-
-    <symbol id="icon-sound-on" viewBox="0 0 24 24">
-      <path fill="currentColor" d="M3 9v6h4l5 4V5L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/>
-    </symbol>
-    <symbol id="icon-sound-off" viewBox="0 0 24 24">
-      <path fill="currentColor" d="M3 9v6h4l5 4V5L7 9H3zm13.6 3 2.7-2.7-1.4-1.4-2.7 2.7-2.7-2.7-1.4 1.4 2.7 2.7-2.7 2.7 1.4 1.4 2.7-2.7 2.7 2.7 1.4-1.4z"/>
-    </symbol>
   </svg>
 
   <a class="skip-link" href="#main">Saltar al contenido</a>
@@ -220,8 +211,13 @@
         <span class="dossier-kicker"><span id="hud-legend">Leyenda 1</span> · <span id="hud-zone">El Callejón</span></span>
         <span id="hud-title" class="dossier-title">Rata del Callejón</span>
       </button>
-      <button type="button" id="btn-sound" class="btn btn-icon" aria-haspopup="dialog" aria-label="Sonido y voz">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><use id="btn-sound-icon" href="#icon-sound-on"/></svg>
+      <button type="button" id="btn-music" class="btn btn-audio btn-music" aria-pressed="true" aria-label="Música de fondo" title="Música de fondo lounge">
+        <span class="audio-icon" aria-hidden="true">🎵</span>
+        <span class="audio-text" aria-hidden="true"><span class="audio-name">Música: </span><span class="audio-state">ON</span></span>
+      </button>
+      <button type="button" id="btn-sfx" class="btn btn-audio btn-sfx" aria-pressed="true" aria-label="Efectos de sonido" title="Efectos de sonido">
+        <span class="audio-icon" aria-hidden="true">🔊</span>
+        <span class="audio-text" aria-hidden="true"><span class="audio-name">Efectos: </span><span class="audio-state">ON</span></span>
       </button>
     </div>
   </header>
@@ -532,35 +528,6 @@
       <div class="cine-actions">
         <button type="button" class="btn btn-danger" id="gameover-restart">Reiniciar la Leyenda</button>
       </div>
-    </div>
-  </dialog>
-
-  <dialog id="sound-dialog" class="modal sound-dialog" aria-labelledby="sound-title">
-    <div class="modal-head">
-      <h2 id="sound-title">Sonido y voz</h2>
-      <button type="button" class="btn btn-icon" id="sound-close" aria-label="Cerrar ajustes de sonido">✕</button>
-    </div>
-    <div class="settings">
-      <label class="switch"><input type="checkbox" id="snd-mute"><span class="switch-ui" aria-hidden="true"></span><span>Silenciar todo</span></label>
-      <label class="slider"><span>Efectos</span><input type="range" id="snd-sfx" min="0" max="100" step="5"><output id="snd-sfx-out">80%</output></label>
-      <label class="switch"><input type="checkbox" id="snd-music-on"><span class="switch-ui" aria-hidden="true"></span><span>Música procedural</span></label>
-      <label class="slider"><span>Volumen de la música</span><input type="range" id="snd-music" min="0" max="100" step="5"><output id="snd-music-out">30%</output></label>
-      <label class="select"><span>Estilo de la música</span>
-        <select id="snd-style">
-          <option value="noir">Noir de suspense (cambia con la zona)</option>
-          <option value="lounge">Lounge jazz clásico</option>
-        </select>
-      </label>
-      <label class="switch"><input type="checkbox" id="snd-voice-on"><span class="switch-ui" aria-hidden="true"></span><span>Voz del crupier</span></label>
-      <label class="slider"><span>Volumen de la voz</span><input type="range" id="snd-voice" min="0" max="100" step="5"><output id="snd-voice-out">90%</output></label>
-      <label class="select"><span>Idioma de la voz</span>
-        <select id="snd-lang">
-          <option value="es">Español</option>
-          <option value="en">English</option>
-        </select>
-      </label>
-      <button type="button" class="btn" id="snd-test">Probar la voz</button>
-      <p class="hint" id="snd-voice-note"></p>
     </div>
   </dialog>
 

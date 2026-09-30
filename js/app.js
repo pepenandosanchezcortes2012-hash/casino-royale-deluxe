@@ -13,7 +13,7 @@ import { vipUi } from './ui/vip-ui.js';
 
 const TAB_KEY = 'crd.tab.v1';
 
-// El AudioContext (efectos y música noir o lounge) solo puede arrancar tras un gesto del usuario.
+// El AudioContext (efectos y música de fondo) solo puede arrancar tras un gesto del usuario.
 function setupAudioUnlock() {
   const events = ['pointerdown', 'keydown', 'touchend'];
   const unlock = () => {

@@ -812,7 +812,6 @@ export class RouletteGame {
   #callSeq = 0;
   #prefs = loadPrefs();
   #visible = false;
-  #invite = 0;
 
   constructor(root) {
     this.root = root;
@@ -1157,7 +1156,6 @@ export class RouletteGame {
     if (s.busy || s.phase !== PHASE.BETTING || !campaign.playable) return;
     const stake = this.#total(s.bets);
     if (stake <= 0) return;
-    clearTimeout(this.#invite);
     campaign.beginRound({ game: 'roulette', stake });
 
     const result = randomInt(POCKETS);
@@ -1166,12 +1164,10 @@ export class RouletteGame {
     const history = [result, ...s.history].slice(0, HISTORY_LIMIT);
     this.#persist(history, s.bets, s.calls);
 
-    audio.say('noMoreBets', {}, { interrupt: true });
     this.#set('SPIN', { phase: PHASE.DEALING, busy: true, message: 'No va más…', lastBets: { ...s.bets }, lastCalls: s.calls.map((c) => ({ ...c })) });
     await this.#wheel.spin(result);
 
     this.#set('RESOLVE', { phase: PHASE.RESOLVING, result, history });
-    audio.say('number', { number: result, color: colorOf(result) }, { interrupt: true });
     this.#renderStats(history);
     await wait(900);
 
@@ -1196,10 +1192,6 @@ export class RouletteGame {
     campaign.report({ game: 'roulette', stake, returned: payout, tags: this.#tags(s.bets, s.calls, result) });
     await wait(500);
     this.#set('READY', { busy: false });
-    this.#invite = setTimeout(() => {
-      const now = this.state;
-      if (this.#visible && !now.busy && now.phase !== PHASE.BETTING) audio.say('placeBets');
-    }, 2600);
   }
 
   // Etiquetas de la ronda para logros y encargos del Sindicato.
@@ -1332,13 +1324,10 @@ export class RouletteGame {
   onShow() {
     this.#visible = true;
     this.#wheel.setVisible(true);
-    const s = this.state;
-    if (!s.busy && s.phase === PHASE.IDLE) audio.say('placeBets');
   }
 
   onHide() {
     this.#visible = false;
-    clearTimeout(this.#invite);
     this.#wheel.setVisible(false);
   }
 }

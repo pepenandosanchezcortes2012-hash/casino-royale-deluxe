@@ -322,7 +322,6 @@ export class SlotsGame {
 
     if (free && outcome.retrigger && !maxed) {
       this.#banner(`+${outcome.retrigger} GIROS`, 'is-free');
-      audio.say('freeSpins', { count: outcome.retrigger });
     }
     if (free && fs.remaining === 0) {
       await wait(900);
@@ -332,7 +331,6 @@ export class SlotsGame {
       campaign.report({ game: 'slots', stake: fs.cost ?? 0, returned: fs.total, tags: fs.source === 'buy' ? ['fs-round', 'bonus-buy'] : ['fs-round'] });
     } else if (!free && outcome.freeSpins) {
       audio.win(2);
-      audio.say('freeSpins', { count: outcome.freeSpins });
       hud.toast(`¡${outcome.freeSpins} GIROS GRATIS con multiplicador dorado!`, 'success', 4200);
     }
     this.#set('READY', { busy: false });
@@ -369,17 +367,14 @@ export class SlotsGame {
     if (crowns) {
       this.#banner('JACKPOT REAL · 4 CORONAS', 'is-jackpot');
       audio.win(3);
-      audio.say('bigWin', {}, { interrupt: true });
       hud.celebrate(3, origin);
     } else if (ratio >= 50) {
       this.#banner(superBonus ? 'SÚPER BONO ×15' : 'MEGA PREMIO', 'is-super');
       audio.win(3);
-      audio.say('bigWin', {}, { interrupt: true });
       hud.celebrate(3, origin);
     } else if (superBonus) {
       this.#banner('SÚPER BONO ×15', 'is-super');
       audio.win(2);
-      audio.say('superBonus');
       hud.celebrate(2, origin);
     } else if (ratio >= 10 || outcome.freeSpins) {
       if (outcome.freeSpins) this.#banner(`${outcome.freeSpins} GIROS GRATIS`, 'is-free');
@@ -513,7 +508,6 @@ export class SlotsGame {
     });
     this.#banner(`${FREE_SPINS} GIROS GRATIS`, 'is-free');
     audio.win(2);
-    audio.say('freeSpins', { count: FREE_SPINS });
     const rect = this.#dom.grid.getBoundingClientRect();
     hud.celebrate(2, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
     this.#scheduleNext();

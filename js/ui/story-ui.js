@@ -9,13 +9,10 @@ import { ACHIEVEMENTS } from '../story/achievements.js';
 import { PROLOGUE, FINALE, GAME_OVER } from '../story/narrative.js';
 import { wallet } from '../engine/wallet.js';
 import { audio } from '../engine/audio.js';
-import { randomInt } from '../engine/rng.js';
 import { hud, formatChips } from './hud.js';
 import { el } from './svg.js';
 
 const LOG_VISIBLE = 40;
-// La voz de las jugadas críticas no se repite más de una vez por minuto.
-const CRITICAL_VOICE_GAP = 60000;
 const timeFormat = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' });
 const dateFormat = new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
@@ -86,7 +83,6 @@ class StoryUi {
   #games = {};
   #typer = new Typewriter();
   #criticalTimer = 0;
-  #criticalVoiceAt = 0;
   #brokeTimer = 0;
   #restartArmed = false;
   #replaying = false;
@@ -234,8 +230,6 @@ class StoryUi {
 
   #onZone({ zone, forced }) {
     this.#transition(zone, forced);
-    if (forced) audio.say('demoted', {}, { interrupt: true });
-    else audio.say('arrive', { zone: zone.id }, { interrupt: true });
   }
 
   #applyZone(zone) {
@@ -278,12 +272,6 @@ class StoryUi {
     audio.riser(1.4);
     audio.startHeartbeat(zone.id === 'penthouse' ? 96 : 84);
     audio.setTension(1);
-    const now = Date.now();
-    if (now - this.#criticalVoiceAt > CRITICAL_VOICE_GAP) {
-      this.#criticalVoiceAt = now;
-      if (zone.id === 'penthouse') audio.say('sibila', { i: randomInt(4) }, { interrupt: true });
-      else audio.say('critical', {}, { interrupt: true });
-    }
     clearTimeout(this.#criticalTimer);
     this.#criticalTimer = setTimeout(() => this.#endCritical(null), 30000);
     this.#dom.root.style.setProperty('--critical-share', String(Math.min(1, share)));
@@ -303,14 +291,8 @@ class StoryUi {
     else audio.doom();
   }
 
-  #onRound({ critical, net, stake }) {
-    if (critical) {
-      this.#endCritical(net > 0);
-      return;
-    }
-    if (campaign.zone.id !== 'penthouse') return;
-    if (net > 0 && net >= stake * 5) audio.say('sibila', { i: 2 });
-    else if (net < 0 && randomInt(8) === 0) audio.say('sibila', { i: randomInt(2) });
+  #onRound({ critical, net }) {
+    if (critical) this.#endCritical(net > 0);
   }
 
   #onAchievement(achievement) {
@@ -331,7 +313,6 @@ class StoryUi {
   #onUnlock(zone) {
     hud.toast(`${zone.name} te abre sus puertas. Pulsa «Nivel ${zone.level}» para subir.`, 'success', 5200);
     audio.neonBuzz();
-    audio.say('unlock');
     this.#dom.zoneBar.querySelector(`[data-zone="${zone.id}"]`)?.classList.add('is-new');
   }
 
@@ -345,7 +326,6 @@ class StoryUi {
 
   #onFavor({ amount, left }) {
     hud.toast(`Favor del Sindicato: +${formatChips(amount)} créditos · quedan ${left}`, 'warn', 4200);
-    audio.say('favor', {}, { interrupt: true });
     audio.chip();
   }
 
@@ -446,7 +426,6 @@ class StoryUi {
     if (campaign.status !== 'intro') return;
     audio.unlock();
     campaign.begin();
-    audio.say('begin', {}, { interrupt: true });
     this.#transition(campaign.zone, false);
   }
 
@@ -494,10 +473,8 @@ class StoryUi {
       if (canvas) dialog.prepend(canvas);
       hud.goldStorm(12);
       audio.fanfare();
-      audio.say('victory', {}, { interrupt: true });
     } else {
       audio.doom();
-      audio.say('gameover', {}, { interrupt: true });
     }
   }
 

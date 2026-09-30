@@ -106,7 +106,6 @@ class VipUi {
 
   #onRankUp({ rank }) {
     audio.win(3);
-    audio.say('rankUp', { rank: rank.id }, { interrupt: true });
     hud.toast(`¡Nuevo rango VIP: ${rank.name}! Bono diario de ${formatChips(rank.daily)} y ${rank.rescues} rescates de ${formatChips(rank.rescue)} por leyenda`, 'success', 5600);
     const button = this.#dom.button;
     const rect = button.getBoundingClientRect();

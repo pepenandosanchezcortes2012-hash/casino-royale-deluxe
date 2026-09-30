@@ -10,9 +10,9 @@ Neo-Madrid, 2089. Despiertas en el sótano de un casino clandestino con **un ún
 - **Ruleta francesa** con racetrack (Voisins, Tiers, Orphelins, Jeu Zéro y vecinos) y zoom balístico.
 - **Slots Matrix 4×4** con avalanchas ×1 → ×5, giros gratis con multiplicadores dorados, Bonus Buy y Auto-Spin.
 
-Tres zonas que se abren según tu saldo, encargos del Sindicato, logros, títulos dinámicos, un **Club VIP** con rangos, bono diario, rescates y tapetes de lujo que se conservan entre partidas, jugadas críticas con latido de corazón, una bitácora donde los crupieres reaccionan a tu suerte, música noir-jazz o lounge procedural y dos finales: la libertad o el Game Over definitivo.
+Tres zonas que se abren según tu saldo, encargos del Sindicato, logros, títulos dinámicos, un **Club VIP** con rangos, bono diario, rescates y tapetes de lujo que se conservan entre partidas, jugadas críticas con latido de corazón, una bitácora donde los crupieres reaccionan a tu suerte, música de fondo lounge/jazz procedural y dos finales: la libertad o el Game Over definitivo.
 
-Es **100 % estático** (HTML5, CSS3 y módulos ES, sin frameworks, dependencias ni recursos externos). El azar sale de `crypto.getRandomValues()`, el sonido se sintetiza con Web Audio API, la voz usa Web Speech API y todos los gráficos son SVG o Canvas.
+Es **100 % estático** (HTML5, CSS3 y módulos ES, sin frameworks, dependencias ni recursos externos). El azar sale de `crypto.getRandomValues()`, la música y los efectos se sintetizan con Web Audio API (sin voces ni archivos de audio) y todos los gráficos son SVG o Canvas.
 
 > Ficción de entretenimiento: créditos virtuales sin valor monetario.
 
@@ -41,7 +41,7 @@ python -m http.server 8080      # o: npx serve .
 Pruebas y simulación (Node 20+, sin dependencias):
 
 ```bash
-npm test             # 41 pruebas: RNG, reglas, ventajas exactas, RTP, campaña, Club VIP y sitio
+npm test             # 48 pruebas: RNG, reglas, RTP, campaña, Club VIP, sonido y sitio
 npm run simulate     # 600 leyendas completas con el núcleo real de la campaña (tabla de equilibrio)
 ```
 
@@ -158,7 +158,7 @@ Los **títulos** siguen a tu saldo, hacia arriba y hacia abajo, y cada cambio se
 
 El Club VIP es tu carrera en el casino: el XP, el rango, los tapetes comprados y el bono diario **se conservan aunque la leyenda termine**, así que cada partida nueva empieza con más ayuda. Se abre con el botón del rango en la cabecera, que muestra un aviso «Bono» cuando el bono diario está disponible.
 
-- **XP**: 1 por cada crédito apostado en cualquier mesa. Cada ascenso se celebra con fanfarria, voz del crupier y una entrada en la bitácora.
+- **XP**: 1 por cada crédito apostado en cualquier mesa. Cada ascenso se celebra con fanfarria, confeti y una entrada en la bitácora.
 - **Bono diario**: una vez por día natural (se renueva a medianoche), en cualquier momento de la leyenda.
 - **Rescates VIP**: cuando te quedas sin créditos; su número por leyenda depende del rango.
 - **Tapetes de lujo**: se compran con créditos de la leyenda y quedan en el Club para siempre. Sustituyen al tapete de la zona hasta que vuelvas a elegir «Tapete de la zona».
@@ -190,20 +190,27 @@ El Club VIP es tu carrera en el casino: el XP, el rango, los tapetes comprados y
 
 ## Tensión y atmósfera
 
-- **Jugadas críticas**: apostarlo todo, o arriesgar al menos la mitad de tu bankroll (apuesta ÷ (saldo + apuesta) ≥ 50 %) con 10 apuestas mínimas o más en juego. Así el drama no se repite en cada apuesta pequeña cuando vas justo de saldo. La pantalla se cierra con una viñeta roja, suenan un latido y un riser, la música sube a tensión máxima y el crupier o SIBILA lo anuncia (como mucho una vez por minuto). El resultado estalla en un impacto dorado o en un golpe grave con destello rojo.
-- **Bitácora del Crupier**: es un panel lateral (en móvil va al final, con un teletipo sobre la mesa). En él Moss, Vera, SIBILA, el Sindicato y el Narrador reaccionan a premios grandes, pérdidas duras, rachas de 3, 5, 7, 10, 15 y 20, títulos, logros, encargos, favores y cambios de zona. En el Penthouse, SIBILA provoca en voz alta. Guarda las últimas 60 entradas.
+- **Jugadas críticas**: apostarlo todo, o arriesgar al menos la mitad de tu bankroll (apuesta ÷ (saldo + apuesta) ≥ 50 %) con 10 apuestas mínimas o más en juego. Así el drama no se repite en cada apuesta pequeña cuando vas justo de saldo. La pantalla se cierra con una viñeta roja, suenan un latido y un riser, la música de fondo se aparta para dejar sitio al latido. El resultado estalla en un impacto dorado o en un golpe grave con destello rojo.
+- **Bitácora del Crupier**: es un panel lateral (en móvil va al final, con un teletipo sobre la mesa). En él Moss, Vera, SIBILA, el Sindicato y el Narrador reaccionan a premios grandes, pérdidas duras, rachas de 3, 5, 7, 10, 15 y 20, títulos, logros, encargos, favores y cambios de zona. Guarda las últimas 60 entradas.
 - **Expediente**: reúne las estadísticas de la leyenda, los logros y el Salón de la Fama (leyendas jugadas, victorias, mejor tiempo y mejor saldo). Desde aquí se relee el prólogo y se reinicia la leyenda con doble confirmación.
 - **CSS atmosférico**: cada zona redefine su paleta con variables CSS. Hay un letrero de neón con parpadeo; en el Callejón, bombilla temblorosa y lluvia; en el Salón, un neón que respira; en el Penthouse, un barrido dorado y el escáner de SIBILA. Todo respeta `prefers-reduced-motion`.
 
-## Música noir, lounge y voz
+## Música de fondo y efectos
 
-- **Dos estilos de música**, a elegir en «Sonido y voz»: *Noir de suspense* (por defecto, cambia con la zona y la tensión) o *Lounge jazz clásico*.
-- **Noir** (`js/engine/noir.js`), con cinco atmósferas: Callejón, Salón, Penthouse, Final y Game Over. Combina piano con voicings de jazz, contrabajo, escobillas, vibráfono, trompeta con sordina, lluvia, drone grave y reloj, todo con reverb por convolución, y cada compás varía.
-- **Lounge** (`js/engine/music.js`, recuperado de la versión 2): progresión de 8 compases con piano eléctrico FM y trémolo, contrabajo walking, ride y escobillas con swing, vibráfono ocasional y reverb por convolución.
+El juego no usa ninguna voz: no hay síntesis de voz ni locuciones, solo música y efectos generados con Web Audio API.
+
+- **Música de fondo lounge / jazz nocturno** (`js/engine/music.js`), pensada para sonar de fondo sin cansar:
+  - **Piano eléctrico tipo Rhodes**: tres senos por nota (fundamental, octava que se apaga antes y una «púa» aguda muy breve), un paso bajo cálido a 2,1 kHz y un trémolo estéreo lento.
+  - **Armonía**: acordes de jazz (maj9, m9, m11, 13, 9sus…) en voicings cerrados sin fundamental, con conducción de voces mínima entre acordes (menos de 3 semitonos por voz de media) y un arpegio humano de pocos milisegundos.
+  - **Contrabajo** suave a dos tiempos (fundamental y quinta) con aproximaciones cromáticas ocasionales.
+  - **Escobillas, platillo y bombo apenas rozado**, hechos con ruido blanco filtrado y un swing ligero.
+  - **Tempo pausado** de 65 a 75 BPM. Cada zona tiene su tonalidad y su progresión de 8 compases: Callejón en re menor a 66 BPM, Salón en mi bemol a 72, Penthouse en la bemol a 68, Final en re bemol a 70 y Game Over en mi menor a 65.
+  - **Mezcla de fondo**: unos 15–20 dB por debajo de fichas y cartas, con reverb de sala pequeña y un recorte suave de agudos. En las jugadas críticas la música se aparta para que se oiga el latido.
+  - **Fundidos**: 3 s de entrada al encenderla y 1,6 s de salida al pausarla, en línea recta en decibelios. También se detiene con la pestaña oculta.
+- **Efectos de juego** (`js/engine/audio.js`): reparto y barajeo de cartas, choque de fichas, bola y rueda de la ruleta, rodillos, avalanchas y campanas de premio, además de los efectos dramáticos (latido, riser, impacto, fanfarria).
+- **Controles independientes en la cabecera**: «🎵 Música: ON/OFF» y «🔊 Efectos: ON/OFF». Cada uno se guarda en su propia clave de `localStorage` (`crd.bgm.v1` y `crd.sfx.v1`); los ajustes del panel de sonido antiguo se migran solos.
 - **Tensión (0–1)**: abre el filtro y el volumen del drone. Por encima de 0,4 añade pulsos de contrabajo, por encima de 0,55 dobla el tic-tac del reloj y por encima de 0,6 mete golpes graves.
 - **Efectos dramáticos sintetizados**: latido, riser, sting, impacto, doom, fanfarria, whoosh de transición, zumbido de neón y teclas de máquina de escribir.
-- **Voz del crupier** (Web Speech API, en español o inglés): bienvenida, llegada a cada zona, jugadas críticas, burlas de SIBILA, favores, ascensos de rango VIP, degradación, victoria y Game Over, además de las frases de mesa («No va más», «Blackjack»…). Solo habla tras la primera interacción.
-- **Volúmenes independientes** de efectos, música y voz. La música se pausa cuando la pestaña queda oculta.
 
 ## Blackjack multimano (Las Vegas Strip)
 
@@ -283,7 +290,7 @@ Muestra: 60 millones de tiradas del juego base y 4,5 millones de rondas de bono.
 
 ## Arquitectura y seguridad
 
-- **Núcleo de campaña sin DOM**: `js/story/campaign.js` es un `EventTarget`. Recibe de cada mesa el aviso previo de la ronda (`beginRound`) y su informe final (`report`), y emite eventos (`round`, `critical`, `zone`, `achievement`, `contract`, `title`, `favor`, `status`…). `js/ui/story-ui.js` los convierte en cinemáticas, bitácora, audio y voz, así que toda la lógica de la historia se prueba en Node.
+- **Núcleo de campaña sin DOM**: `js/story/campaign.js` es un `EventTarget`. Recibe de cada mesa el aviso previo de la ronda (`beginRound`) y su informe final (`report`), y emite eventos (`round`, `critical`, `zone`, `achievement`, `contract`, `title`, `favor`, `status`…). `js/ui/story-ui.js` los convierte en cinemáticas, bitácora y sonido, así que toda la lógica de la historia se prueba en Node.
 - **State Store unidireccional**: cada mesa tiene un `Store` con estado inmutable (`deepFreeze`) y fases atómicas `IDLE → BETTING → DEALING → RESOLVING → PAYOUT`; una transición ilegal lanza un error.
 - **Anti doble gasto**: al apostar, las fichas pasan del saldo a un **escrow** por mesa (`hold`). Se liquidan en cuanto se decide el azar (`settle`) y el premio se acredita al terminar la animación (`reveal`). Los controles se desactivan con el flag `busy`. «En juego» muestra solo lo apostado, sin revelar el resultado antes de tiempo.
 - **Recargar no hace trampa**: el resultado se liquida antes de animarse. Al recargar se abonan los premios pendientes, se devuelven las apuestas de ruleta aún no sorteadas, la mano de blackjack se **reanuda** y los giros gratis pendientes se conservan. Los finales se comprueban solo con las mesas en reposo.
@@ -337,13 +344,11 @@ js/engine/store.js          State Store unidireccional y máquina de estados at�
 js/engine/wallet.js         Monedero con escrow anti doble gasto, ingresos (Sindicato y Club VIP) y compras
 js/engine/vip.js            Club VIP: XP, rangos, bono diario, rescates por leyenda y tapetes
 js/engine/storage.js        Persistencia en localStorage tolerante a fallos
-js/engine/audio.js          Buses de efectos y música, efectos dramáticos sintetizados y fachada de voz
-js/engine/noir.js           Música noir-jazz procedural por zona con capa de tensión
-js/engine/music.js          Música lounge jazz procedural (estilo alternativo)
-js/engine/voice.js          Voz del crupier con Web Speech API (es/en)
+js/engine/audio.js          Efectos sintetizados, buses de música y efectos, preferencias independientes
+js/engine/music.js          Música de fondo lounge/jazz procedural: Rhodes, contrabajo y escobillas
 js/engine/particles.js      Confeti, chispas y lluvia de oro en Canvas
 js/ui/svg.js                Cartas (índices jumbo), fichas y símbolos generados con createElementNS
-js/ui/hud.js                Saldo, racks de fichas por zona, panel de sonido y voz, avisos
+js/ui/hud.js                Saldo, racks de fichas por zona, interruptores de música y efectos, avisos
 js/ui/story-ui.js           Cinemáticas, transiciones de zona, bitácora, encargos, salvavidas, expediente y jugadas críticas
 js/ui/vip-ui.js             Botón y diálogo del Club VIP: rango, bono diario, rescates y tienda de tapetes
 js/ui/input.js              Clic derecho o pulsación larga para retirar fichas
@@ -354,6 +359,7 @@ js/games/slots-engine.js    Motor matemático: líneas, avalancha, giros gratis 
 js/games/slots.js           Rodillos, animación de avalancha, Bonus Buy y Auto-Spin
 tests/math.test.js          22 pruebas de RNG, reglas, ventajas exactas, RTP y economía
 tests/story.test.js         16 pruebas de zonas, encargos, logros, jugadas críticas, Club VIP, salvavidas y finales
-tests/site.test.js          3 pruebas del sitio: precarga de módulos, CSP y animaciones baratas
+tests/audio.test.js         6 pruebas de sonido: preferencias, migración, mezcla, tempo y armonía
+tests/site.test.js          4 pruebas del sitio: precarga de módulos, sin voz, CSP y animaciones baratas
 tools/simulate-economy.mjs  Simulación de leyendas completas (tabla de equilibrio)
 ```

@@ -441,7 +441,6 @@ export class BlackjackGame {
     });
     if (reshuffle) {
       audio.shuffle();
-      audio.say('shuffle');
       this.#dom.shoe.classList.add('is-shuffling');
       setTimeout(() => this.#dom.shoe.classList.remove('is-shuffling'), 1300);
       this.#clock = performance.now() + 1300;
@@ -457,9 +456,7 @@ export class BlackjackGame {
     await wait(this.#settleTime());
     this.#settleSides();
     const s = this.state;
-    if (s.hands.some((hand) => isNatural(hand))) audio.say('blackjack');
     if (rankOf(s.dealer[0]) === 'A') {
-      audio.say('insurance');
       this.#offerInsurance(-1);
       return;
     }
@@ -772,8 +769,6 @@ export class BlackjackGame {
 
     const rect = this.#dom.seats.getBoundingClientRect();
     const origin = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 3 };
-    const allLost = hands.every((hand) => hand.result === 'lose' || hand.result === 'bust');
-    const allPush = hands.every((hand) => hand.result === 'push');
     if (hands.some((hand) => hand.result === 'blackjack')) {
       audio.win(2);
       hud.celebrate(2, origin);
@@ -784,10 +779,6 @@ export class BlackjackGame {
     } else if (net < 0) {
       audio.lose();
     }
-    if (dealerBust) audio.say('dealerBust');
-    else if (allLost) audio.say('houseWins');
-    else if (allPush) audio.say('push');
-    else if (net > 0) audio.say('playerWins');
 
     this.#set('PAYOUT_MSG', { message: `${dealerText}. ${netText}` });
     const tags = [];

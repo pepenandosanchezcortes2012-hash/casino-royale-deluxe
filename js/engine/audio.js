@@ -1,36 +1,45 @@
-// Motor de audio procedural con Web Audio API: ningún archivo de audio externo.
-// Buses independientes: efectos (SFX) y música, más la voz del crupier (Web Speech API).
-// Dos estilos de música: noir de suspense (cambia con la zona y la tensión) o lounge jazz.
+// Motor de audio procedural con Web Audio API: ningún archivo de audio externo y ninguna voz.
+// Dos buses independientes: efectos de juego (SFX) y música de fondo lounge/jazz (BGM), cada uno
+// con su interruptor guardado en su propia clave de localStorage.
 // El contexto se crea y se reanuda tras el primer gesto del usuario (política de autoplay).
 
 import { storage } from './storage.js';
 import { randomFloat, randomBetween } from './rng.js';
-import { NoirMusic } from './noir.js';
-import { LoungeMusic } from './music.js';
-import { DealerVoice } from './voice.js';
+import { LoungeBgm } from './music.js';
 
-const KEY = 'crd.audio.v2';
-const LEGACY_KEY = 'crd.audio.v1';
+export const SOUND_KEYS = Object.freeze({ music: 'crd.bgm.v1', sfx: 'crd.sfx.v1' });
+const LEGACY_KEYS = Object.freeze(['crd.audio.v2', 'crd.audio.v1']);
+// Niveles de mezcla: la música queda de fondo, por debajo de fichas y cartas.
+export const MUSIC_LEVEL = 0.3;
+export const SFX_LEVEL = 0.85;
 const SILENCE = 0.0001;
-const LANGS = ['es', 'en'];
-export const MUSIC_STYLES = Object.freeze(['noir', 'lounge']);
 
-const DEFAULTS = Object.freeze({ muted: false, sfx: 0.8, musicOn: true, music: 0.3, style: 'noir', voiceOn: true, voice: 0.9, lang: 'es' });
-
-const level = (value, fallback) => (typeof value === 'number' && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : fallback);
-
-function sanitize(raw) {
-  const source = raw && typeof raw === 'object' ? raw : {};
-  return {
-    muted: typeof source.muted === 'boolean' ? source.muted : DEFAULTS.muted,
-    sfx: level(source.sfx, DEFAULTS.sfx),
-    musicOn: typeof source.musicOn === 'boolean' ? source.musicOn : DEFAULTS.musicOn,
-    music: level(source.music, DEFAULTS.music),
-    style: MUSIC_STYLES.includes(source.style) ? source.style : DEFAULTS.style,
-    voiceOn: typeof source.voiceOn === 'boolean' ? source.voiceOn : DEFAULTS.voiceOn,
-    voice: level(source.voice, DEFAULTS.voice),
-    lang: LANGS.includes(source.lang) ? source.lang : DEFAULTS.lang,
+// Preferencias de sonido: música y efectos se guardan por separado ('on' / 'off').
+// Si solo existe el panel de sonido antiguo (un objeto con silencio y volúmenes), se migra.
+export function loadSoundPrefs(store = storage) {
+  const read = (key) => {
+    const value = store.read(key, null);
+    return value === 'on' ? true : value === 'off' ? false : null;
   };
+  let music = read(SOUND_KEYS.music);
+  let sfx = read(SOUND_KEYS.sfx);
+  if (music === null || sfx === null) {
+    const legacy = LEGACY_KEYS.map((key) => store.read(key, null)).find((value) => value && typeof value === 'object');
+    if (legacy) {
+      const muted = legacy.muted === true;
+      if (music === null) music = !muted && legacy.musicOn !== false && legacy.music !== 0;
+      if (sfx === null) sfx = !muted && legacy.sfx !== 0;
+    }
+  }
+  const prefs = { music: music ?? true, sfx: sfx ?? true };
+  saveSoundPref(store, 'music', prefs.music);
+  saveSoundPref(store, 'sfx', prefs.sfx);
+  for (const key of LEGACY_KEYS) store.remove(key);
+  return prefs;
+}
+
+export function saveSoundPref(store, kind, on) {
+  store.write(SOUND_KEYS[kind], on ? 'on' : 'off');
 }
 
 class AudioEngine extends EventTarget {
@@ -39,51 +48,53 @@ class AudioEngine extends EventTarget {
   #sfx = null;
   #musicBus = null;
   #noise = null;
-  #noir = null;
-  #lounge = null;
+  #bgm = null;
   #hidden = false;
   #mood = 'alley';
   #tension = 0.12;
   #heartbeat = 0;
   #heartbeatStop = 0;
-  #settings;
-  voice;
+  #prefs;
 
   constructor() {
     super();
-    const legacy = storage.read(LEGACY_KEY, null);
-    const saved = storage.read(KEY, null) ?? (legacy ? { muted: legacy.muted === true } : null);
-    this.#settings = sanitize(saved);
-    this.voice = new DealerVoice(() => this.#settings);
+    this.#prefs = loadSoundPrefs(storage);
   }
 
-  get settings() {
-    return { ...this.#settings };
-  }
-
-  get muted() {
-    return this.#settings.muted;
+  get prefs() {
+    return { ...this.#prefs };
   }
 
   get unlocked() {
     return this.#ctx !== null && this.#ctx.state === 'running';
   }
 
-  update(patch) {
-    this.#settings = sanitize({ ...this.#settings, ...patch });
-    storage.write(KEY, this.#settings);
+  setMusic(on) {
+    this.#setPref('music', on);
+  }
+
+  setSfx(on) {
+    this.#setPref('sfx', on);
+  }
+
+  toggleMusic() {
+    this.setMusic(!this.#prefs.music);
+    return this.#prefs.music;
+  }
+
+  toggleSfx() {
+    this.setSfx(!this.#prefs.sfx);
+    return this.#prefs.sfx;
+  }
+
+  #setPref(kind, on) {
+    const value = Boolean(on);
+    if (this.#prefs[kind] === value) return;
+    this.#prefs = { ...this.#prefs, [kind]: value };
+    saveSoundPref(storage, kind, value);
     this.#applyLevels();
     this.#syncMusic();
-    if (this.#settings.muted || !this.#settings.voiceOn) this.voice.cancel();
     this.dispatchEvent(new Event('change'));
-  }
-
-  setMuted(muted) {
-    this.update({ muted: Boolean(muted) });
-  }
-
-  say(key, params, options) {
-    return this.voice.say(key, params, options);
   }
 
   unlock() {
@@ -116,9 +127,8 @@ class AudioEngine extends EventTarget {
       const data = this.#noise.getChannelData(0);
       for (let i = 0; i < length; i++) data[i] = randomFloat() * 2 - 1;
 
-      this.#noir = new NoirMusic(ctx, this.#musicBus, this.#mood);
-      this.#noir.setTension(this.#tension);
-      this.#lounge = new LoungeMusic(ctx, this.#musicBus);
+      this.#bgm = new LoungeBgm(ctx, this.#musicBus, this.#mood);
+      this.#bgm.setTension(this.#tension);
     }
     if (this.#ctx.state === 'suspended' && !this.#hidden) {
       this.#ctx.resume().then(() => this.#syncMusic(), () => {});
@@ -127,13 +137,12 @@ class AudioEngine extends EventTarget {
     return true;
   }
 
-  // Con la pestaña oculta se suspende el contexto (ahorro de batería) y se detiene la música.
+  // Con la pestaña oculta se detiene la música y se suspende el contexto (ahorro de batería).
   setHidden(hidden) {
     this.#hidden = hidden;
     if (!this.#ctx) return;
     if (hidden) {
-      this.#noir?.stop();
-      this.#lounge?.stop();
+      this.#bgm?.stop();
       this.#ctx.suspend().catch(() => {});
     } else {
       this.#ctx.resume().then(() => this.#syncMusic(), () => {});
@@ -142,30 +151,26 @@ class AudioEngine extends EventTarget {
 
   #applyLevels(immediate = false) {
     if (!this.#ctx) return;
-    const s = this.#settings;
     const now = this.#ctx.currentTime;
     const set = (param, value) => {
       if (immediate) param.value = value;
       else param.setTargetAtTime(value, now, 0.04);
     };
-    set(this.#master.gain, s.muted ? 0 : 1);
-    set(this.#sfx.gain, s.sfx);
-    set(this.#musicBus.gain, s.music);
+    set(this.#master.gain, 1);
+    set(this.#sfx.gain, this.#prefs.sfx ? SFX_LEVEL : 0);
+    // El encendido y apagado de la música lo hace el propio motor con sus fundidos.
+    set(this.#musicBus.gain, MUSIC_LEVEL);
   }
 
   #syncMusic() {
-    if (!this.#noir) return;
-    const s = this.#settings;
-    const wanted = s.musicOn && !s.muted && s.music > 0 && !this.#hidden && this.#ctx.state === 'running';
-    const active = s.style === 'lounge' ? this.#lounge : this.#noir;
-    for (const engine of [this.#noir, this.#lounge]) {
-      if (engine !== active || !wanted) engine.stop();
-    }
-    if (wanted) active.start();
+    if (!this.#bgm) return;
+    const wanted = this.#prefs.music && !this.#hidden && this.#ctx.state === 'running';
+    if (wanted) this.#bgm.start();
+    else this.#bgm.stop();
   }
 
   #ready() {
-    return this.#ctx !== null && this.#ctx.state === 'running' && !this.#settings.muted && this.#settings.sfx > 0;
+    return this.#ctx !== null && this.#ctx.state === 'running' && this.#prefs.sfx;
   }
 
   #time(delay = 0) {
@@ -382,16 +387,18 @@ class AudioEngine extends EventTarget {
     this.#tone(this.#time(), { type: 'triangle', freq: 1800, peak: 0.06, decay: 0.03 });
   }
 
-  // ---------- Atmósfera noir: estado de ánimo, tensión y efectos dramáticos ----------
+  // ---------- Ambiente: zona de la música, tensión y efectos dramáticos ----------
 
+  // Cada zona tiene su tonalidad y su progresión lounge; el cambio entra en el siguiente compás.
   setMood(mood) {
     this.#mood = mood;
-    this.#noir?.setMood(mood);
+    this.#bgm?.setMood(mood);
   }
 
+  // Con tensión alta la música se aparta para que se oigan el latido y el desenlace.
   setTension(value) {
     this.#tension = Math.min(1, Math.max(0, value));
-    this.#noir?.setTension(this.#tension);
+    this.#bgm?.setTension(this.#tension);
   }
 
   // Latido grave «lub-dub».

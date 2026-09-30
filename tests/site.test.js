@@ -33,6 +33,19 @@ test('Carga: index.html precarga en paralelo todos los módulos de la app', () =
   for (const file of preloads) assert.ok(existsSync(new URL(file, root)), `falta ${file}`);
 });
 
+test('Sonido: sin síntesis de voz ni locuciones en ningún módulo', () => {
+  const modules = moduleGraph('js/app.js');
+  for (const file of modules) {
+    const source = read(file);
+    for (const pattern of [/speechSynthesis/, /SpeechSynthesisUtterance/, /\.speak\(/, /audio\.say\(/]) {
+      assert.equal(pattern.test(source), false, `${file} usa ${pattern}`);
+    }
+  }
+  assert.equal(/Voz del crupier|snd-voice|sound-dialog/.test(html), false, 'controles de voz en el HTML');
+  assert.match(html, /id="btn-music"[^>]*aria-pressed/);
+  assert.match(html, /id="btn-sfx"[^>]*aria-pressed/);
+});
+
 test('CSP: sin scripts, estilos ni manejadores en línea', () => {
   assert.match(html, /Content-Security-Policy[^>]*script-src 'self'; style-src 'self'/);
   assert.equal(/<script(?![^>]*\ssrc=)[^>]*>/i.test(html), false, 'script en línea');

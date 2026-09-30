@@ -437,14 +437,14 @@ code {
     display: none;
   }
 
-  /* Cabecera en tres filas: saldo y sonido; Club VIP y expediente; salvavidas (si hace falta). */
+  /* Cabecera en tres filas: saldo, música y efectos; Club VIP y expediente; salvavidas. */
   .hud {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
     grid-template-areas:
-      "balance inplay sound"
-      "vip dossier dossier"
-      "lifeline lifeline lifeline";
+      "balance inplay music sfx"
+      "vip dossier dossier dossier"
+      "lifeline lifeline lifeline lifeline";
     width: 100%;
     gap: 6px;
   }
@@ -490,8 +490,16 @@ code {
     grid-area: lifeline;
   }
 
-  .hud .btn-icon {
-    grid-area: sound;
+  .hud .btn-music {
+    grid-area: music;
+  }
+
+  .hud .btn-sfx {
+    grid-area: sfx;
+  }
+
+  .hud .btn-audio {
+    padding: 0 10px;
   }
 
   .tablist {

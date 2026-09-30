@@ -101,10 +101,6 @@
   height: 22px;
 }
 
-.btn-icon.is-muted {
-  color: #ff9ea2;
-}
-
 .btn-buy {
   border-color: rgba(230, 160, 255, 0.6);
   background: linear-gradient(180deg, #7a1d9c, #3b0b52);
@@ -707,39 +703,6 @@
   opacity: 0.45;
 }
 
-.slider {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 2px 12px;
-}
-
-.slider > span {
-  grid-column: 1 / -1;
-  color: var(--ink-dim);
-  font-size: 0.9rem;
-}
-
-.slider input[type="range"] {
-  width: 100%;
-  min-height: var(--touch);
-  margin: 0;
-  accent-color: var(--gold);
-  cursor: pointer;
-}
-
-.slider input[type="range"]:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.slider output {
-  min-width: 4ch;
-  color: var(--gold-hi);
-  font-weight: 700;
-  text-align: right;
-}
-
 .select,
 .field {
   display: grid;
@@ -1161,5 +1124,47 @@
 
   .lifeline .btn {
     width: 100%;
+  }
+}
+
+/* ---------- Interruptores de música y efectos ---------- */
+
+.btn-audio {
+  gap: 6px;
+  padding: 0 12px;
+  border-color: var(--panel-edge);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.35));
+  color: var(--ink);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.audio-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.audio-state {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--neon);
+}
+
+.btn-audio.is-off {
+  color: var(--ink-mute);
+}
+
+.btn-audio.is-off .audio-icon {
+  opacity: 0.55;
+  filter: grayscale(1);
+}
+
+.btn-audio.is-off .audio-state {
+  color: #ff8a8e;
+}
+
+@media (max-width: 1320px) {
+  .audio-name {
+    display: none;
   }
 }
