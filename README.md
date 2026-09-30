@@ -10,7 +10,7 @@ Neo-Madrid, 2089. Despiertas en el sótano de un casino clandestino con **un ún
 - **Ruleta francesa** con racetrack (Voisins, Tiers, Orphelins, Jeu Zéro y vecinos) y zoom balístico.
 - **Slots Matrix 4×4** con avalanchas ×1 → ×5, giros gratis con multiplicadores dorados, Bonus Buy y Auto-Spin.
 
-Tres zonas que se abren según tu saldo, encargos del Sindicato, logros, títulos dinámicos, jugadas críticas con latido de corazón, una bitácora donde los crupieres reaccionan a tu suerte, música noir-jazz procedural y dos finales: la libertad o el Game Over definitivo.
+Tres zonas que se abren según tu saldo, encargos del Sindicato, logros, títulos dinámicos, un **Club VIP** con rangos, bono diario, rescates y tapetes de lujo que se conservan entre partidas, jugadas críticas con latido de corazón, una bitácora donde los crupieres reaccionan a tu suerte, música noir-jazz o lounge procedural y dos finales: la libertad o el Game Over definitivo.
 
 Es **100 % estático** (HTML5, CSS3 y módulos ES, sin frameworks, dependencias ni recursos externos). El azar sale de `crypto.getRandomValues()`, el sonido se sintetiza con Web Audio API, la voz usa Web Speech API y todos los gráficos son SVG o Canvas.
 
@@ -41,14 +41,14 @@ python -m http.server 8080      # o: npx serve .
 Pruebas y simulación (Node 20+, sin dependencias):
 
 ```bash
-npm test             # 34 pruebas: RNG, reglas, ventajas exactas, RTP y núcleo de la campaña
+npm test             # 38 pruebas: RNG, reglas, ventajas exactas, RTP, campaña y Club VIP
 npm run simulate     # 600 leyendas completas con el núcleo real de la campaña (tabla de equilibrio)
 ```
 
 ## La historia
 
 1. **Prólogo**: la primera visita abre una cinemática con lluvia y texto a máquina de escribir. Se puede saltar y releer desde el Expediente.
-2. **Leyenda nº N**: cada partida es una leyenda numerada que empieza con **exactamente 1 crédito**, 3 favores del Sindicato y el título «Rata del Callejón».
+2. **Leyenda nº N**: cada partida es una leyenda numerada que empieza con **exactamente 1 crédito**, 3 favores del Sindicato, los rescates de tu rango VIP y el título «Rata del Callejón». El bono diario del Club VIP se puede cobrar en cualquier momento.
 3. **Ascenso**: tu saldo abre las puertas de las zonas superiores. Cada zona cambia las mesas, las fichas, el crupier, la música y la iluminación.
 4. **Final**: con 100.000 créditos compras tu libertad («Dueño del Destino»). Sin créditos ni favores llega el Game Over definitivo.
 
@@ -100,15 +100,22 @@ Las mesas conservan su ventaja de la casa real: blackjack ≈ 0,5 %, ruleta 2,70
 
 ### Equilibrio simulado
 
-`npm run simulate` juega 200 leyendas completas por estilo con el núcleo real de la campaña y el motor real de las slots. La ruleta es exacta y el blackjack usa la distribución de resultados de la estrategia básica. El jugador simulado persigue el encargo más rápido, sube de zona en cuanto puede y pide favores al arruinarse. Las semillas son fijas, así que los resultados se reproducen exactamente.
+`npm run simulate` juega 200 leyendas completas por estilo con el núcleo real de la campaña y del Club VIP, y con el motor real de las slots. La ruleta es exacta y el blackjack usa la distribución de resultados de la estrategia básica.
 
-| Estilo | Victoria | Game Over | Llega al Penthouse | Rondas hasta la libertad (mediana / p90) | Favores usados |
-|---|---|---|---|---|---|
-| Prudente (apuesta mínima) | 93,0 % | 7,0 % | 93,0 % | 627 / 1.124 | 0,92 |
-| Moderado (3 % del saldo) | 88,0 % | 11,5 % | 88,0 % | 729 / 2.144 | 1,09 |
-| Temerario (10 % del saldo) | 26,0 % | 66,5 % | 43,5 % | 684 / 1.369 | 2,42 |
+Cada leyenda simulada es **la primera de un jugador nuevo** (rango Bronce). Ese jugador:
+- cobra el bono diario al empezar;
+- persigue el encargo más rápido y sube de zona en cuanto puede;
+- al arruinarse, usa primero el rescate VIP y después los favores.
 
-El resto de leyendas (0,5 % y 7,5 %) seguía en juego al llegar al tope de 6.000 rondas. Jugar con cabeza casi siempre gana; ir a por todo casi siempre acaba en el sótano.
+Las semillas son fijas, así que los resultados se reproducen exactamente.
+
+| Estilo | Victoria | Game Over | Llega al Penthouse | Rondas hasta la libertad (mediana / p90) | Rescates VIP usados | Favores usados |
+|---|---|---|---|---|---|---|
+| Prudente (apuesta mínima) | 100 % | 0 % | 100 % | 625 / 1.186 | 0,01 | 0 |
+| Moderado (3 % del saldo) | 99,0 % | 0 % | 99,5 % | 707 / 1.811 | 0,13 | 0 |
+| Temerario (10 % del saldo) | 68,5 % | 20,5 % | 85,0 % | 843 / 2.548 | 1,85 | 0,83 |
+
+El resto de leyendas (1 % y 11 %) seguía en juego al llegar al tope de 6.000 rondas. Con los salvavidas del Club VIP, jugar con cabeza siempre acaba en libertad. Ir a por todo todavía se paga: una de cada cinco leyendas temerarias termina en Game Over.
 
 ## Logros y títulos
 
@@ -147,25 +154,55 @@ Los **títulos** siguen a tu saldo, hacia arriba y hacia abajo, y cada cambio se
 | 25.000 | Tiburón del Sindicato |
 | 100.000 | Dueño del Destino |
 
-## Favores, Game Over y gran final
+## Club VIP
 
-- **Favores del Sindicato**: hay 3 por leyenda. Si tu saldo cae por debajo de 1 crédito con las mesas en reposo, el botón «Pedir favor» ofrece 5, 50 o 500 créditos según la zona más alta que hayas pisado.
-- **Game Over definitivo**: sin créditos ni favores, el juego se detiene. Aparece una cinemática roja con las estadísticas y un único botón, **Reiniciar la Leyenda**, que borra la leyenda y conserva el Salón de la Fama. La cinemática no se cierra con Esc y reaparece al recargar.
+El Club VIP es tu carrera en el casino: el XP, el rango, los tapetes comprados y el bono diario **se conservan aunque la leyenda termine**, así que cada partida nueva empieza con más ayuda. Se abre con el botón del rango en la cabecera, que muestra un aviso «Bono» cuando el bono diario está disponible.
+
+- **XP**: 1 por cada crédito apostado en cualquier mesa. Cada ascenso se celebra con fanfarria, voz del crupier y una entrada en la bitácora.
+- **Bono diario**: una vez por día natural (se renueva a medianoche), en cualquier momento de la leyenda.
+- **Rescates VIP**: cuando te quedas sin créditos; su número por leyenda depende del rango.
+- **Tapetes de lujo**: se compran con créditos de la leyenda y quedan en el Club para siempre. Sustituyen al tapete de la zona hasta que vuelvas a elegir «Tapete de la zona».
+
+| Rango | XP | Bono diario | Rescate VIP | Rescates por leyenda |
+|---|---|---|---|---|
+| Bronce | 0 | 100 | 500 | 1 |
+| Plata | 5.000 | 250 | 750 | 2 |
+| Oro | 25.000 | 500 | 1.000 | 3 |
+| Platino | 100.000 | 1.000 | 1.500 | 4 |
+| Diamante | 400.000 | 2.500 | 2.500 | 5 |
+
+| Tapete | Precio |
+|---|---|
+| Tapete de la zona (verde, violeta u ónix según la zona) | Incluido |
+| Verde Esmeralda | Incluido |
+| Azul Zafiro | 1.000 |
+| Rojo Carmesí | 2.500 |
+| Negro Ónix | 5.000 |
+
+## Salvavidas, Game Over y gran final
+
+- **Salvavidas**: si tu saldo cae por debajo de 1 crédito con las mesas en reposo, se abre el diálogo «Sin créditos» (y la cabecera muestra «Pedir ayuda») con todas las ayudas que te quedan:
+  - el **bono diario** del Club VIP, si no lo has cobrado hoy;
+  - los **rescates VIP** de tu rango;
+  - los **favores del Sindicato**: 3 por leyenda, de 5, 50 o 500 créditos según la zona más alta que hayas pisado.
+- **Game Over definitivo**: sin créditos y sin ningún salvavidas, el juego se detiene. Aparece una cinemática roja con las estadísticas y un único botón, **Reiniciar la Leyenda**, que borra la leyenda y conserva el Salón de la Fama y el Club VIP. La cinemática no se cierra con Esc y reaparece al recargar.
 - **Gran final**: al llegar a 100.000 créditos con las mesas en reposo, el juego se detiene, cae una tormenta de partículas doradas y suena una fanfarria. La cinemática final te corona **«Dueño del Destino»** con las estadísticas de la leyenda.
 
 ## Tensión y atmósfera
 
-- **Jugadas críticas**: si una apuesta es al menos la mitad de tu bankroll (apuesta ÷ (saldo + apuesta) ≥ 50 %), la pantalla se cierra con una viñeta roja, suenan un latido y un riser, el crupier o SIBILA lo anuncia y la música sube a tensión máxima. El resultado estalla en un impacto dorado o en un golpe grave con destello rojo.
+- **Jugadas críticas**: apostarlo todo, o arriesgar al menos la mitad de tu bankroll (apuesta ÷ (saldo + apuesta) ≥ 50 %) con 10 apuestas mínimas o más en juego. Así el drama no se repite en cada apuesta pequeña cuando vas justo de saldo. La pantalla se cierra con una viñeta roja, suenan un latido y un riser, la música sube a tensión máxima y el crupier o SIBILA lo anuncia (como mucho una vez por minuto). El resultado estalla en un impacto dorado o en un golpe grave con destello rojo.
 - **Bitácora del Crupier**: es un panel lateral (en móvil va al final, con un teletipo sobre la mesa). En él Moss, Vera, SIBILA, el Sindicato y el Narrador reaccionan a premios grandes, pérdidas duras, rachas de 3, 5, 7, 10, 15 y 20, títulos, logros, encargos, favores y cambios de zona. En el Penthouse, SIBILA provoca en voz alta. Guarda las últimas 60 entradas.
 - **Expediente**: reúne las estadísticas de la leyenda, los logros y el Salón de la Fama (leyendas jugadas, victorias, mejor tiempo y mejor saldo). Desde aquí se relee el prólogo y se reinicia la leyenda con doble confirmación.
 - **CSS atmosférico**: cada zona redefine su paleta con variables CSS. Hay un letrero de neón con parpadeo; en el Callejón, bombilla temblorosa y lluvia; en el Salón, un neón que respira; en el Penthouse, un barrido dorado y el escáner de SIBILA. Todo respeta `prefers-reduced-motion`.
 
-## Música noir y voz
+## Música noir, lounge y voz
 
-- **Motor procedural** (`js/engine/noir.js`) con cinco atmósferas: Callejón, Salón, Penthouse, Final y Game Over. Combina piano con voicings de jazz, contrabajo, escobillas, vibráfono, trompeta con sordina, lluvia, drone grave y reloj, todo con reverb por convolución, y cada compás varía.
+- **Dos estilos de música**, a elegir en «Sonido y voz»: *Noir de suspense* (por defecto, cambia con la zona y la tensión) o *Lounge jazz clásico*.
+- **Noir** (`js/engine/noir.js`), con cinco atmósferas: Callejón, Salón, Penthouse, Final y Game Over. Combina piano con voicings de jazz, contrabajo, escobillas, vibráfono, trompeta con sordina, lluvia, drone grave y reloj, todo con reverb por convolución, y cada compás varía.
+- **Lounge** (`js/engine/music.js`, recuperado de la versión 2): progresión de 8 compases con piano eléctrico FM y trémolo, contrabajo walking, ride y escobillas con swing, vibráfono ocasional y reverb por convolución.
 - **Tensión (0–1)**: abre el filtro y el volumen del drone. Por encima de 0,4 añade pulsos de contrabajo, por encima de 0,55 dobla el tic-tac del reloj y por encima de 0,6 mete golpes graves.
 - **Efectos dramáticos sintetizados**: latido, riser, sting, impacto, doom, fanfarria, whoosh de transición, zumbido de neón y teclas de máquina de escribir.
-- **Voz del crupier** (Web Speech API, en español o inglés): bienvenida, llegada a cada zona, jugadas críticas, burlas de SIBILA, favores, degradación, victoria y Game Over, además de las frases de mesa («No va más», «Blackjack»…). Solo habla tras la primera interacción.
+- **Voz del crupier** (Web Speech API, en español o inglés): bienvenida, llegada a cada zona, jugadas críticas, burlas de SIBILA, favores, ascensos de rango VIP, degradación, victoria y Game Over, además de las frases de mesa («No va más», «Blackjack»…). Solo habla tras la primera interacción.
 - **Volúmenes independientes** de efectos, música y voz. La música se pausa cuando la pestaña queda oculta.
 
 ## Blackjack multimano (Las Vegas Strip)
@@ -251,7 +288,8 @@ Muestra: 60 millones de tiradas del juego base y 4,5 millones de rondas de bono.
 - **Anti doble gasto**: al apostar, las fichas pasan del saldo a un **escrow** por mesa (`hold`). Se liquidan en cuanto se decide el azar (`settle`) y el premio se acredita al terminar la animación (`reveal`). Los controles se desactivan con el flag `busy`. «En juego» muestra solo lo apostado, sin revelar el resultado antes de tiempo.
 - **Recargar no hace trampa**: el resultado se liquida antes de animarse. Al recargar se abonan los premios pendientes, se devuelven las apuestas de ruleta aún no sorteadas, la mano de blackjack se **reanuda** y los giros gratis pendientes se conservan. Los finales se comprueban solo con las mesas en reposo.
 - **Protección XSS**: todo el DOM dinámico se crea con `createElement`/`createElementNS` y `textContent`; no se usa `innerHTML`. Una Content-Security-Policy bloquea scripts y estilos en línea.
-- **Monedero**: 1 crédito inicial y denominaciones de 1 a 10.000, con persistencia en `localStorage`. Fuera de las mesas, solo el Sindicato (logros, encargos y favores) puede ingresar créditos.
+- **Monedero**: 1 crédito inicial y denominaciones de 1 a 10.000, con persistencia en `localStorage`. Fuera de las mesas, solo el Sindicato (logros, encargos y favores) y el Club VIP (bono diario y rescates) ingresan créditos, y solo los tapetes de lujo los gastan.
+- **Club VIP** (`js/engine/vip.js`): su estado (XP, tapetes, bono diario y rescates usados en la leyenda actual) vive en su propia clave de `localStorage`, que «Reiniciar la Leyenda» no borra. La campaña decide cuándo se puede usar cada ayuda.
 
 ## Accesibilidad y responsive
 
@@ -277,15 +315,18 @@ js/story/titles.js          Títulos dinámicos según el saldo
 js/story/narrative.js       Prólogo, finales y frases de Moss, Vera, SIBILA, el Sindicato y el Narrador
 js/engine/rng.js            Entropía criptográfica, Fisher-Yates, muestreo ponderado y probabilidad
 js/engine/store.js          State Store unidireccional y máquina de estados atómica
-js/engine/wallet.js         Monedero con escrow anti doble gasto e ingresos del Sindicato
+js/engine/wallet.js         Monedero con escrow anti doble gasto, ingresos (Sindicato y Club VIP) y compras
+js/engine/vip.js            Club VIP: XP, rangos, bono diario, rescates por leyenda y tapetes
 js/engine/storage.js        Persistencia en localStorage tolerante a fallos
 js/engine/audio.js          Buses de efectos y música, efectos dramáticos sintetizados y fachada de voz
 js/engine/noir.js           Música noir-jazz procedural por zona con capa de tensión
+js/engine/music.js          Música lounge jazz procedural (estilo alternativo)
 js/engine/voice.js          Voz del crupier con Web Speech API (es/en)
 js/engine/particles.js      Confeti, chispas y lluvia de oro en Canvas
 js/ui/svg.js                Cartas (índices jumbo), fichas y símbolos generados con createElementNS
 js/ui/hud.js                Saldo, racks de fichas por zona, panel de sonido y voz, avisos
-js/ui/story-ui.js           Cinemáticas, transiciones de zona, bitácora, encargos, expediente y jugadas críticas
+js/ui/story-ui.js           Cinemáticas, transiciones de zona, bitácora, encargos, salvavidas, expediente y jugadas críticas
+js/ui/vip-ui.js             Botón y diálogo del Club VIP: rango, bono diario, rescates y tienda de tapetes
 js/ui/input.js              Clic derecho o pulsación larga para retirar fichas
 js/games/blackjack-rules.js Reglas puras: liquidación, Perfect Pairs, 21+3, estrategia básica y Hi-Lo
 js/games/blackjack.js       Mesa multimano: asientos por zona, seguro por asiento, coach, conteo y reanudación
@@ -293,6 +334,6 @@ js/games/roulette.js        Plato con zoom balístico, tapete, racetrack y apues
 js/games/slots-engine.js    Motor matemático: líneas, avalancha, giros gratis y multiplicador dorado
 js/games/slots.js           Rodillos, animación de avalancha, Bonus Buy y Auto-Spin
 tests/math.test.js          22 pruebas de RNG, reglas, ventajas exactas, RTP y economía
-tests/story.test.js         12 pruebas de zonas, encargos, logros, jugadas críticas, favores y finales
+tests/story.test.js         16 pruebas de zonas, encargos, logros, jugadas críticas, Club VIP, salvavidas y finales
 tools/simulate-economy.mjs  Simulación de leyendas completas (tabla de equilibrio)
 ```

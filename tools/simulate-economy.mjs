@@ -2,12 +2,14 @@
 // motor real de las slots. Reproduce la tabla del README:
 //   node tools/simulate-economy.mjs [leyendas=200] [rondas máximas=6000] [estilo]
 // Estilos: cautious (apuesta mínima), moderate (3 % del saldo) y bold (10 % del saldo).
-// El jugador persigue el encargo mejor pagado por esfuerzo (el de menor recompensa, que es el más
-// rápido), sube de zona en cuanto puede y pide los favores del Sindicato al quedarse sin saldo.
-// Ruleta y slots son exactas; el blackjack usa la distribución de resultados de la estrategia
-// básica (6 barajas, S17). Cada leyenda usa una semilla fija: los resultados son reproducibles.
+// Cada leyenda es la primera de un jugador nuevo (Club VIP en Bronce): cobra el bono diario al
+// empezar, persigue el encargo mejor pagado por esfuerzo (el de menor recompensa, que es el más
+// rápido), sube de zona en cuanto puede y, al quedarse sin saldo, usa el rescate VIP y después
+// los favores del Sindicato. Ruleta y slots son exactas; el blackjack usa la distribución de
+// resultados de la estrategia básica (6 barajas, S17). Semillas fijas: resultados reproducibles.
 
 import { Campaign } from '../js/story/campaign.js';
+import { VipClub } from '../js/engine/vip.js';
 import { ZONES } from '../js/story/zones.js';
 import { playSpin, playFreeSpinsRound } from '../js/games/slots-engine.js';
 
@@ -187,12 +189,16 @@ function simulate(style) {
   let gameOvers = 0;
   let penthouse = 0;
   let favors = 0;
+  let rescues = 0;
   const roundsToWin = [];
   for (let run = 0; run < RUNS; run++) {
     next = mulberry32(1000 + run);
     const wallet = fakeWallet();
-    const campaign = new Campaign({ wallet, store: memoryStore(), rand, now: () => 0 });
+    const store = memoryStore();
+    const vip = new VipClub({ store, now: () => 0 });
+    const campaign = new Campaign({ wallet, vip, store, rand, now: () => 0 });
     campaign.begin();
+    campaign.claimDaily();
     let rounds = 0;
     let reached = false;
     while (rounds < MAX_ROUNDS && campaign.status === 'playing') {
@@ -200,7 +206,8 @@ function simulate(style) {
       if (campaign.zone.id === 'penthouse') reached = true;
       playRound(style, campaign, wallet);
       campaign.checkEnd();
-      if (campaign.favorStatus().available) campaign.takeFavor();
+      if (campaign.lifelines().rescue.available) campaign.takeRescue();
+      else if (campaign.favorStatus().available) campaign.takeFavor();
       rounds++;
     }
     if (campaign.status === 'victory') {
@@ -211,6 +218,7 @@ function simulate(style) {
     }
     if (reached) penthouse++;
     favors += campaign.state.stats.favorsUsed;
+    rescues += campaign.state.stats.vipRescues;
   }
   roundsToWin.sort((a, b) => a - b);
   const pct = (count) => `${((count / RUNS) * 100).toFixed(1)} %`;
@@ -222,6 +230,7 @@ function simulate(style) {
     'rondas (mediana)': roundsToWin[Math.floor(roundsToWin.length / 2)] ?? '—',
     'rondas (p90)': roundsToWin[Math.floor(roundsToWin.length * 0.9)] ?? '—',
     penthouse: pct(penthouse),
+    'rescates VIP medios': (rescues / RUNS).toFixed(2),
     'favores medios': (favors / RUNS).toFixed(2),
   };
 }
