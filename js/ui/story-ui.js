@@ -665,6 +665,8 @@ class StoryUi {
       door.classList.toggle('is-current', current);
       door.classList.toggle('is-locked', !current && !affordable);
       door.classList.toggle('is-open', !current && affordable);
+      // El aviso de zona recién abierta se apaga al entrar (o si ya no alcanza el saldo).
+      if (current || !affordable) door.classList.remove('is-new');
       if (current) door.setAttribute('aria-current', 'true');
       else door.removeAttribute('aria-current');
       const req = door.querySelector('.zone-req');

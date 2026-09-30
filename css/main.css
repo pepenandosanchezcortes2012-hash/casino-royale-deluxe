@@ -511,6 +511,14 @@ code {
   }
 }
 
+/* Brillo que late: el halo se pinta una vez en un pseudo-elemento y solo se anima su opacidad,
+   que resuelve el compositor sin repintar la página. */
+@keyframes glow-pulse {
+  50% {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

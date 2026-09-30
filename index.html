@@ -18,6 +18,33 @@
   <link rel="stylesheet" href="css/tables.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/story.css">
+  <!-- Precarga de todos los módulos en paralelo: evita la cascada de imports (4 viajes de red → 1). -->
+  <link rel="modulepreload" href="js/engine/audio.js">
+  <link rel="modulepreload" href="js/engine/particles.js">
+  <link rel="modulepreload" href="js/engine/storage.js">
+  <link rel="modulepreload" href="js/games/blackjack.js">
+  <link rel="modulepreload" href="js/games/roulette.js">
+  <link rel="modulepreload" href="js/games/slots.js">
+  <link rel="modulepreload" href="js/ui/hud.js">
+  <link rel="modulepreload" href="js/ui/story-ui.js">
+  <link rel="modulepreload" href="js/ui/vip-ui.js">
+  <link rel="modulepreload" href="js/engine/music.js">
+  <link rel="modulepreload" href="js/engine/noir.js">
+  <link rel="modulepreload" href="js/engine/rng.js">
+  <link rel="modulepreload" href="js/engine/store.js">
+  <link rel="modulepreload" href="js/engine/vip.js">
+  <link rel="modulepreload" href="js/engine/voice.js">
+  <link rel="modulepreload" href="js/engine/wallet.js">
+  <link rel="modulepreload" href="js/games/blackjack-rules.js">
+  <link rel="modulepreload" href="js/games/slots-engine.js">
+  <link rel="modulepreload" href="js/story/achievements.js">
+  <link rel="modulepreload" href="js/story/campaign.js">
+  <link rel="modulepreload" href="js/story/narrative.js">
+  <link rel="modulepreload" href="js/story/zones.js">
+  <link rel="modulepreload" href="js/ui/input.js">
+  <link rel="modulepreload" href="js/ui/svg.js">
+  <link rel="modulepreload" href="js/story/contracts.js">
+  <link rel="modulepreload" href="js/story/titles.js">
   <script type="module" src="js/app.js"></script>
 </head>
 <body>

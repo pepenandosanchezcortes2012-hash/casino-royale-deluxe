@@ -41,7 +41,7 @@ python -m http.server 8080      # o: npx serve .
 Pruebas y simulación (Node 20+, sin dependencias):
 
 ```bash
-npm test             # 38 pruebas: RNG, reglas, ventajas exactas, RTP, campaña y Club VIP
+npm test             # 41 pruebas: RNG, reglas, ventajas exactas, RTP, campaña, Club VIP y sitio
 npm run simulate     # 600 leyendas completas con el núcleo real de la campaña (tabla de equilibrio)
 ```
 
@@ -298,6 +298,25 @@ Muestra: 60 millones de tiradas del juego base y 4,5 millones de rondas de bono.
 - A partir de 1.180 px la bitácora ocupa una columna lateral; en móvil pasa al final de la página y un teletipo muestra la última entrada sobre la mesa. A 390 px de ancho no hay desplazamiento horizontal: el tapete y el racetrack se desplazan dentro de su contenedor.
 - Respeta `prefers-reduced-motion`: sin zoom de cámara, menos partículas y animaciones reducidas al mínimo.
 
+## Rendimiento
+
+El juego está afinado para móviles de gama media. Las medidas se hicieron con Chrome, pantalla de móvil y la CPU ralentizada ×4, y cuentan el tiempo del hilo principal ocupado por cada segundo:
+
+| Escenario | Antes | Ahora |
+|---|---|---|
+| Blackjack en reposo (Callejón) | 789 ms/s | 11 ms/s |
+| Slots en reposo | 428 ms/s | 11 ms/s |
+| Penthouse en reposo | 903 ms/s | 34 ms/s |
+| Ruleta en reposo | 601–815 ms/s | 106–112 ms/s |
+| Tirada de slots | 607 ms/s | 356 ms/s |
+| Giro de ruleta | 726 ms/s | 380 ms/s |
+
+- **Animaciones solo en el compositor**: los brillos que laten (aros de apuesta, botones, puertas, orbe dorado, celdas ganadoras, veladura crítica) se pintan una vez en un pseudo-elemento y solo se anima su opacidad. El neón parpadea con opacidad, el barrido dorado del Penthouse usa `transform` y las bombillas de las slots se encienden con una capa superpuesta. Así nada repinta la página en cada fotograma, y una prueba (`tests/site.test.js`) impide que vuelva a colarse una animación infinita que lo haga.
+- **Puertas de zona**: el aviso de zona recién abierta se apaga al entrar en ella. Antes seguía latiendo durante toda la partida.
+- **Rueda de ruleta**: gira a pleno ritmo solo durante el lanzamiento, el zoom y la frenada. En reposo se dibuja a unos 20 fotogramas por segundo, y nada si queda fuera de la pantalla.
+- **Carga**: `index.html` precarga los 26 módulos con `<link rel="modulepreload">`, así que el navegador los pide todos a la vez en lugar de descubrirlos en 4 viajes de red encadenados. La misma prueba comprueba que la lista está completa.
+- **Jugadas críticas** sin filtros de color sobre toda la pantalla.
+
 ## Estructura
 
 ```
@@ -335,5 +354,6 @@ js/games/slots-engine.js    Motor matemático: líneas, avalancha, giros gratis 
 js/games/slots.js           Rodillos, animación de avalancha, Bonus Buy y Auto-Spin
 tests/math.test.js          22 pruebas de RNG, reglas, ventajas exactas, RTP y economía
 tests/story.test.js         16 pruebas de zonas, encargos, logros, jugadas críticas, Club VIP, salvavidas y finales
+tests/site.test.js          3 pruebas del sitio: precarga de módulos, CSP y animaciones baratas
 tools/simulate-economy.mjs  Simulación de leyendas completas (tabla de equilibrio)
 ```

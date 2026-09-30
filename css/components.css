@@ -75,14 +75,19 @@
 }
 
 .btn.is-coach-pick {
+  position: relative;
   box-shadow: 0 0 0 3px #5fd6ff, 0 0 20px rgba(95, 214, 255, 0.65);
-  animation: coach-pulse 1.3s ease-in-out infinite;
 }
 
-@keyframes coach-pulse {
-  50% {
-    box-shadow: 0 0 0 5px rgba(95, 214, 255, 0.55), 0 0 28px rgba(95, 214, 255, 0.85);
-  }
+.btn.is-coach-pick::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 5px rgba(95, 214, 255, 0.55), 0 0 28px rgba(95, 214, 255, 0.85);
+  opacity: 0;
+  pointer-events: none;
+  animation: glow-pulse 1.3s ease-in-out infinite;
 }
 
 .btn-icon {
@@ -98,22 +103,6 @@
 
 .btn-icon.is-muted {
   color: #ff9ea2;
-}
-
-.btn-rescue {
-  border-color: rgba(62, 207, 142, 0.6);
-  background: linear-gradient(180deg, #1c6b45, #0c3622);
-  color: #d9ffe9;
-}
-
-.btn-rescue.is-pulsing {
-  animation: pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  50% {
-    box-shadow: 0 0 0 6px rgba(62, 207, 142, 0.18), 0 0 24px rgba(62, 207, 142, 0.5);
-  }
 }
 
 .btn-buy {

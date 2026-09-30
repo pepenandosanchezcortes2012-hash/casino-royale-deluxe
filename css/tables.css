@@ -519,14 +519,15 @@
   cursor: default;
 }
 
-#panel-blackjack[data-mode="bet"] .bj-seats .bet-spot:not(:disabled) .bet-spot-ring {
-  animation: ring-breathe 2.6s ease-in-out infinite;
-}
-
-@keyframes ring-breathe {
-  50% {
-    box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.35), 0 0 14px rgba(247, 224, 138, 0.3);
-  }
+#panel-blackjack[data-mode="bet"] .bj-seats .bet-spot:not(:disabled) .bet-spot-ring::after {
+  content: "";
+  position: absolute;
+  inset: -2.5px;
+  border-radius: 50%;
+  box-shadow: 0 0 14px rgba(247, 224, 138, 0.3);
+  opacity: 0;
+  pointer-events: none;
+  animation: glow-pulse 2.6s ease-in-out infinite;
 }
 
 #panel-blackjack[data-mode="bet"] #bj-play-controls,
@@ -1144,18 +1145,30 @@
 }
 
 .bulbs {
+  position: relative;
   flex: 1;
   height: 10px;
   max-width: 140px;
   background-image: radial-gradient(circle, #fff6c2 0 3px, transparent 3.5px);
   background-size: 18px 10px;
-  animation: bulbs 0.9s steps(2) infinite;
+}
+
+/* Las bombillas encendidas en dorado se superponen y parpadean solo con la opacidad. */
+.bulbs::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, #d4af37 0 3px, transparent 3.5px);
+  background-size: 18px 10px;
+  filter: drop-shadow(0 0 4px #ffd76a);
+  opacity: 0;
+  animation: bulbs 0.9s steps(1) infinite;
 }
 
 @keyframes bulbs {
-  50% {
-    background-image: radial-gradient(circle, #d4af37 0 3px, transparent 3.5px);
-    filter: drop-shadow(0 0 4px #ffd76a);
+  50%,
+  100% {
+    opacity: 1;
   }
 }
 
@@ -1345,13 +1358,33 @@
 }
 
 .slot-cell.is-win {
+  position: relative;
   animation: cell-win 0.7s ease-in-out infinite;
   background: radial-gradient(circle, rgba(255, 215, 90, 0.55), transparent 70%);
 }
 
 .slot-cell.is-scatter {
+  position: relative;
   animation: cell-win 0.8s ease-in-out infinite;
   background: radial-gradient(circle, rgba(95, 214, 255, 0.55), transparent 70%);
+}
+
+/* El destello de las celdas ganadoras: halo fijo cuya opacidad late (sin filtros animados). */
+.slot-cell.is-win::after,
+.slot-cell.is-scatter::after {
+  content: "";
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  box-shadow: 0 0 18px rgba(255, 215, 90, 0.85), inset 0 0 18px rgba(255, 240, 180, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  animation: glow-pulse 0.7s ease-in-out infinite;
+}
+
+.slot-cell.is-scatter::after {
+  box-shadow: 0 0 18px rgba(95, 214, 255, 0.85), inset 0 0 18px rgba(200, 245, 255, 0.45);
+  animation-duration: 0.8s;
 }
 
 .slot-cell.is-exploding {
@@ -1362,7 +1395,6 @@
 @keyframes cell-win {
   50% {
     transform: scale(1.1);
-    filter: brightness(1.25) drop-shadow(0 0 12px rgba(255, 215, 90, 0.9));
   }
 }
 
@@ -1454,7 +1486,22 @@
   color: #3a2600;
   background: radial-gradient(circle at 35% 30%, #fffbe0, #f2c94c 45%, #9c6b12);
   box-shadow: 0 0 26px rgba(255, 215, 90, 0.95), 0 0 0 3px #fff3b0;
-  animation: orb-in 0.6s var(--ease-out) both, orb-glow 1.2s ease-in-out 0.6s infinite;
+  animation: orb-in 0.6s var(--ease-out) both;
+}
+
+.golden-orb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 44px rgba(255, 215, 90, 1), 0 0 0 5px #fff3b0;
+  opacity: 0;
+  pointer-events: none;
+  animation: glow-pulse 1.2s ease-in-out 0.6s infinite;
+}
+
+.golden-orb.is-epic::after {
+  box-shadow: 0 0 48px rgba(255, 90, 110, 1), 0 0 0 5px #ffd6dc;
 }
 
 .golden-orb.is-epic {
@@ -1472,12 +1519,6 @@
   from {
     opacity: 0;
     transform: translate(-50%, -180%) scale(0.3);
-  }
-}
-
-@keyframes orb-glow {
-  50% {
-    box-shadow: 0 0 44px rgba(255, 215, 90, 1), 0 0 0 5px #fff3b0;
   }
 }
 

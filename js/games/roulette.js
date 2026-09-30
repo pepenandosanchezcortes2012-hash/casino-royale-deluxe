@@ -170,6 +170,8 @@ export function boardSpots() {
 
 const SEG = (Math.PI * 2) / POCKETS;
 const IDLE_OMEGA = 0.32;
+// En reposo la rueda gira despacio (0,32 rad/s): unos 20 fotogramas por segundo bastan.
+const IDLE_FRAME_MS = 50;
 const TAU = Math.PI * 2;
 const ZOOM = 1.9;
 const mod = (a, m) => ((a % m) + m) % m;
@@ -193,6 +195,7 @@ class WheelRenderer {
   #cam = { x: 0, y: 0, s: 1 };
   #camTime = 0;
   #zoomUntil = 0;
+  #onScreen = true;
   #reduced = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)') ?? { matches: false };
 
   constructor(canvas) {
@@ -201,6 +204,14 @@ class WheelRenderer {
     this.#wheel.t0 = performance.now();
     const observer = new ResizeObserver(() => this.resize());
     observer.observe(canvas.parentElement);
+    // Fuera de la pantalla (por ejemplo, apostando en el tapete desde el móvil) la rueda en
+    // reposo deja de dibujarse; vuelve en cuanto asoma.
+    if ('IntersectionObserver' in globalThis) {
+      new IntersectionObserver(([entry]) => {
+        this.#onScreen = entry.isIntersecting;
+        if (this.#onScreen && this.#visible) this.#loop();
+      }).observe(canvas);
+    }
   }
 
   #wheelAngle(now) {
@@ -250,15 +261,23 @@ class WheelRenderer {
     requestAnimationFrame(this.#frame);
   }
 
+  // A pleno ritmo solo durante el giro, el zoom o la frenada. En reposo el siguiente fotograma se
+  // pide con retraso, así el navegador no trabaja a 60 Hz; y si la rueda no se ve, no se dibuja.
+  #busy(now) {
+    return Boolean(this.#spin) || now < this.#zoomUntil || this.#cam.s > 1.002 || this.#wheelVelocity(now) > IDLE_OMEGA * 1.5;
+  }
+
   #frame = (now) => {
-    if (!this.#visible && !this.#spin) {
+    const busy = this.#busy(now);
+    if (!this.#spin && (!this.#visible || (!this.#onScreen && !busy))) {
       this.#running = false;
       return;
     }
     this.#update(now);
     this.#updateCamera(now);
     this.#draw(now);
-    requestAnimationFrame(this.#frame);
+    if (busy) requestAnimationFrame(this.#frame);
+    else setTimeout(() => requestAnimationFrame(this.#frame), IDLE_FRAME_MS);
   };
 
   // Plan del lanzamiento: el número ya está sorteado; la física se resuelve en forma cerrada

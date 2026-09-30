@@ -90,9 +90,12 @@ html[data-zone="neon"] .ambient::before {
   animation: neon-breathe 5s ease-in-out infinite;
 }
 
+/* Barrido dorado: una franja que cruza la pantalla con transform (antes, background-position). */
 html[data-zone="penthouse"] .ambient::before {
-  background: linear-gradient(110deg, transparent 35%, rgba(255, 230, 160, 0.07) 48%, transparent 60%);
-  background-size: 300% 100%;
+  inset: 0 auto 0 0;
+  width: 70%;
+  background: linear-gradient(110deg, transparent 20%, rgba(255, 230, 160, 0.07) 50%, transparent 80%);
+  transform: translateX(-100%);
   animation: gold-sweep 9s ease-in-out infinite;
 }
 
@@ -120,8 +123,8 @@ html[data-zone="penthouse"] .ambient::after {
 }
 
 @keyframes gold-sweep {
-  0% { background-position: 100% 0; }
-  60%, 100% { background-position: -100% 0; }
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(145%); }
 }
 
 @keyframes sibila-scan {
@@ -149,13 +152,13 @@ html[data-zone="penthouse"] .ambient::after {
   font-style: italic;
 }
 
+/* Solo la opacidad parpadea: el halo del texto es fijo y el compositor hace el resto. */
 @keyframes neon-flicker {
   0%, 18%, 22%, 25%, 53%, 57%, 100% {
     opacity: 1;
   }
   20%, 24%, 55% {
-    opacity: 0.45;
-    text-shadow: none;
+    opacity: 0.4;
   }
 }
 
@@ -217,17 +220,23 @@ html[data-zone="penthouse"] .ambient::after {
 }
 
 .btn-lifeline {
+  position: relative;
   border-color: rgba(255, 90, 95, 0.6);
   background: linear-gradient(180deg, #5c1318, #2b0709);
   color: #ffd5d7;
   font-weight: 700;
-  animation: pulse-red 1.6s ease-in-out infinite;
 }
 
-@keyframes pulse-red {
-  50% {
-    box-shadow: 0 0 0 6px rgba(255, 90, 95, 0.16), 0 0 24px rgba(255, 90, 95, 0.45);
-  }
+.btn-lifeline::after,
+.btn-danger.is-armed::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 6px rgba(255, 90, 95, 0.16), 0 0 24px rgba(255, 90, 95, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  animation: glow-pulse 1.6s ease-in-out infinite;
 }
 
 .btn-danger {
@@ -237,9 +246,13 @@ html[data-zone="penthouse"] .ambient::after {
 }
 
 .btn-danger.is-armed {
+  position: relative;
   background: linear-gradient(180deg, #a3141f, #5c0a11);
   color: #fff;
-  animation: pulse-red 1s ease-in-out infinite;
+}
+
+.btn-danger.is-armed::after {
+  animation-duration: 1s;
 }
 
 /* ---------- Mapa de zonas y libertad ---------- */
@@ -319,14 +332,15 @@ html[data-zone="penthouse"] .ambient::after {
   font-weight: 700;
 }
 
-.zone-door.is-open.is-new {
-  animation: door-call 1.4s ease-in-out infinite;
-}
-
-@keyframes door-call {
-  50% {
-    box-shadow: 0 0 0 5px rgba(62, 207, 142, 0.2), 0 0 26px rgba(62, 207, 142, 0.55);
-  }
+.zone-door.is-open.is-new::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 5px rgba(62, 207, 142, 0.2), 0 0 26px rgba(62, 207, 142, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  animation: glow-pulse 1.4s ease-in-out infinite;
 }
 
 .zone-door.is-locked {
@@ -934,13 +948,13 @@ html[data-zone="penthouse"] .ambient::after {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 22px rgba(247, 224, 138, 0.6));
+  filter: drop-shadow(0 0 30px rgba(247, 224, 138, 0.8));
   animation: finale-glow 3s ease-in-out infinite;
 }
 
 @keyframes finale-glow {
   50% {
-    filter: drop-shadow(0 0 40px rgba(247, 224, 138, 0.95));
+    transform: scale(1.04);
   }
 }
 
@@ -1062,10 +1076,6 @@ html.is-critical .critical-veil {
   animation: veil-pulse 0.72s ease-in-out infinite;
 }
 
-html.is-critical .stage {
-  filter: saturate(0.85) contrast(1.08);
-}
-
 html.is-critical-win .critical-veil {
   opacity: 1;
   box-shadow: inset 0 0 200px rgba(247, 224, 138, 0.8);
@@ -1084,7 +1094,7 @@ html.is-critical-loss .stage {
 
 @keyframes veil-pulse {
   50% {
-    box-shadow: inset 0 0 120px rgba(255, 60, 40, 0.35);
+    opacity: 0.55;
   }
 }
 
