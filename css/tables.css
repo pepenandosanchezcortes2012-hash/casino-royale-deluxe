@@ -1474,52 +1474,82 @@
   }
 }
 
-.golden-orb {
+/* Comodines pegajosos: candado y contador de giros sobre cada comodín fijo. La capa usa la misma
+   rejilla que los rodillos, así que no gira con ellos. */
+.slot-sticky {
+  position: absolute;
+  inset: 10px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(4, var(--cell));
+  grid-template-rows: repeat(4, var(--cell));
+  gap: 0 6px;
+  pointer-events: none;
+}
+
+.sticky-wild {
+  position: relative;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 3px #c084fc, inset 0 0 22px rgba(192, 132, 252, 0.55), 0 0 16px rgba(192, 132, 252, 0.6);
+}
+
+.slot-sticky.is-spinning .sticky-wild {
+  background: radial-gradient(circle, rgba(46, 16, 101, 0.92), rgba(20, 6, 45, 0.96));
+}
+
+.slot-sticky.is-spinning .sticky-wild::before {
+  content: "";
+  position: absolute;
+  inset: 12%;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='7' y='7' width='86' height='86' rx='16' fill='%236d28d9' stroke='%23f7e08a' stroke-width='3'/%3E%3Cpath d='M20 62 L29 25 L42 50 L50 16 L58 50 L71 25 L80 62 Z' fill='%23a21caf' stroke='%23f7e08a' stroke-width='2.5'/%3E%3Ctext x='50' y='87' text-anchor='middle' font-family='Georgia' font-size='15' font-weight='900' fill='%23fff6c2'%3EWILD%3C/text%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.sticky-wild.is-fresh {
+  animation: lock-in 0.45s var(--ease-out);
+}
+
+.sticky-lock,
+.sticky-count {
   position: absolute;
   display: grid;
   place-items: center;
-  width: clamp(52px, 12vw, 70px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  font: 900 clamp(1rem, 3vw, 1.3rem) var(--font-display);
-  color: #3a2600;
-  background: radial-gradient(circle at 35% 30%, #fffbe0, #f2c94c 45%, #9c6b12);
-  box-shadow: 0 0 26px rgba(255, 215, 90, 0.95), 0 0 0 3px #fff3b0;
-  animation: orb-in 0.6s var(--ease-out) both;
+  font-weight: 900;
+  line-height: 1;
 }
 
-.golden-orb::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  box-shadow: 0 0 44px rgba(255, 215, 90, 1), 0 0 0 5px #fff3b0;
-  opacity: 0;
-  pointer-events: none;
-  animation: glow-pulse 1.2s ease-in-out 0.6s infinite;
+.sticky-lock {
+  top: -6px;
+  left: -6px;
+  font-size: 0.9rem;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
 }
 
-.golden-orb.is-epic::after {
-  box-shadow: 0 0 48px rgba(255, 90, 110, 1), 0 0 0 5px #ffd6dc;
+.sticky-count {
+  right: -6px;
+  bottom: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border: 2px solid #1d0a3a;
+  border-radius: 11px;
+  background: #f7e08a;
+  color: #2e1065;
+  font-size: 0.78rem;
 }
 
-.golden-orb.is-epic {
-  color: #fff;
-  background: radial-gradient(circle at 35% 30%, #ffffff, #ff8fa0 40%, #b3001b);
-  box-shadow: 0 0 34px rgba(255, 90, 110, 0.95), 0 0 0 3px #ffd6dc;
+.sticky-note {
+  margin: 0;
+  padding: 4px 12px;
+  border: 1px solid #c084fc;
+  border-radius: 999px;
+  background: rgba(46, 16, 101, 0.6);
+  color: #ead9ff;
+  font-size: 0.8rem;
 }
 
-.golden-orb.is-fading {
-  opacity: 0;
-  transition: opacity 0.4s;
-}
-
-@keyframes orb-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -180%) scale(0.3);
-  }
+.win-line.is-wild {
+  stroke: #d8b4fe;
+  filter: drop-shadow(0 0 8px rgba(192, 132, 252, 0.95));
 }
 
 .slot-panel {

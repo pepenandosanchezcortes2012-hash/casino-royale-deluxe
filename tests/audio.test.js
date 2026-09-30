@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { loadSoundPrefs, saveSoundPref, SOUND_KEYS, MUSIC_LEVEL, SFX_LEVEL } from '../js/engine/audio.js';
+import { loadSoundPrefs, saveSoundPref, SOUND_KEYS, MUSIC_LEVEL, SFX_LEVEL } from '../js/audio.js';
 import { MOODS, QUALITIES, VOICE_WINDOW, BASS_WINDOW, FADE_IN, FADE_OUT, chordTones, voiceLead, bassRoot } from '../js/engine/music.js';
 
 function memoryStore(initial = {}) {

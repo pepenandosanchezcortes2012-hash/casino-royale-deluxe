@@ -3,7 +3,7 @@
 // diario sobreviven al reinicio de la leyenda; los rescates VIP se cuentan por leyenda.
 // Sin DOM y sin tocar el monedero: la campaña decide cuándo se usan y abona los créditos.
 
-import { storage as defaultStore } from './storage.js';
+import { storage as defaultStore } from '../storage.js';
 
 export const VIP_KEY = 'crd.vip.v1';
 export const XP_PER_CREDIT = 1;
@@ -15,6 +15,8 @@ export const RANKS = Object.freeze([
   Object.freeze({ id: 'gold', name: 'Oro', xp: 25000, rescue: 1000, rescues: 3, daily: 500 }),
   Object.freeze({ id: 'platinum', name: 'Platino', xp: 100000, rescue: 1500, rescues: 4, daily: 1000 }),
   Object.freeze({ id: 'diamond', name: 'Diamante', xp: 400000, rescue: 2500, rescues: 5, daily: 2500 }),
+  // Sexto rango, compartido con el Cripto-Casino: la cima de la carrera de un jugador.
+  Object.freeze({ id: 'godfather', name: 'El Padrino', xp: 1500000, rescue: 4000, rescues: 6, daily: 5000 }),
 ]);
 
 // Tapetes de lujo. «zone» deja el tapete propio de cada zona del casino.

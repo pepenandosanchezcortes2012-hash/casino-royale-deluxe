@@ -34,6 +34,7 @@ const CHIP_COLORS = {
   5: { base: '#b3261e', inner: '#cc3a2f', text: '#ffffff', edge: '#ffffff' },
   10: { base: '#1f5fbf', inner: '#2a70d6', text: '#ffffff', edge: '#ffffff' },
   25: { base: '#1c8a3f', inner: '#23a24b', text: '#ffffff', edge: '#ffffff' },
+  50: { base: '#d9661a', inner: '#ef7a2a', text: '#ffffff', edge: '#ffffff' },
   100: { base: '#15171b', inner: '#2a2d33', text: '#f7e08a', edge: '#ffffff' },
   500: { base: '#6a2ea3', inner: '#7d3cbd', text: '#ffffff', edge: '#ffffff' },
   1000: { base: '#c99a16', inner: '#e3b52c', text: '#3a2600', edge: '#ffffff' },

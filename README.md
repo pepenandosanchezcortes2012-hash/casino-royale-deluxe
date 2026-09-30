@@ -1,167 +1,264 @@
-# El Último Crédito · Casino Royale Deluxe
+# Casino Royale Deluxe · Cyber-Ultra
 
 **▶ Jugar ahora:** https://pepenandosanchezcortes2012-hash.github.io/casino-royale-deluxe/
 
-Neo-Madrid, 2089. Despiertas en el sótano de un casino clandestino con **un único crédito**. El Sindicato que controla las mesas te ofrece un trato: reúne **100.000 créditos** y comprarás tu libertad. Si pierdes el último, tu leyenda termina ahí.
+Un casino estático para GitHub Pages con dos modos, que se eligen en el menú principal:
 
-**El Último Crédito** es un RPG narrativo de supervivencia de casino con estética noir/cyberpunk, construido sobre los tres juegos de Casino Royale Deluxe:
+- **Modo Historia · «El Último Crédito»**: el RPG narrativo de supervivencia de siempre, intacto. Neo-Madrid, 2089: empiezas con **un único crédito** en el sótano de un casino clandestino y tienes que reunir **100.000** para comprar tu libertad. Tiene zonas, encargos del Sindicato, Club VIP, salvavidas y dos finales.
+- **Cripto-Casino · modo libre**: **10 juegos provably fair** con semillas verificables. Son blackjack, ruleta, slots, Plinko, Crash, Minas, Dados, Torres, Video Póker y la Rueda diaria. Además tiene niveles 1–50, 6 rangos VIP, misiones diarias, reliquias, cofres, pociones, 5 temas de color, modo turbo y una terminal hacker.
 
-- **Blackjack multimano** (Las Vegas Strip, 6 barajas) con Perfect Pairs, 21+3, coach de estrategia básica y entrenador de conteo Hi-Lo.
-- **Ruleta francesa** con racetrack (Voisins, Tiers, Orphelins, Jeu Zéro y vecinos) y zoom balístico.
-- **Slots Matrix 4×4** con avalanchas ×1 → ×5, giros gratis con multiplicadores dorados, Bonus Buy y Auto-Spin.
+Todo es **100 % estático**: HTML5 semántico, CSS3 y módulos ES nativos, sin frameworks, dependencias, CDN ni archivos de audio. El azar sale de `crypto.getRandomValues()`. En el Cripto-Casino, además, cada resultado se deriva de `HMAC-SHA256` y se puede comprobar a mano. La música y los efectos se sintetizan con Web Audio API (sin voces) y los gráficos son SVG y Canvas 2D.
 
-Tres zonas que se abren según tu saldo, encargos del Sindicato, logros, títulos dinámicos, un **Club VIP** con rangos, bono diario, rescates y tapetes de lujo que se conservan entre partidas, jugadas críticas con latido de corazón, una bitácora donde los crupieres reaccionan a tu suerte, música de fondo lounge/jazz procedural y dos finales: la libertad o el Game Over definitivo.
+> Ficción de entretenimiento: créditos y fichas virtuales sin valor monetario, para mayores de 18 años.
 
-Es **100 % estático** (HTML5, CSS3 y módulos ES, sin frameworks, dependencias ni recursos externos). El azar sale de `crypto.getRandomValues()`, la música y los efectos se sintetizan con Web Audio API (sin voces ni archivos de audio) y todos los gráficos son SVG o Canvas.
+## Índice
 
-> Ficción de entretenimiento: créditos virtuales sin valor monetario.
+- [Menú principal y modos](#menú-principal-y-modos)
+- [Cripto-Casino](#cripto-casino)
+  - [Los 10 juegos](#los-10-juegos)
+  - [Provably fair: cómo verificar una jugada](#provably-fair-cómo-verificar-una-jugada)
+  - [Reliquias, cofres y pociones](#reliquias-cofres-y-pociones)
+  - [Niveles, rangos VIP y misiones](#niveles-rangos-vip-y-misiones)
+  - [Economía: fichas, rescate y abundancia](#economía-fichas-rescate-y-abundancia)
+  - [Terminal hacker](#terminal-hacker)
+  - [Temas, turbo y efectos](#temas-turbo-y-efectos)
+- [Modo Historia: El Último Crédito](#modo-historia-el-último-crédito)
+- [Slots Matrix 4×4 (ambos modos)](#slots-matrix-44-ambos-modos)
+- [Decisiones de diseño y desviaciones del enunciado](#decisiones-de-diseño-y-desviaciones-del-enunciado)
+- [Arquitectura y seguridad](#arquitectura-y-seguridad)
+- [Rendimiento](#rendimiento)
+- [Accesibilidad y responsive](#accesibilidad-y-responsive)
+- [Probar, verificar y publicar](#probar-verificar-y-publicar)
+- [Estructura](#estructura)
 
-## Publicar en GitHub Pages (2 pasos)
+## Menú principal y modos
 
-1. **Sube el proyecto** a un repositorio de GitHub (con `index.html` en la raíz):
-   ```bash
-   git init && git add . && git commit -m "El Último Crédito"
-   git branch -M main
-   git remote add origin https://github.com/<tu-usuario>/casino-royale-deluxe.git
-   git push -u origin main
+La primera visita abre un **menú principal** con la lluvia de código de fondo y dos tarjetas. Cada tarjeta resume su partida guardada:
+
+- en la historia, la leyenda, la zona y los créditos;
+- en el Cripto-Casino, las fichas, el nivel y los cofres sin abrir.
+
+El modo elegido se recuerda. El botón **☰ Menú** de la cabecera vuelve a esta pantalla desde cualquiera de los dos modos. Solo se bloquea con un cohete de Crash en vuelo sin retiro automático, porque salir haría perder la apuesta.
+
+Cada modo tiene su propio monedero y sus propios guardados: el Cripto-Casino usa claves `crd.cyber.*`, así que nunca toca la leyenda. Lo que sí comparten es la **carrera global**:
+
+- las rondas de la leyenda suman XP al nivel global;
+- cada logro de la historia deja un **cofre de reliquias** en la bóveda del Cripto-Casino (una vez por logro);
+- la libertad deja un **cofre legendario** por leyenda;
+- las fichas de los niveles subidos jugando la historia esperan al Cripto-Casino.
+
+El Expediente de la historia muestra ese progreso.
+
+Las mesas tienen enlaces directos: `…/casino-royale-deluxe/#plinko` abre esa mesa.
+
+## Cripto-Casino
+
+Se empieza con **1.000 fichas** de 10, 25, 50, 100, 500 y 1.000. La cabecera muestra:
+
+- fichas y fichas en juego, con la barra de la abundancia;
+- nivel, XP y rango VIP;
+- misiones del día;
+- las 4 ranuras de reliquias;
+- los botones de turbo ⚡, terminal `>_`, música 🎵, efectos 🔊 y menú.
+
+En escritorio, a la derecha, está el panel de **telemetría** provably fair.
+
+### Los 10 juegos
+
+| Juego | Reglas | RTP |
+|---|---|---|
+| **Blackjack Pro** | 6 barajas barajadas con Fisher-Yates, 3:2, el crupier pide con 16 y se planta con 17, hasta 3 asientos. Perfect Pairs: mixta 6:1, color 12:1, perfecta 25:1. 21+3: color 5:1, escalera 10:1, trío 30:1, escalera de color 40:1, trío del mismo palo 100:1. Coach de estrategia básica y entrenador Hi-Lo | ≈ 99,6 % con estrategia básica · PP 93,89 % · 21+3 95,38 % |
+| **Ruleta europea** | 0–36, tapete completo y racetrack francés (Voisins, Tiers, Orphelins, Jeu Zéro y vecinos) | 97,30 % |
+| **Slots Matrix 4×4** | 10 líneas, avalancha ×1 → ×2 → ×3 → ×5, comodín 🃏 pegajoso, estrella ⭐ con 8 giros gratis, Bonus Buy a 80× ([detalle](#slots-matrix-44-ambos-modos)) | 96,38 % |
+| **Plinko** | 9 filas de clavijas (la primera es la puerta), 9 cubetas, física guiada con gravedad 0,28 y restitución 0,55, bola suelta o **ráfaga de 5** con 150 ms entre bolas | Bajo 97,20 % · Medio 96,80 % · Alto 96,50 % |
+| **Crash Rocket** | M(t) = 1 + 0,06 · t^1,35; retiro manual o automático en pleno vuelo | 97 % con cualquier retiro |
+| **Minas 5×5** | 1–24 minas; tras k gemas, ×0,97 · C(25, k) / C(25 − m, k); retírate cuando quieras | 97 % |
+| **Dados Over/Under** | Tirada de 0,00 a 99,99; probabilidad 1–97 %; multiplicador 98 / P | 98 % |
+| **La Torre de la Muerte** | 8 pisos. Fácil: 3 losas y 1 trampa; Media: 2 losas y 1 trampa; Difícil: 3 losas y 2 trampas. ×0,97 / p^n, retiro en cada piso | 97 % |
+| **Video Póker Jacks or Better 9/6** | Pagos «por 1»: Jotas 1, Doble pareja 2, Trío 3, Escalera 4, Color 6, Full 9, Póker 25, Escalera de color 50, Escalera real 250 (800 con 5 monedas) | 99,54 % con estrategia óptima y 5 monedas |
+| **Rueda de la Fortuna** | Una tirada gratis cada 24 h, 10 gajos: 200, 400, 800, 1.500, 3.000 y bote de 10.000 fichas, Poción ×2 y cofre | ≈ 555 fichas de media, más pociones (10 %) y cofres (8 %) |
+
+**Plinko.** Las cubetas pagan exactamente lo que pide el enunciado:
+
+| Riesgo | Cubetas | Cubeta central / extremos |
+|---|---|---|
+| Bajo | 5 · 2 · 1,2 · 1 · 0,5 · 1 · 1,2 · 2 · 5 | 29,57 % / 0,32 % cada extremo |
+| Medio | 10 · 4 · 1,5 · 0,5 · 0,2 · 0,5 · 1,5 · 4 · 10 | 26,17 % / 0,44 % |
+| Alto | 35 · 12 · 2 · 0,2 · 0 · 0,2 · 2 · 12 · 35 | 35,66 % / 0,17 % |
+
+Cada fila la decide un número verificable. El rebote amortiguado tiene un **sesgo publicado hacia el centro**: desde una posición desplazada, la bola vuelve hacia el centro con probabilidad q. Ese q se ha calculado para que el RTP sea exactamente el anunciado (Bajo q = 0,5151, Medio 0,4918, Alto 0,5546). La distribución de las cubetas se calcula de forma exacta y las pruebas la comprueban.
+
+**Crash.** El punto de explosión es E = 0,97 / (1 − r) con el primer número de la ronda, truncado a 2 decimales. Si queda por debajo de ×1,01, el cohete explota al despegar (3,96 % de las rondas). Así, P(llegar a x) = 0,97 / x para cualquier x ≥ 1,01 y el RTP es del 97 % te retires donde te retires.
+
+La apuesta se cobra al despegar y el retiro se abona al instante. Si recargas la página en pleno vuelo, la ronda se resuelve como lo haría el servidor: cobra el retiro automático si el cohete llegaba a él y, si no, se pierde.
+
+**Estado guardado.** Minas, Torres y Video Póker guardan la partida a medias y la reanudan tras recargar, con la apuesta retenida.
+
+### Provably fair: cómo verificar una jugada
+
+1. Antes de apostar, la telemetría publica **`hash = SHA-256(semilla del servidor)`**. La semilla del servidor son 32 bytes aleatorios de `crypto.getRandomValues()` que siguen ocultos.
+2. Tú eliges la **semilla del cliente**: se puede editar en la telemetría o con `clientseed` en la terminal. Cada jugada usa un **nonce** creciente.
+3. El primer número de la jugada es:
    ```
-2. En GitHub: **Settings → Pages → Build and deployment → Source: _Deploy from a branch_**, rama **`main`**, carpeta **`/ (root)`** y **Save**. En un minuto estará en `https://<tu-usuario>.github.io/casino-royale-deluxe/`.
+   HMAC-SHA256(clave = semilla del servidor, mensaje = "semilla del cliente:nonce")
+   → los 8 primeros caracteres hexadecimales como entero de 32 bits ÷ 2^32   ∈ [0, 1)
+   ```
+   Los juegos que necesitan más números (barajas, caminos, avalanchas) siguen con los siguientes grupos de 8 caracteres. Agotado el hash, continúan con `"semilla del cliente:nonce:1"`, `:2`…
+4. **Rotar** la semilla (o cambiar la del cliente) **revela** la anterior y publica un compromiso nuevo. Desde ese momento se puede recalcular cada jugada.
 
-El archivo `.nojekyll` evita que GitHub procese el sitio con Jekyll.
+Cada apuesta aparece en **Apuestas en vivo** con su nonce. Al pulsarla se abre el **verificador**, que:
 
-## Probar en local
+- comprueba que `SHA-256(semilla)` coincide con el hash publicado;
+- recalcula el HMAC, los 8 hex, el entero y el número;
+- reproduce el resultado completo con las mismas funciones matemáticas de la mesa (la tirada, las minas, el camino de Plinko, la mano de póker, el zapato de blackjack…).
 
-Los módulos ES no se cargan desde `file://`; sirve la carpeta por HTTP:
+La terminal hace lo mismo con `verify <nonce>`. La comprobación también se puede hacer fuera del juego, por ejemplo con Node:
 
-```bash
-python -m http.server 8080      # o: npx serve .
-# abre http://localhost:8080
+```js
+import { createHmac, createHash } from 'node:crypto';
+const hmac = createHmac('sha256', serverSeed).update(`${clientSeed}:${nonce}`).digest('hex');
+console.log(createHash('sha256').update(serverSeed).digest('hex') === serverSeedHash); // true
+console.log(parseInt(hmac.slice(0, 8), 16) / 2 ** 32);                               // primer número
 ```
 
-Pruebas y simulación (Node 20+, sin dependencias):
+Cómo usa cada juego sus números:
 
-```bash
-npm test             # 48 pruebas: RNG, reglas, RTP, campaña, Club VIP, sonido y sitio
-npm run simulate     # 600 leyendas completas con el núcleo real de la campaña (tabla de equilibrio)
-```
+| Juego | Números del flujo |
+|---|---|
+| Ruleta | casilla = ⌊r · 37⌋ |
+| Dados | tirada = ⌊r · 10 000⌋ / 100 |
+| Crash | E = 0,97 / (1 − r), truncado |
+| Minas y Torres | Fisher-Yates de las casillas y losas |
+| Plinko | una decisión por fila |
+| Video Póker | Fisher-Yates de las 52 cartas: las 5 primeras son la mano y las siguientes, las de reposición |
+| Blackjack | un nonce por zapato: Fisher-Yates de las 312 cartas; cada mano anota qué cartas usó |
+| Slots | cada símbolo y cada duración de bloqueo, por orden |
+| Rueda | gajo según los pesos publicados |
 
-## La historia
+Es una **demostración del protocolo sin servidor**: la semilla oculta vive en tu propio navegador, así que alguien que lea `localStorage` podría conocerla antes de rotarla. Con fichas sin valor, solo se engañaría a sí mismo.
 
-1. **Prólogo**: la primera visita abre una cinemática con lluvia y texto a máquina de escribir. Se puede saltar y releer desde el Expediente.
-2. **Leyenda nº N**: cada partida es una leyenda numerada que empieza con **exactamente 1 crédito**, 3 favores del Sindicato, los rescates de tu rango VIP y el título «Rata del Callejón». El bono diario del Club VIP se puede cobrar en cualquier momento.
-3. **Ascenso**: tu saldo abre las puertas de las zonas superiores. Cada zona cambia las mesas, las fichas, el crupier, la música y la iluminación.
-4. **Final**: con 100.000 créditos compras tu libertad («Dueño del Destino»). Sin créditos ni favores llega el Game Over definitivo.
+### Reliquias, cofres y pociones
 
-La leyenda se guarda en `localStorage`: recargar la reanuda donde estaba, incluido un final ya alcanzado.
+La **Bóveda de Reliquias** se abre desde las ranuras de la cabecera. Guarda 10 reliquias; se equipan hasta 4 a la vez y solo actúan en el Cripto-Casino. Las que tocan probabilidades son **variantes de reglas publicadas y verificables**.
 
-## Las tres zonas
+| Reliquia | Rareza | Efecto |
+|---|---|---|
+| 🍀 Trébol de Oro | Rara | +15 % de peso para comodines y estrellas en las slots (RTP con el Trébol: 124,75 %) |
+| 🎲 Dado de Montecarlo | Épica | Si el crupier pide con 15 o 16 duros, un número verificable decide (25 %) si su carta es la siguiente de valor 10 del zapato |
+| 🛡️ Escudo | Común | Devuelve lo perdido en la primera mano de blackjack perdida de cada sesión |
+| 👑 Corona de Midas | Legendaria | +20 % de cada premio neto (×1,20) |
+| 🧲 Imán de Cashback | Rara | Devuelve el 10 % de cada pérdida neta |
+| ⏳ Reloj de la Abundancia | Común | +50 fichas extra cada minuto de juego activo |
+| 🔋 Batería Cuántica | Épica | Tras una tirada de slots sin premio, un 25 % de las veces (con el siguiente número del giro) vuelves a girar gratis |
+| 💎 Zafiro de Plinko | Rara | Otro sesgo publicado hacia los extremos: +8 puntos de RTP en cada riesgo |
+| 📡 Radar de Crash | Épica | Alarma visual al llegar al 80 % del punto de explosión |
+| 🎟️ Pase del Padrino | Legendaria | Duplica toda la XP |
+
+| Cofre | Precio | Rarezas (reliquia nueva garantizada) | Extra | Con la colección completa |
+|---|---|---|---|---|
+| Común | 2.500 fichas | Común 55 % · Rara 30 % · Épica 12 % · Legendaria 3 % | — | 1.500 fichas |
+| Legendario | 15.000 fichas | Rara 30 % · Épica 45 % · Legendaria 25 % | +1 poción | 10.000 fichas |
+
+Cada cofre saca **una reliquia que aún no tienes**, con una animación de gacha. La reliquia se equipa sola si hay una ranura libre. Los cofres se ganan con los niveles, los rangos, las misiones, la Rueda y los logros de la historia, y también se compran.
+
+La **Poción ×2** duplica el siguiente premio que cobres, en cualquier juego salvo la Rueda.
+
+### Niveles, rangos VIP y misiones
+
+- **XP por ronda** = apuesta × 0,25 + premio × 0,5, y × 2 con el Pase del Padrino. Las rondas del Modo Historia también suman.
+- **Niveles 1–50**: pasar del nivel n al n + 1 cuesta 100 · n^1,6 XP. Cada nivel paga **100 × nivel** fichas, cada 5 niveles da un cofre común y cada rango, uno legendario.
+
+| Rango VIP | Nivel | XP total | Abundancia por minuto | Rondas de 100 fichas (aprox.) |
+|---|---|---|---|---|
+| Bronce | 1 | 0 | 50 | — |
+| Plata | 10 | 13.372 | 60 | 180 |
+| Oro | 20 | 86.877 | 70 | 1.200 |
+| Platino | 30 | 254.960 | 80 | 3.500 |
+| Diamante | 40 | 544.664 | 90 | 7.400 |
+| El Padrino | 50 | 979.417 | 100 | 13.300 |
+
+**10 misiones diarias acumulativas**. Se renuevan a medianoche y se pagan solas al completarse. Completar las 10 da además un cofre común y +1.000 fichas.
+
+| Misión | Recompensa |
+|---|---|
+| Juega 40 rondas | 400 fichas · 150 XP |
+| Apuesta 5.000 fichas en total | 500 · 200 |
+| Gana 15 rondas | 400 · 150 |
+| Gana 5 manos de blackjack | 300 · 120 |
+| Juega 10 tiradas de ruleta | 250 · 100 |
+| Consigue 3 avalanchas dobles en las slots | 350 · 140 |
+| Lanza 25 bolas de Plinko | 250 · 100 |
+| Retírate en Crash a ×2 o más 3 veces | 350 · 140 |
+| Descubre 12 casillas seguras en Minas o Torres | 300 · 120 |
+| Consigue un premio de ×10 o más | 600 · 250 |
+
+### Economía: fichas, rescate y abundancia
+
+- **Fondo de rescate**: si el saldo baja de la ficha mínima (10) sin nada en juego, el casino te presta **+500 fichas** automáticamente.
+- **Reloj de la abundancia**: cada **60 s con la pestaña visible**, +50 fichas, más el extra del rango y del Reloj de la Abundancia. Lo acompañan un mensaje flotante sobre el saldo y una marimba suave, y la barra bajo el saldo muestra cuánto falta. Con la pestaña oculta, el reloj se pausa.
+
+### Terminal hacker
+
+Se abre con la tecla **`~`** (o `º`/`` ` ``, la misma tecla física) o con el botón `>_`. Tiene fondo negro, fósforo verde y cian, scanlines CRT opcionales, historial con ↑/↓ y autocompletado con Tab.
+
+| Orden | Qué hace |
+|---|---|
+| `help` | Lista de órdenes (también `ayuda`) |
+| `seeds` | Hash comprometido, semilla del cliente y nonce |
+| `rotate` | Revela la semilla del servidor y compromete otra |
+| `clientseed <texto>` | Cambia tu semilla del cliente |
+| `verify <nonce>` | Recalcula una jugada con la semilla ya revelada |
+| `history [n]` | Últimas apuestas |
+| `rtp` | Retorno teórico de los 10 juegos |
+| `relics` | Ranuras, colección, cofres y pociones |
+| `missions` · `level` · `balance` | Misiones, nivel y saldo |
+| `matrix on\|off` · `turbo on\|off` · `crt on\|off` | Lluvia de fondo, modo turbo y scanlines |
+| `theme <matrix\|neon\|onyx\|gold\|blood>` | Tema de color |
+| `export` · `import` | Copia de seguridad de toda la partida en JSON |
+| `clear` · `exit` | Limpiar y cerrar |
+
+`export` descarga todas las claves `crd.*` en un JSON. `import` valida la copia entera antes de tocar nada (formato, versión, claves `crd.*`, tamaño), la restaura, aplica las migraciones y recarga.
+
+### Temas, turbo y efectos
+
+- **5 temas**: Matrix Green (por defecto), Cyberpunk Neon, Onyx, Gold Imperial y Blood Red. Cada tema redefine la paleta cyber y también los tokens de las mesas clásicas: el oro, el tapete y los paneles.
+- **Turbo ⚡**: divide por dos las animaciones sin tocar ninguna probabilidad ni ningún pago. La frenada de la ruleta pasa al 40 % (100 → 40 fotogramas), el blackjack reparte una carta cada 150 ms, y Plinko y Crash simulan el doble de rápido.
+- **Efectos**: sacudida de pantalla por «trauma» (minas, trampas, explosiones), glitch del título, chispas y confeti de un pool de partículas sin basura, y la lluvia Matrix en un Web Worker.
+- **Sonido procedural** con Web Audio: clavijas de Plinko, motor del cohete que sube de tono con el multiplicador, explosión, gemas, minas, dados, losas, cofres, reliquias, subida de nivel y la marimba de la abundancia. Música y efectos tienen interruptores independientes.
+
+## Modo Historia: El Último Crédito
+
+Está **intacto**: la misma campaña, los mismos encargos, zonas, logros, Club VIP y finales. Las mesas del modo conservan al 100 % sus apuestas laterales, el racetrack y las avalanchas. Sus novedades son:
+
+- el sexto rango del Club VIP, **El Padrino**;
+- el motor v4 de las slots;
+- el botón Menú;
+- la conexión con la carrera global.
+
+### La historia
+
+1. **Prólogo**: una cinemática con lluvia y texto a máquina de escribir. Se puede saltar y releer desde el Expediente.
+2. **Leyenda nº N**: cada partida empieza con **1 crédito**, 3 favores del Sindicato, los rescates de tu rango VIP y el título «Rata del Callejón».
+3. **Ascenso**: tu saldo abre las zonas superiores. Cada zona cambia las mesas, las fichas, el crupier, la música y la iluminación.
+4. **Final**: con 100.000 créditos compras tu libertad («Dueño del Destino»). Sin créditos ni salvavidas llega el Game Over definitivo.
+
+### Las tres zonas
 
 | | Nivel 1 · El Callejón | Nivel 2 · El Salón de Neón | Nivel 3 · El Penthouse |
 |---|---|---|---|
 | Acceso | Desde el inicio | 250 créditos | 5.000 créditos |
 | Expulsión por debajo de | — | 100 | 2.500 |
-| Crupier | Moss, crupier del sótano | Vera, crupier del Salón | SIBILA, la IA del Sindicato |
+| Crupier | Moss | Vera | SIBILA, la IA del Sindicato |
 | Fichas | 1 · 5 · 10 | 5 · 10 · 25 · 100 · 500 | 100 · 500 · 1K · 5K · 10K |
-| Blackjack | 1 asiento, apuesta 1–10, sin laterales | 3 asientos, 5–500, laterales hasta 100 | 3 asientos, 100–25.000, laterales hasta 5.000 |
-| Ruleta | 10 por casilla y 50 por mesa, sin racetrack | 500 por casilla y 5.000 por mesa, con racetrack | 25.000 por casilla y 100.000 por mesa |
-| Slots | Apuesta 1–10, sin Bonus Buy | 10–500, con Bonus Buy | 500–10.000, con Bonus Buy |
-| Ambiente | Bombilla que parpadea, lluvia, piano y trompeta con sordina (re menor, 58 BPM) | Neón rosa y cian, contrabajo walking, escobillas y vibráfono (do menor, 74 BPM) | Oro y cristal, pedal grave, reloj y escáner rojo de SIBILA (la menor, 64 BPM) |
+| Blackjack | 1 asiento, 1–10, sin laterales | 3 asientos, 5–500, laterales hasta 100 | 3 asientos, 100–25.000, laterales hasta 5.000 |
+| Ruleta | 10 por casilla, sin racetrack | 500 por casilla, con racetrack | 25.000 por casilla |
+| Slots | 1–10, sin Bonus Buy | 10–500, con Bonus Buy | 500–10.000, con Bonus Buy |
 
-- **Viajar**: se hace desde las puertas de la barra de zonas, solo con las mesas en reposo (sin apuestas en juego ni giros gratis pendientes), y va acompañado de una transición a pantalla completa.
-- **Histéresis**: se entra con el umbral de acceso, pero solo te expulsan si caes por debajo del umbral de permanencia. Así, una mala mano justo al llegar no te devuelve al sótano. La degradación es automática y la narra el Sindicato.
-- En el Callejón las funciones avanzadas se ven bloqueadas con su zona de desbloqueo: los asientos 2 y 3 («Reservado · Salón de Neón»), las apuestas laterales, el racetrack y el Bonus Buy.
+### Encargos, logros y Club VIP
 
-## Encargos del Sindicato: el motor del progreso
-
-Las mesas conservan su ventaja de la casa real: blackjack ≈ 0,5 %, ruleta 2,70 % y slots ≈ 3,7 %. Con juegos de esperanza nula o negativa, el **teorema de parada opcional** limita la probabilidad de convertir 1 crédito en 100.000 a **1 entre 100.000 como mucho**, sea cual sea la estrategia. Por eso el progreso viene del Sindicato:
-
-- Un tablero con **3 encargos simultáneos** por zona; al cumplir uno llega otro distinto.
-- Solo cuentan las rondas con **ganancia neta** (los empates y las pérdidas no suman).
-- La recompensa es la base × el factor de la zona (**×2** Callejón, **×30** Salón, **×600** Penthouse). La base es ≈ 0,6 × las rondas que se tarda de media en cumplirlo, medidas con los motores reales, de modo que premia el esfuerzo sin eliminar el riesgo.
-
-| Encargo | Base | Callejón | Salón | Penthouse |
-|---|---|---|---|---|
-| Gana 3 rondas en cualquier mesa | 4 | 8 | 120 | 2.400 |
-| Gana 2 rondas de blackjack | 3 | 6 | 90 | 1.800 |
-| Gana 2 giros de ruleta | 3 | 6 | 90 | 1.800 |
-| Gana 3 tiradas en las slots | 13 | 26 | 390 | 7.800 |
-| Cobra 2 suertes sencillas (rojo, par, 1-18…) | 3 | 6 | 90 | 1.800 |
-| Cobra una docena o una columna | 2 | 4 | 60 | 1.200 |
-| Acierta un pleno en la ruleta | 22 | 44 | 660 | 13.200 |
-| Consigue un Blackjack natural | 13 | 26 | 390 | 7.800 |
-| Gana una mano de blackjack doblada | 11 | 22 | 330 | 6.600 |
-| Gana una mano de blackjack dividida | 48 | 96 | 1.440 | 28.800 |
-| Encadena 3 victorias seguidas | 9 | 18 | 270 | 5.400 |
-| Consigue 2 avalanchas en un solo giro | 8 | 16 | 240 | 4.800 |
-| Gana 10 veces lo apostado en una sola ronda | 22 | 44 | 660 | 13.200 |
-| Activa los giros gratis de las slots | 165 | 330 | 4.950 | 99.000 |
-| Cobra un Perfect Pairs o un 21+3 | 4 | — | 120 | 2.400 |
-| Cobra una apuesta anunciada del racetrack | 2 | — | 60 | 1.200 |
-
-### Equilibrio simulado
-
-`npm run simulate` juega 200 leyendas completas por estilo con el núcleo real de la campaña y del Club VIP, y con el motor real de las slots. La ruleta es exacta y el blackjack usa la distribución de resultados de la estrategia básica.
-
-Cada leyenda simulada es **la primera de un jugador nuevo** (rango Bronce). Ese jugador:
-- cobra el bono diario al empezar;
-- persigue el encargo más rápido y sube de zona en cuanto puede;
-- al arruinarse, usa primero el rescate VIP y después los favores.
-
-Las semillas son fijas, así que los resultados se reproducen exactamente.
-
-| Estilo | Victoria | Game Over | Llega al Penthouse | Rondas hasta la libertad (mediana / p90) | Rescates VIP usados | Favores usados |
-|---|---|---|---|---|---|---|
-| Prudente (apuesta mínima) | 100 % | 0 % | 100 % | 625 / 1.186 | 0,01 | 0 |
-| Moderado (3 % del saldo) | 99,0 % | 0 % | 99,5 % | 707 / 1.811 | 0,13 | 0 |
-| Temerario (10 % del saldo) | 68,5 % | 20,5 % | 85,0 % | 843 / 2.548 | 1,85 | 0,83 |
-
-El resto de leyendas (1 % y 11 %) seguía en juego al llegar al tope de 6.000 rondas. Con los salvavidas del Club VIP, jugar con cabeza siempre acaba en libertad. Ir a por todo todavía se paga: una de cada cinco leyendas temerarias termina en Game Over.
-
-## Logros y títulos
-
-Cada logro se desbloquea una vez por leyenda y el Sindicato paga su recompensa.
-
-| Logro | Condición | Recompensa |
-|---|---|---|
-| Primer Crédito | Gana tu primera ronda | 2 |
-| Desde el Fondo | Gana una ronda apostando todo tu saldo | 5 |
-| Natural | Consigue un Blackjack natural | 5 |
-| Pleno al Número | Acierta un pleno en la ruleta | 10 |
-| Avalancha | Encadena 3 avalanchas en un solo giro | 10 |
-| Súper Bono | Alinea 4 símbolos iguales en las slots | 15 |
-| Lluvia Dorada | Activa los giros gratis | 40 |
-| Mano Caliente | Gana 5 rondas seguidas | 25 |
-| Nervios de Acero | Gana justo después de perder 5 rondas seguidas | 15 |
-| Todo o Nada | Gana una jugada crítica | 20 |
-| Estratega | 25 decisiones con el coach y un 90 % de acierto | 30 |
-| Apuesta Paralela | Cobra un Perfect Pairs o un 21+3 | 50 |
-| Apuesta Anunciada | Cobra una apuesta del racetrack | 50 |
-| Luces de Neón | Entra en el Salón de Neón | 100 |
-| Aire Enrarecido | Entra en el Penthouse | 1.000 |
-| Tiburón | Alcanza 25.000 créditos | 2.500 |
-| Dueño del Destino | Compra tu libertad | — |
-
-Los **títulos** siguen a tu saldo, hacia arriba y hacia abajo, y cada cambio se narra en la bitácora:
-
-| Saldo | Título |
-|---|---|
-| 0 | Alma en Pena |
-| 1 | Rata del Callejón |
-| 10 | Buscavidas |
-| 100 | Tahúr de Barrio |
-| 500 | Lobo de Neón |
-| 5.000 | High-Roller |
-| 25.000 | Tiburón del Sindicato |
-| 100.000 | Dueño del Destino |
-
-## Club VIP
-
-El Club VIP es tu carrera en el casino: el XP, el rango, los tapetes comprados y el bono diario **se conservan aunque la leyenda termine**, así que cada partida nueva empieza con más ayuda. Se abre con el botón del rango en la cabecera, que muestra un aviso «Bono» cuando el bono diario está disponible.
-
-- **XP**: 1 por cada crédito apostado en cualquier mesa. Cada ascenso se celebra con fanfarria, confeti y una entrada en la bitácora.
-- **Bono diario**: una vez por día natural (se renueva a medianoche), en cualquier momento de la leyenda.
-- **Rescates VIP**: cuando te quedas sin créditos; su número por leyenda depende del rango.
-- **Tapetes de lujo**: se compran con créditos de la leyenda y quedan en el Club para siempre. Sustituyen al tapete de la zona hasta que vuelvas a elegir «Tapete de la zona».
+- **Encargos del Sindicato**: 3 a la vez por zona. Pagan una base × el factor de la zona (×2, ×30 y ×600), que se calibró con los motores reales. Las mesas conservan su ventaja de la casa, así que el progreso viene de ahí.
+- **17 logros** con recompensa y **títulos** que siguen al saldo, de «Alma en Pena» a «Dueño del Destino».
+- **Club VIP**: XP (1 por crédito apostado), rango, bono diario, rescates por leyenda y tapetes de lujo que sobreviven al reinicio. Ahora tiene 6 rangos:
 
 | Rango | XP | Bono diario | Rescate VIP | Rescates por leyenda |
 |---|---|---|---|---|
@@ -170,196 +267,151 @@ El Club VIP es tu carrera en el casino: el XP, el rango, los tapetes comprados y
 | Oro | 25.000 | 500 | 1.000 | 3 |
 | Platino | 100.000 | 1.000 | 1.500 | 4 |
 | Diamante | 400.000 | 2.500 | 2.500 | 5 |
+| **El Padrino** | 1.500.000 | 5.000 | 4.000 | 6 |
 
-| Tapete | Precio |
-|---|---|
-| Tapete de la zona (verde, violeta u ónix según la zona) | Incluido |
-| Verde Esmeralda | Incluido |
-| Azul Zafiro | 1.000 |
-| Rojo Carmesí | 2.500 |
-| Negro Ónix | 5.000 |
+- **Salvavidas**: sin créditos se abre un diálogo con el bono diario, los rescates VIP y los favores del Sindicato. Solo cuando no queda ninguno llega el Game Over.
+- **Tensión**: jugadas críticas con latido y viñeta roja, bitácora del crupier, expediente con el Salón de la Fama y música lounge/jazz por zona.
 
-## Salvavidas, Game Over y gran final
+`npm run simulate` juega 600 leyendas completas con el núcleo real de la campaña y el motor real de las slots, incluidos los comodines fijos entre giros:
 
-- **Salvavidas**: si tu saldo cae por debajo de 1 crédito con las mesas en reposo, se abre el diálogo «Sin créditos» (y la cabecera muestra «Pedir ayuda») con todas las ayudas que te quedan:
-  - el **bono diario** del Club VIP, si no lo has cobrado hoy;
-  - los **rescates VIP** de tu rango;
-  - los **favores del Sindicato**: 3 por leyenda, de 5, 50 o 500 créditos según la zona más alta que hayas pisado.
-- **Game Over definitivo**: sin créditos y sin ningún salvavidas, el juego se detiene. Aparece una cinemática roja con las estadísticas y un único botón, **Reiniciar la Leyenda**, que borra la leyenda y conserva el Salón de la Fama y el Club VIP. La cinemática no se cierra con Esc y reaparece al recargar.
-- **Gran final**: al llegar a 100.000 créditos con las mesas en reposo, el juego se detiene, cae una tormenta de partículas doradas y suena una fanfarria. La cinemática final te corona **«Dueño del Destino»** con las estadísticas de la leyenda.
-
-## Tensión y atmósfera
-
-- **Jugadas críticas**: apostarlo todo, o arriesgar al menos la mitad de tu bankroll (apuesta ÷ (saldo + apuesta) ≥ 50 %) con 10 apuestas mínimas o más en juego. Así el drama no se repite en cada apuesta pequeña cuando vas justo de saldo. La pantalla se cierra con una viñeta roja, suenan un latido y un riser, la música de fondo se aparta para dejar sitio al latido. El resultado estalla en un impacto dorado o en un golpe grave con destello rojo.
-- **Bitácora del Crupier**: es un panel lateral (en móvil va al final, con un teletipo sobre la mesa). En él Moss, Vera, SIBILA, el Sindicato y el Narrador reaccionan a premios grandes, pérdidas duras, rachas de 3, 5, 7, 10, 15 y 20, títulos, logros, encargos, favores y cambios de zona. Guarda las últimas 60 entradas.
-- **Expediente**: reúne las estadísticas de la leyenda, los logros y el Salón de la Fama (leyendas jugadas, victorias, mejor tiempo y mejor saldo). Desde aquí se relee el prólogo y se reinicia la leyenda con doble confirmación.
-- **CSS atmosférico**: cada zona redefine su paleta con variables CSS. Hay un letrero de neón con parpadeo; en el Callejón, bombilla temblorosa y lluvia; en el Salón, un neón que respira; en el Penthouse, un barrido dorado y el escáner de SIBILA. Todo respeta `prefers-reduced-motion`.
-
-## Música de fondo y efectos
-
-El juego no usa ninguna voz: no hay síntesis de voz ni locuciones, solo música y efectos generados con Web Audio API.
-
-- **Música de fondo lounge / jazz nocturno** (`js/engine/music.js`), pensada para sonar de fondo sin cansar:
-  - **Piano eléctrico tipo Rhodes**: tres senos por nota (fundamental, octava que se apaga antes y una «púa» aguda muy breve), un paso bajo cálido a 2,1 kHz y un trémolo estéreo lento.
-  - **Armonía**: acordes de jazz (maj9, m9, m11, 13, 9sus…) en voicings cerrados sin fundamental, con conducción de voces mínima entre acordes (menos de 3 semitonos por voz de media) y un arpegio humano de pocos milisegundos.
-  - **Contrabajo** suave a dos tiempos (fundamental y quinta) con aproximaciones cromáticas ocasionales.
-  - **Escobillas, platillo y bombo apenas rozado**, hechos con ruido blanco filtrado y un swing ligero.
-  - **Tempo pausado** de 65 a 75 BPM. Cada zona tiene su tonalidad y su progresión de 8 compases: Callejón en re menor a 66 BPM, Salón en mi bemol a 72, Penthouse en la bemol a 68, Final en re bemol a 70 y Game Over en mi menor a 65.
-  - **Mezcla de fondo**: unos 15–20 dB por debajo de fichas y cartas, con reverb de sala pequeña y un recorte suave de agudos. En las jugadas críticas la música se aparta para que se oiga el latido.
-  - **Fundidos**: 3 s de entrada al encenderla y 1,6 s de salida al pausarla, en línea recta en decibelios. También se detiene con la pestaña oculta.
-- **Efectos de juego** (`js/engine/audio.js`): reparto y barajeo de cartas, choque de fichas, bola y rueda de la ruleta, rodillos, avalanchas y campanas de premio, además de los efectos dramáticos (latido, riser, impacto, fanfarria).
-- **Controles independientes en la cabecera**: «🎵 Música: ON/OFF» y «🔊 Efectos: ON/OFF». Cada uno se guarda en su propia clave de `localStorage` (`crd.bgm.v1` y `crd.sfx.v1`); los ajustes del panel de sonido antiguo se migran solos.
-- **Tensión (0–1)**: abre el filtro y el volumen del drone. Por encima de 0,4 añade pulsos de contrabajo, por encima de 0,55 dobla el tic-tac del reloj y por encima de 0,6 mete golpes graves.
-- **Efectos dramáticos sintetizados**: latido, riser, sting, impacto, doom, fanfarria, whoosh de transición, zumbido de neón y teclas de máquina de escribir.
-
-## Blackjack multimano (Las Vegas Strip)
-
-| Regla | Valor |
-|---|---|
-| Asientos | Hasta 3 (según la zona), con decisiones independientes por mano |
-| Zapato | 6 barajas (312 cartas), Fisher-Yates, carta de corte al 75 % |
-| Blackjack natural | Paga 3 a 2 |
-| Crupier | Pide con 16 o menos, se planta con todos los 17 (S17) y revisa Blackjack (peek) |
-| Seguro | Se ofrece asiento por asiento con As visible; cuesta media apuesta y paga 2 a 1 |
-| Doblar / Dividir | Doblar con dos cartas (también tras dividir); dividir hasta 4 manos por asiento; ases divididos reciben una carta |
-| Límites | Según la zona: ver la tabla de zonas |
-
-**Apuestas laterales** (se resuelven con las dos primeras cartas y la carta visible del crupier). La ventaja de la casa es **exacta**, calculada enumerando el zapato completo con multiplicidades. Las pruebas también reproducen los valores publicados para 8 barajas: 4,10 % y 3,70 %.
-
-| Perfect Pairs | Paga | | 21+3 | Paga |
-|---|---|---|---|---|
-| Pareja perfecta (mismo palo) | 25:1 | | Trío del mismo palo | 100:1 |
-| Pareja de color | 12:1 | | Escalera de color | 40:1 |
-| Pareja mixta | 6:1 | | Trío | 30:1 |
-| **Ventaja (6 barajas)** | **6,11 %** | | Escalera | 10:1 |
-| | | | Color | 5:1 |
-| | | | **Ventaja (6 barajas)** | **4,62 %** |
-
-**Modo didáctico**
-- **Coach**: recomienda en tiempo real la jugada de estrategia básica (6 barajas, S17, doblar tras dividir, sin rendición), resalta el botón y puntúa tu precisión. Si no puedes doblar o dividir, recomienda la alternativa correcta.
-- **Entrenador Hi-Lo**: etiqueta cada carta (2–6 = +1, 7–9 = 0, 10–As = −1) y muestra Running Count, True Count (RC ÷ mazos restantes) y mazos restantes. La carta oculta del crupier no cuenta hasta que se descubre. Con True Count ≥ +3 el coach recomienda el seguro.
-
-## Ruleta Francesa
-
-- 37 casillas en el orden físico real del plato europeo.
-- Tapete con plenos, divididas, calles, cuadros, docenas, columnas y suertes sencillas, además de **divididas y tríos con el cero** (0/1, 0/2, 0/3, 0/1/2, 0/2/3).
-- **Racetrack** (desde el Salón de Neón) con los números en el orden del plato:
-
-| Apuesta anunciada | Fichas | Números | Reparto |
+| Estilo | Libertad | Game Over | Rondas hasta la libertad (mediana / p90) |
 |---|---|---|---|
-| Voisins du Zéro | 9 | 17 | 2 en trío 0/2/3, 4/7, 12/15, 18/21, 19/22, 2 en cuadro 25/29, 32/35 |
-| Tiers du Cylindre | 6 | 12 | 5/8, 10/11, 13/16, 23/24, 27/30, 33/36 |
-| Orphelins | 5 | 8 | pleno 1, 6/9, 14/17, 17/20, 31/34 |
-| Jeu Zéro | 4 | 7 | 0/3, 12/15, pleno 26, 32/35 |
-| Vecinos | 3, 5 o 7 | 3, 5 o 7 | pleno al número y ±1, ±2 o ±3 casillas del plato |
+| Prudente (apuesta mínima) | 100 % | 0 % | 545 / 966 |
+| Moderado (3 % del saldo) | 100 % | 0 % | 618 / 1.449 |
+| Temerario (10 % del saldo) | 82 % | 12 % | 927 / 2.810 |
 
-- **Todas** las apuestas, simples o anunciadas, tienen la misma ventaja de la casa: `1 − 36/37 = 2,7027 %` (verificado para cada casilla del tapete y cada apuesta anunciada).
-- **Zoom balístico**: el número se sortea antes de lanzar la bola y la física se resuelve en forma cerrada (desaceleración en la pista más un oscilador amortiguado entre los trastes). Cuando la bola entra en la fase final, una cámara suavizada acerca el plato ×1,9 al sector donde cae, la sigue en los rebotes y se aleja tras mostrar el número. El rotor se renderiza a doble resolución para que el zoom sea nítido.
-- Acciones rápidas: **Deshacer**, **Limpiar**, **Repetir**, **Repetir ×2** y **Doblar**.
+El 6 % restante de las leyendas temerarias seguía en juego al llegar al tope de 6.000 rondas.
 
-## Slots Matrix 4×4 con avalancha
+## Slots Matrix 4×4 (ambos modos)
 
-- 10 líneas (4 filas, 4 columnas y 2 diagonales): 3 o 4 iguales desde la primera celda (4 = **Súper Bono ×15**).
-- **Avalancha**: los símbolos ganadores explotan, el resto cae y entran símbolos nuevos en el mismo giro. Cada combo sucesivo aplica **×1, ×2, ×3 y ×5** (se mantiene en ×5).
-- **Giros gratis**: 10 (3 diamantes), 12 (4) o 15 (5+), con rodillos premium y un **multiplicador dorado** en cada giro (×2 40 %, ×3 25 %, ×5 18 %, ×10 10 %, ×25 5 %, ×50 1,5 %, ×100 0,5 %). 3+ diamantes durante el bono suman +5 giros.
-- **Bonus Buy** (desde el Salón de Neón): 10 giros gratis por 100 × apuesta, con confirmación.
-- **Auto-Spin**: 10–100 tiradas con **límite de pérdida obligatorio**, límite por premio y parada opcional al activarse el bono. Se detiene al cambiar de mesa o de pestaña y cuando la leyenda termina.
-- Premio máximo: 5.000 × apuesta por giro o por ronda de bono.
+- **10 líneas** (4 filas, 4 columnas y 2 diagonales): 3 o 4 iguales desde la primera celda. Con 4 idénticos se cobra el **Súper Bono ×15**; si un comodín completa el cuarteto, ×5.
+- **Avalancha**: los símbolos ganadores explotan, el resto cae y entran nuevos en el mismo giro. Los combos sucesivos pagan **×1, ×2, ×3 y ×5**.
+- **Comodín 🃏 pegajoso**: sustituye a los símbolos de pago (3 comodines pagan como la corona). Cuando forma parte de un premio **queda fijo 2 o 3 giros**, con un candado y un contador. En cada uno de esos giros actúa una vez y **multiplica ×2** cada línea que pasa por él (varios se multiplican entre sí, hasta ×8). Mientras haya comodines fijos, la apuesta queda bloqueada, para que no se pueda subir justo cuando valen más.
+- **Estrella ⭐**: 3 o más al final del giro dan **8 giros gratis** con rodillos cargados de comodines.
+- **Bonus Buy**: 8 giros gratis por **80 × apuesta**. En el Modo Historia se abre en el Salón de Neón.
+- **Auto-Spin** con límite de pérdida obligatorio. El premio máximo es 5.000 × apuesta.
 
-| Símbolo | Peso base | Peso bono | 3 en línea | 4 en línea |
+| Símbolo | Peso base | Peso en giros gratis | 3 en línea | 4 iguales |
 |---|---|---|---|---|
-| Diamante (scatter) | 1,8 % | 2,0 % | 3 → ×2 · 4 → ×10 · 5+ → ×50 apuesta | + giros gratis |
-| Corona Real | 6,0 % | 15,8 % | ×50 | ×750 |
-| 7 de Oro | 9,0 % | 17,0 % | ×20 | ×300 |
-| Campana | 13,0 % | 18,0 % | ×8 | ×120 |
-| Herradura | 18,0 % | 17,0 % | ×4 | ×60 |
-| Trébol | 22,0 % | 15,0 % | ×1 | ×15 |
-| Cerezas | 30,2 % | 15,2 % | ×1 | ×15 |
+| ⭐ Estrella (scatter) | 1,83 % | 1,44 % | 3+ → 8 giros gratis | |
+| 🃏 Comodín | 0,41 % | 4,62 % | ×50 | ×750 |
+| Corona Real | 5,88 % | 15,38 % | ×50 | ×750 |
+| 7 de Oro | 8,92 % | 16,41 % | ×20 | ×300 |
+| Campana | 12,98 % | 17,44 % | ×8 | ×120 |
+| Herradura | 18,26 % | 16,41 % | ×4 | ×60 |
+| Trébol | 22,31 % | 14,36 % | ×1 | ×15 |
+| Cerezas | 29,41 % | 13,95 % | ×1 | ×15 |
 
-Los premios de línea se pagan sobre la apuesta de línea (apuesta ÷ 10). Con la avalancha las celdas dejan de ser independientes entre combos, así que el RTP se **mide** con el motor real y con reducción de varianza: líneas y scatter se miden directamente, y los giros gratis como frecuencia de activación × valor medio de la ronda.
+Con la avalancha y los comodines pegajosos, las celdas dejan de ser independientes, así que el RTP se **mide** con el motor real (`npm run slots`):
 
-| Componente | RTP |
+| Medida | Valor |
 |---|---|
-| Líneas con avalancha | 60,02 % |
-| Scatter | 0,95 % |
-| Giros gratis | 35,33 % |
-| **Total juego base** | **96,29 % (± 0,1)** |
-| **Compra de bono** | **96,25 % (± 0,14)** |
+| RTP total | **96,38 %** |
+| Líneas del juego base | 67,53 % |
+| Giros gratis | 28,84 % (1 de cada 268 tiradas, 77,3 × apuesta de media) |
+| Compra de bono | **96,63 %** |
+| Tiradas con premio | 39,46 % |
+| Muestra | 3 millones de tiradas y 300.000 rondas de bono |
 
-Muestra: 60 millones de tiradas del juego base y 4,5 millones de rondas de bono. Frecuencia de premio 37,5 %; giros gratis 1 de cada 276 tiradas. Las pruebas vuelven a simular el motor con un PRNG con semilla y comprueban ambos valores.
+## Decisiones de diseño y desviaciones del enunciado
+
+- **«El Último Crédito» como Modo Historia** (opción 1 elegida): la campaña queda intacta y convive con el Cripto-Casino desde el menú principal. Sus recompensas se fusionan con la carrera global: XP, rangos, cofres y fichas.
+- **Plinko**: se mantienen los multiplicadores pedidos. Con caídas 50/50 darían otro RTP (el alto pasaría del 150 %), así que se usa un **sesgo hacia el centro publicado** que clava el 97,2 / 96,8 / 96,5 %.
+- **Crash**: la fórmula `max(1,01; 0,97/(1−r))` permitiría ganar siempre retirándose en ×1,01. Por eso, por debajo de ×1,01 el cohete **explota al despegar** (3,96 %), y el RTP es del 97 % con cualquier retiro.
+- **Video Póker**: pagos «por 1» (incluyen la apuesta), la convención estándar de las máquinas 9/6.
+- **Dados**: la probabilidad llega hasta el 97 %: con 98 / P, un 98 % pagaría ×1 y ganar no daría nada.
+- **Reliquias**: solo actúan en el Cripto-Casino, para que la dificultad de la historia no cambie. Las que alteran probabilidades son variantes de reglas publicadas, y sus sorteos (Dado, Batería) usan números verificables del flujo.
+- **Abundancia**: con el Reloj de la Abundancia equipado, sus +50 se suman a los +50 base (y al extra del rango).
+- **Rescate**: salta con el saldo por debajo de la ficha mínima (10) y sin nada en juego, no solo con 0 exacto.
 
 ## Arquitectura y seguridad
 
-- **Núcleo de campaña sin DOM**: `js/story/campaign.js` es un `EventTarget`. Recibe de cada mesa el aviso previo de la ronda (`beginRound`) y su informe final (`report`), y emite eventos (`round`, `critical`, `zone`, `achievement`, `contract`, `title`, `favor`, `status`…). `js/ui/story-ui.js` los convierte en cinemáticas, bitácora y sonido, así que toda la lógica de la historia se prueba en Node.
-- **State Store unidireccional**: cada mesa tiene un `Store` con estado inmutable (`deepFreeze`) y fases atómicas `IDLE → BETTING → DEALING → RESOLVING → PAYOUT`; una transición ilegal lanza un error.
-- **Anti doble gasto**: al apostar, las fichas pasan del saldo a un **escrow** por mesa (`hold`). Se liquidan en cuanto se decide el azar (`settle`) y el premio se acredita al terminar la animación (`reveal`). Los controles se desactivan con el flag `busy`. «En juego» muestra solo lo apostado, sin revelar el resultado antes de tiempo.
-- **Recargar no hace trampa**: el resultado se liquida antes de animarse. Al recargar se abonan los premios pendientes, se devuelven las apuestas de ruleta aún no sorteadas, la mano de blackjack se **reanuda** y los giros gratis pendientes se conservan. Los finales se comprueban solo con las mesas en reposo.
-- **Protección XSS**: todo el DOM dinámico se crea con `createElement`/`createElementNS` y `textContent`; no se usa `innerHTML`. Una Content-Security-Policy bloquea scripts y estilos en línea.
-- **Monedero**: 1 crédito inicial y denominaciones de 1 a 10.000, con persistencia en `localStorage`. Fuera de las mesas, solo el Sindicato (logros, encargos y favores) y el Club VIP (bono diario y rescates) ingresan créditos, y solo los tapetes de lujo los gastan.
-- **Club VIP** (`js/engine/vip.js`): su estado (XP, tapetes, bono diario y rescates usados en la leyenda actual) vive en su propia clave de `localStorage`, que «Reiniciar la Leyenda» no borra. La campaña decide cuándo se puede usar cada ayuda.
-
-## Accesibilidad y responsive
-
-- Pestañas con roles ARIA y navegación con flechas, Inicio y Fin; regiones `aria-live` para mensajes, coach, resultados y bitácora; diálogos nativos `<dialog>`.
-- Áreas de toque mínimas de 44×44 px en botones, fichas, círculos de apuesta, puertas de zona y controles. Las apuestas de borde del tapete, de 26 px, están sobre las líneas como en una mesa real.
-- A partir de 1.180 px la bitácora ocupa una columna lateral; en móvil pasa al final de la página y un teletipo muestra la última entrada sobre la mesa. A 390 px de ancho no hay desplazamiento horizontal: el tapete y el racetrack se desplazan dentro de su contenedor.
-- Respeta `prefers-reduced-motion`: sin zoom de cámara, menos partículas y animaciones reducidas al mínimo.
+- **Máquina de estados de la app** (`js/app.js`): `boot → menu | story | free → leaving`. Cambiar de modo recarga la página, para que cada módulo arranque con el monedero y los datos de su modo. `app.js` también lleva el router de pestañas, el temporizador de la abundancia y el turbo.
+- **EventBus** (`js/event_bus.js`): las mesas avisan de `round:start` y `round:end`. La progresión, las misiones, las reliquias y la telemetría escuchan sin depender unas de otras. El bus también transporta `reward:chest`, `reward:chips`, `rescue`, `abundance` y `app:state`.
+- **Sesión** (`js/session.js`): es la única puerta entre las mesas y el modo. Da los límites, el azar de cada jugada (el flujo provably fair en el Cripto-Casino, `crypto.getRandomValues()` en la historia) y el registro verificable.
+- **State Store unidireccional** por mesa, con estado inmutable y fases atómicas `IDLE → BETTING → DEALING → RESOLVING → PAYOUT`.
+- **Anti doble gasto**: `hold` pasa las fichas del saldo al escrow de la mesa, `settle` las liquida en cuanto se decide el azar y `reveal` acredita el premio al terminar la animación. Las bolas simultáneas de Plinko revelan cada una su parte. Recargar nunca anula un resultado ya sorteado.
+- **Almacenamiento reactivo** (`js/storage.js`): `localStorage` con respaldo en memoria, suscripciones por clave (también entre pestañas), migraciones numeradas y copias de seguridad JSON validadas.
+- **Seguridad**: una Content-Security-Policy estricta (`script-src 'self'; style-src 'self'`, sin nada en línea). El DOM dinámico se crea solo con `createElement` y `textContent`, nunca con `innerHTML`. Las importaciones se validan antes de escribir.
 
 ## Rendimiento
 
-El juego está afinado para móviles de gama media. Las medidas se hicieron con Chrome, pantalla de móvil y la CPU ralentizada ×4, y cuentan el tiempo del hilo principal ocupado por cada segundo:
+Medido con Chrome, pantalla de móvil y la CPU ralentizada ×4: tiempo del hilo principal ocupado por segundo.
 
-| Escenario | Antes | Ahora |
-|---|---|---|
-| Blackjack en reposo (Callejón) | 789 ms/s | 11 ms/s |
-| Slots en reposo | 428 ms/s | 11 ms/s |
-| Penthouse en reposo | 903 ms/s | 34 ms/s |
-| Ruleta en reposo | 601–815 ms/s | 106–112 ms/s |
-| Tirada de slots | 607 ms/s | 356 ms/s |
-| Giro de ruleta | 726 ms/s | 380 ms/s |
+| Escenario | ms/s |
+|---|---|
+| Menú con la lluvia Matrix | 6 |
+| Cripto-Casino en reposo: blackjack · Plinko · Crash · Rueda | 12–28 |
+| Slots en reposo | 57–66 |
+| Crash con el cohete en vuelo | ≈ 525 |
+| Plinko, ráfaga de 5 bolas | ≈ 600 |
 
-- **Animaciones solo en el compositor**: los brillos que laten (aros de apuesta, botones, puertas, orbe dorado, celdas ganadoras, veladura crítica) se pintan una vez en un pseudo-elemento y solo se anima su opacidad. El neón parpadea con opacidad, el barrido dorado del Penthouse usa `transform` y las bombillas de las slots se encienden con una capa superpuesta. Así nada repinta la página en cada fotograma, y una prueba (`tests/site.test.js`) impide que vuelva a colarse una animación infinita que lo haga.
-- **Puertas de zona**: el aviso de zona recién abierta se apaga al entrar en ella. Antes seguía latiendo durante toda la partida.
-- **Rueda de ruleta**: gira a pleno ritmo solo durante el lanzamiento, el zoom y la frenada. En reposo se dibuja a unos 20 fotogramas por segundo, y nada si queda fuera de la pantalla.
-- **Carga**: `index.html` precarga los 26 módulos con `<link rel="modulepreload">`, así que el navegador los pide todos a la vez en lugar de descubrirlos en 4 viajes de red encadenados. La misma prueba comprueba que la lista está completa.
-- **Jugadas críticas** sin filtros de color sobre toda la pantalla.
+- **Lluvia Matrix en un Web Worker** con OffscreenCanvas, a 15 fps y media resolución. Dibujarla en el hilo principal obligaba a producir fotogramas y recalcular estilos, y costaba unos 95 ms/s en reposo; en el worker se queda en 3. Si el navegador no admite OffscreenCanvas, se dibuja en el hilo principal con el mismo pintor.
+- **Canvas con sprites cacheados**: el tablero, las cubetas y la bola de Plinko se pintan una vez; los emojis del cohete se rasterizan una sola vez; las partículas usan un pool fijo de arrays tipados, sin basura para el recolector.
+- **Animaciones solo en el compositor**: todas las animaciones infinitas mueven solo `opacity` y `transform`, y una prueba lo vigila.
+- **Carga**: 56 módulos precargados en paralelo con `modulepreload` (lista generada con `npm run preload` y comprobada por las pruebas). Son unos 220 KB comprimidos y la app está lista en ≈ 2,7 s con una red de 1,6 Mbps y 150 ms de latencia.
+
+## Accesibilidad y responsive
+
+- Pestañas con roles ARIA y navegación por teclado (flechas, Inicio y Fin), diálogos nativos `<dialog>`, regiones `aria-live` para los resultados y etiquetas en cada casilla, losa, carta y control.
+- En móvil, la cabecera del Cripto-Casino se compacta en tres filas (marca con menú, saldo y carrera, reliquias e iconos) y deja de ser fija. Las 10 pestañas se desplazan en horizontal. A 390 px no hay desplazamiento horizontal en ninguna mesa.
+- Respeta `prefers-reduced-motion`: sin lluvia, menos partículas y animaciones mínimas.
+
+## Probar, verificar y publicar
+
+Los módulos ES no se cargan desde `file://`, así que hay que servir la carpeta por HTTP:
+
+```bash
+python -m http.server 8080      # o: npx serve .   → http://localhost:8080
+npm test                        # 85 pruebas (Node 20+, sin dependencias)
+npm run slots                   # mide el RTP de las slots con el motor real
+npm run simulate                # 600 leyendas completas del Modo Historia
+npm run preload                 # regenera la lista de módulos precargados de index.html
+```
+
+Las pruebas cubren:
+
+- SHA-256 y HMAC comparados con `node:crypto`;
+- el flujo provably fair y el verificador de cada juego;
+- el RTP exacto de los juegos nuevos y el Monte Carlo de las slots;
+- la progresión, las misiones, las reliquias y los cofres;
+- la terminal, el almacenamiento con sus migraciones y copias de seguridad;
+- la campaña, el sonido y el sitio: precarga, CSP, identificadores del DOM y animaciones baratas.
+
+**Publicar en GitHub Pages**: sube el repositorio con `index.html` en la raíz y, en **Settings → Pages**, elige **Deploy from a branch**, rama `main`, carpeta `/ (root)`. El archivo `.nojekyll` evita el procesado de Jekyll.
 
 ## Estructura
 
 ```
-index.html                  Estructura semántica, sprite SVG, cinemáticas, expediente, bitácora y CSP
-css/main.css                Variables, layout con bitácora lateral, cabecera, HUD y pestañas
-css/tables.css              Mesa multimano, racetrack, rueda y gabinete de slots con avalancha
-css/components.css          Botones, fichas, cartas 3D, modales y controles de sonido
-css/story.css               Paletas por zona, neón, ambiente, puertas, bitácora, cinemáticas y jugadas críticas
-js/app.js                   Inicializador maestro, pestañas accesibles, desbloqueo y pausa del audio
-js/story/zones.js           Las tres zonas: accesos, fichas, límites por mesa y crupier
-js/story/campaign.js        Núcleo de la leyenda: rondas, jugadas críticas, zonas, favores y finales
-js/story/contracts.js       Encargos del Sindicato (tablero de 3 y recompensas por esfuerzo)
-js/story/achievements.js    Los 17 logros y sus recompensas
-js/story/titles.js          Títulos dinámicos según el saldo
-js/story/narrative.js       Prólogo, finales y frases de Moss, Vera, SIBILA, el Sindicato y el Narrador
-js/engine/rng.js            Entropía criptográfica, Fisher-Yates, muestreo ponderado y probabilidad
-js/engine/store.js          State Store unidireccional y máquina de estados atómica
-js/engine/wallet.js         Monedero con escrow anti doble gasto, ingresos (Sindicato y Club VIP) y compras
-js/engine/vip.js            Club VIP: XP, rangos, bono diario, rescates por leyenda y tapetes
-js/engine/storage.js        Persistencia en localStorage tolerante a fallos
-js/engine/audio.js          Efectos sintetizados, buses de música y efectos, preferencias independientes
-js/engine/music.js          Música de fondo lounge/jazz procedural: Rhodes, contrabajo y escobillas
-js/engine/particles.js      Confeti, chispas y lluvia de oro en Canvas
-js/ui/svg.js                Cartas (índices jumbo), fichas y símbolos generados con createElementNS
-js/ui/hud.js                Saldo, racks de fichas por zona, interruptores de música y efectos, avisos
-js/ui/story-ui.js           Cinemáticas, transiciones de zona, bitácora, encargos, salvavidas, expediente y jugadas críticas
-js/ui/vip-ui.js             Botón y diálogo del Club VIP: rango, bono diario, rescates y tienda de tapetes
-js/ui/input.js              Clic derecho o pulsación larga para retirar fichas
-js/games/blackjack-rules.js Reglas puras: liquidación, Perfect Pairs, 21+3, estrategia básica y Hi-Lo
-js/games/blackjack.js       Mesa multimano: asientos por zona, seguro por asiento, coach, conteo y reanudación
-js/games/roulette.js        Plato con zoom balístico, tapete, racetrack y apuestas anunciadas
-js/games/slots-engine.js    Motor matemático: líneas, avalancha, giros gratis y multiplicador dorado
-js/games/slots.js           Rodillos, animación de avalancha, Bonus Buy y Auto-Spin
-tests/math.test.js          22 pruebas de RNG, reglas, ventajas exactas, RTP y economía
-tests/story.test.js         16 pruebas de zonas, encargos, logros, jugadas críticas, Club VIP, salvavidas y finales
-tests/audio.test.js         6 pruebas de sonido: preferencias, migración, mezcla, tempo y armonía
-tests/site.test.js          4 pruebas del sitio: precarga de módulos, sin voz, CSP y animaciones baratas
-tools/simulate-economy.mjs  Simulación de leyendas completas (tabla de equilibrio)
+index.html                    Menú principal, armazón de ambos modos, 10 mesas, diálogos, sprite SVG y CSP
+css/main.css                  Variables, layout, cabecera, pestañas y pantalla de arranque
+css/themes.css                5 temas: Matrix Green, Cyberpunk Neon, Onyx, Gold Imperial y Blood Red
+css/cyber.css                 Menú, HUD del Cripto-Casino, telemetría, bóveda, carrera y verificador
+css/arcade.css                Plinko, Crash, Minas, Dados, Torres, Video Póker, Rueda y control de apuesta
+css/hacker_terminal.css       Terminal: fósforo, cursor y scanlines
+css/animations.css            Trauma, glitch, cofres, reliquias, textos flotantes y ajustes del turbo
+css/tables.css                Blackjack, ruleta y slots (comodines pegajosos)
+css/components.css            Botones, fichas, cartas 3D, modales y Club VIP
+css/story.css                 Zonas, neón, bitácora, cinemáticas y jugadas críticas del Modo Historia
+js/app.js                     Máquina de estados, router de pestañas, abundancia y turbo
+js/event_bus.js               Bus de eventos (pub/sub)
+js/mode.js                    Modo activo y claves de guardado por modo
+js/session.js                 Límites, azar por modo, registro verificable y fondo de rescate
+js/provably_fair.js           SHA-256/HMAC en JS puro, semillas, nonce, flujo e historial
+js/verify.js                  Verificador independiente de las jugadas de los 10 juegos
+js/progression.js             XP, niveles 1–50, 6 rangos VIP y 10 misiones diarias
+js/relics.js                  10 reliquias, 4 ranuras, cofres, pociones y bonificaciones
+js/terminal.js                Intérprete de órdenes de la terminal (sin DOM)
+js/settings.js                Turbo, tema, lluvia y scanlines
+js/storage.js                 Persistencia reactiva, migraciones y copias de seguridad JSON
+js/audio.js                   Efectos procedurales y buses de música y efectos
+js/particles.js               Partículas con pool fijo y sprites cacheados
+js/engine/                    RNG criptográfico, Store, monedero con escrow, Club VIP y música lounge
+js/story/                     Campaña, zonas, encargos, logros, títulos y narrativa
+js/ui/                        HUD, menú, HUD cyber, telemetría, terminal, bóveda, lluvia (worker), SVG y utilidades
+js/games/*-math.js            Matemáticas puras de Plinko, Crash, Minas, Dados, Torres, Video Póker y Rueda
+js/games/slots-engine.js      Motor de las slots v4: líneas, avalancha, comodines pegajosos y giros gratis
+js/games/*.js                 Las 10 mesas (blackjack, roulette, slots, plinko, crash, mines, dice, towers, video_poker, wheel)
+tests/                        85 pruebas con node:test
+tools/                        Medición del RTP de las slots, simulación de la historia y precarga
 ```

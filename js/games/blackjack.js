@@ -5,14 +5,17 @@
 
 import { Store, PHASE, wait } from '../engine/store.js';
 import { wallet, money } from '../engine/wallet.js';
-import { campaign } from '../story/campaign.js';
-import { audio } from '../engine/audio.js';
-import { storage } from '../engine/storage.js';
+import { session } from '../session.js';
+import { scopedKey } from '../mode.js';
+import { audio } from '../audio.js';
+import { storage } from '../storage.js';
 import { hud, formatChips } from '../ui/hud.js';
 import { cardElement, setCardFaceUp, chipStack, el } from '../ui/svg.js';
 import { bindRemoveGesture } from '../ui/input.js';
+import { settings } from '../settings.js';
+import { relics, DADO_CHANCE } from '../relics.js';
 import {
-  SHOE_SIZE, CUT_CARD, newShuffledShoe, rankOf, cardValue, handValue, isBlackjack, isNatural,
+  SHOE_SIZE, CUT_CARD, buildShoe, rankOf, cardValue, handValue, isBlackjack, isNatural,
   dealerShouldHit, canSplitHand, canDoubleHand, settleHand, perfectPairsResult, twentyOnePlusThreeResult,
   basicStrategy, hiLoValue, trueCount, INSURANCE_TRUE_COUNT, SIDE_BET_HOUSE_EDGE,
 } from './blackjack-rules.js';
@@ -21,11 +24,24 @@ export * from './blackjack-rules.js';
 
 export const SEATS = 3;
 
-const SAVE_KEY = 'crd.blackjack.v2';
+const SAVE_KEY = scopedKey('crd.blackjack.v2');
 const LEGACY_KEY = 'crd.blackjack.v1';
-const PREFS_KEY = 'crd.blackjack.prefs.v1';
+const PREFS_KEY = scopedKey('crd.blackjack.prefs.v1');
 const DEAL_STEP = 360;
+const TURBO_DEAL_STEP = 150;
 const FLIP_TIME = 560;
+// Ritmo del reparto: en turbo, una carta cada 150 ms y volteos a mitad de tiempo.
+const dealStep = () => (settings.turbo ? TURBO_DEAL_STEP : DEAL_STEP);
+const flipTime = () => FLIP_TIME * settings.speed;
+
+// Zapato nuevo de 6 barajas. En el Cripto-Casino se baraja con el flujo provably fair (un nonce
+// por zapato, anotado en el historial para verificarlo); en el Modo Historia, con crypto directo.
+function freshShoe() {
+  const stream = session.stream('blackjack');
+  const shoe = stream.shuffle(buildShoe());
+  session.record(stream, { stake: 0, payout: 0, summary: 'Zapato nuevo · 6 barajas barajadas', params: { kind: 'shoe' } });
+  return { shoe, shoeMeta: stream.meta ?? null };
+}
 const SPOTS = ['pp', 'main', 't213'];
 const SPOT_NAMES = { main: 'Apuesta principal', pp: 'Perfect Pairs', t213: '21+3' };
 const ACTION_NAMES = { hit: 'Pedir', stand: 'Plantarse', double: 'Doblar', split: 'Dividir' };
@@ -58,8 +74,9 @@ function initialState() {
     phase: PHASE.IDLE,
     busy: false,
     stage: 'bet',
-    shoe: newShuffledShoe(),
+    ...freshShoe(),
     pos: 0,
+    roundFrom: 0,
     seats: emptySeats(),
     lastSeats: emptySeats(),
     message: 'Toca el círculo de apuesta para jugar',
@@ -149,10 +166,13 @@ export class BlackjackGame {
       storage.write(SAVE_KEY, state);
       this.#render(state);
     });
+    // Se guarda también el estado inicial: un zapato recién barajado no se vuelve a barajar
+    // (ni gasta otro nonce verificable) solo por recargar la página.
+    storage.write(SAVE_KEY, this.state);
     wallet.addEventListener('change', () => this.#renderControls(this.state));
 
     this.#bind();
-    campaign.register('blackjack', {
+    session.register('blackjack', {
       hasPendingPlay: () => this.state.phase === PHASE.DEALING || this.state.phase === PHASE.RESOLVING,
       onZone: () => this.#render(this.state),
     });
@@ -163,7 +183,7 @@ export class BlackjackGame {
 
   // Límites de la zona actual: asientos, apuestas laterales, mínimo y máximos.
   #limits() {
-    return campaign.limits('blackjack');
+    return session.limits('blackjack');
   }
 
   get state() {
@@ -295,7 +315,7 @@ export class BlackjackGame {
   }
 
   addChip(seat, spot, value) {
-    if (!this.#canBet() || !campaign.playable) return;
+    if (!this.#canBet() || !session.playable) return;
     const limits = this.#limits();
     if (seat >= limits.seats) {
       hud.toast('Asiento reservado: la mesa multimano se abre en el Salón de Neón', 'warn');
@@ -360,7 +380,7 @@ export class BlackjackGame {
 
   rebet() {
     const s = this.state;
-    if (!this.#canBet() || s.phase === PHASE.BETTING || !campaign.playable) return;
+    if (!this.#canBet() || s.phase === PHASE.BETTING || !session.playable) return;
     const total = seatsTotal(s.lastSeats);
     if (total <= 0) return;
     if (!this.#fitsLimits(s.lastSeats)) {
@@ -389,13 +409,13 @@ export class BlackjackGame {
 
   #draw(target) {
     const s = this.state;
-    let { shoe, pos } = s;
+    let { shoe, pos, shoeMeta } = s;
     if (pos >= shoe.length) {
-      shoe = newShuffledShoe();
+      ({ shoe, shoeMeta } = freshShoe());
       pos = 0;
     }
     const card = shoe[pos];
-    const patch = { shoe, pos: pos + 1 };
+    const patch = { shoe, shoeMeta, pos: pos + 1 };
     if (target === 'dealer') {
       patch.dealer = [...s.dealer, card];
     } else {
@@ -410,17 +430,17 @@ export class BlackjackGame {
   #dealDelay() {
     const now = performance.now();
     const start = Math.max(now, this.#clock);
-    this.#clock = start + DEAL_STEP;
+    this.#clock = start + dealStep();
     return start - now;
   }
 
   #settleTime() {
-    return Math.max(0, this.#clock - performance.now()) + FLIP_TIME;
+    return Math.max(0, this.#clock - performance.now()) + flipTime();
   }
 
   async deal() {
     const s = this.state;
-    if (s.busy || s.phase !== PHASE.BETTING || !campaign.playable) return;
+    if (s.busy || s.phase !== PHASE.BETTING || !session.playable) return;
     const { minBet } = this.#limits();
     const seatsInPlay = s.seats.map((seat, i) => (seat.main >= minBet ? i : -1)).filter((i) => i >= 0);
     if (!seatsInPlay.length) {
@@ -428,13 +448,15 @@ export class BlackjackGame {
       return;
     }
     const reshuffle = s.pos >= CUT_CARD;
+    const shoe = reshuffle ? freshShoe() : { shoe: s.shoe, shoeMeta: s.shoeMeta ?? null };
     this.#set('DEAL', {
       ...freshRound(),
       phase: PHASE.DEALING,
       stage: 'dealing',
       busy: true,
-      shoe: reshuffle ? newShuffledShoe() : s.shoe,
+      ...shoe,
       pos: reshuffle ? 0 : s.pos,
+      roundFrom: reshuffle ? 0 : s.pos,
       lastSeats: structuredClone(s.seats),
       hands: seatsInPlay.map((seat) => newHand(seat, s.seats[seat].main)),
       message: reshuffle ? 'Carta de corte alcanzada: barajando un zapato nuevo…' : 'Repartiendo…',
@@ -443,9 +465,9 @@ export class BlackjackGame {
       audio.shuffle();
       this.#dom.shoe.classList.add('is-shuffling');
       setTimeout(() => this.#dom.shoe.classList.remove('is-shuffling'), 1300);
-      this.#clock = performance.now() + 1300;
+      this.#clock = performance.now() + 1300 * settings.speed;
     }
-    campaign.beginRound({ game: 'blackjack', stake: seatsTotal(s.seats) });
+    session.beginRound({ game: 'blackjack', stake: seatsTotal(s.seats) });
     const order = this.state.hands.map((_, i) => i);
     for (const target of [...order, 'dealer', ...order, 'dealer']) this.#draw(target);
     await this.#afterInitialDeal();
@@ -550,7 +572,7 @@ export class BlackjackGame {
       this.#set('PEEK_MSG', { message: 'El crupier revisa su carta oculta…' });
       const hole = this.#view.dealer[1]?.el;
       hole?.classList.add('is-peeking');
-      await wait(1100);
+      await wait(1100 * settings.speed);
       hole?.classList.remove('is-peeking');
     }
     const s = this.state;
@@ -721,14 +743,15 @@ export class BlackjackGame {
   async #resolve() {
     const s = this.state;
     const dealer = [...s.dealer];
-    let { shoe, pos } = s;
+    let { shoe, pos, shoeMeta } = s;
     const live = s.hands.some((hand) => handValue(hand.cards).total <= 21 && !isNatural(hand));
     if (!isBlackjack(dealer) && live) {
       while (dealerShouldHit(dealer)) {
         if (pos >= shoe.length) {
-          shoe = newShuffledShoe();
+          ({ shoe, shoeMeta } = freshShoe());
           pos = 0;
         }
+        shoe = this.#montecarlo(dealer, shoe, pos);
         dealer.push(shoe[pos++]);
       }
     }
@@ -737,15 +760,35 @@ export class BlackjackGame {
     const payout = hands.reduce((sum, hand) => sum + hand.payout, 0);
     wallet.settle('blackjack', stake, payout);
 
-    this.#set('RESOLVE', { phase: PHASE.RESOLVING, stage: 'dealer', busy: true, active: -1, hands, shoe, pos, dealerFinal: dealer, message: 'Juega el crupier…' });
+    this.#set('RESOLVE', { phase: PHASE.RESOLVING, stage: 'dealer', busy: true, active: -1, hands, shoe, shoeMeta, pos, dealerFinal: dealer, message: 'Juega el crupier…' });
     this.#set('REVEAL_HOLE', { holeRevealed: true });
     audio.cardSlide();
-    await wait(FLIP_TIME + 250);
+    await wait(flipTime() + 250 * settings.speed);
     for (let i = s.dealer.length; i < dealer.length; i++) {
       this.#set('DEALER_DRAW', { dealer: dealer.slice(0, i + 1) });
       await wait(this.#settleTime());
     }
     await this.#payout();
+  }
+
+  // Dado de Montecarlo (reliquia del Cripto-Casino): si el crupier va a pedir con 15 o 16 duros,
+  // un número verificable decide (25 %) si la siguiente carta es la primera de valor 10 que quede
+  // en el zapato. La tirada y el intercambio quedan anotados en el historial.
+  #montecarlo(dealer, shoe, pos) {
+    if (!relics.active('dice')) return shoe;
+    const { total, soft } = handValue(dealer);
+    if (soft || (total !== 15 && total !== 16)) return shoe;
+    const stream = session.stream('blackjack');
+    const acts = stream.float() < DADO_CHANCE;
+    const target = acts ? shoe.findIndex((card, i) => i >= pos && cardValue(card) === 10) : -1;
+    let next = shoe;
+    if (target > pos) {
+      next = [...shoe];
+      [next[pos], next[target]] = [next[target], next[pos]];
+    }
+    session.record(stream, { stake: 0, payout: 0, summary: acts ? 'Dado de Montecarlo: el crupier recibe un 10' : 'Dado de Montecarlo: no actúa', params: { kind: 'dado', swap: target >= pos ? [pos, target] : null } });
+    if (acts && target >= pos) hud.toast('🎲 Dado de Montecarlo: el crupier recibe un 10', 'success', 2600);
+    return next;
   }
 
   async #payout() {
@@ -788,8 +831,9 @@ export class BlackjackGame {
     if (sidePaid > 0) tags.push('side-win');
     if (insurancePaid > 0) tags.push('insurance-win');
     if (dealerBust) tags.push('dealer-bust');
-    campaign.report({ game: 'blackjack', stake, returned, tags, coach: { right: this.#prefs.right, total: this.#prefs.total } });
-    await wait(450);
+    session.record({ meta: s.shoeMeta }, { stake, payout: returned, summary: `${dealerText} · ${netText}`, params: { kind: 'round', from: s.roundFrom ?? 0, to: s.pos } });
+    session.report({ game: 'blackjack', stake, returned, tags, coach: { right: this.#prefs.right, total: this.#prefs.total } });
+    await wait(450 * settings.speed);
     this.#set('READY', { busy: false });
   }
 

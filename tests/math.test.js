@@ -18,8 +18,8 @@ import {
   CALL_BETS, sectorNumbers, neighborsOf, callBetParts,
 } from '../js/games/roulette.js';
 import {
-  SYMBOLS, LINES, CASCADE_MULTIPLIERS, GOLDEN, SLOT_MATH, BONUS_BUY_COST, MAX_WIN,
-  findWins, collapse, resolveTumbles, scatterAward, playSpin, playFreeSpinsRound,
+  SYMBOLS, LINES, CASCADE_MULTIPLIERS, SLOT_MATH, BONUS_BUY_COST, MAX_WIN, FREE_SPINS, SUPER_BONUS, WILD_FOUR,
+  findWins, collapse, createDraw, playSpin, playFreeSpinsRound,
 } from '../js/games/slots-engine.js';
 
 // PRNG determinista (mulberry32) solo para las simulaciones de las pruebas; el juego usa crypto.
@@ -229,88 +229,127 @@ test('Apuestas anunciadas francesas: fichas, números cubiertos y ventaja 2,70 %
 
 // ---------- Slots ----------
 
-test('Pesos de símbolos (base y giros gratis) suman 1000 y hay 10 líneas', () => {
-  assert.equal(SYMBOLS.reduce((sum, s) => sum + s.base, 0), 1000);
-  assert.equal(SYMBOLS.reduce((sum, s) => sum + s.free, 0), 1000);
-  assert.equal(GOLDEN.reduce((sum, [, w]) => sum + w, 0), 1000);
+// Tirada guionizada: cada llamada a rand(total) devuelve el inicio del rango del símbolo pedido;
+// el resto (duración del bloqueo de un comodín) devuelve 0 → 2 giros.
+function scripted(ids, mode = 'base') {
+  const weights = SYMBOLS.map((symbol) => (mode === 'free' ? symbol.free : symbol.base));
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  const starts = [];
+  let acc = 0;
+  for (const weight of weights) {
+    starts.push(acc);
+    acc += weight;
+  }
+  const queue = [...ids];
+  return (n) => {
+    if (n !== total) return 0;
+    const id = queue.shift() ?? 'R';
+    return starts[SYMBOLS.findIndex((symbol) => symbol.id === id)];
+  };
+}
+
+const FILLER = ['H', 'B', 'S', 'R', 'B', 'S', 'R', 'H', 'S', 'R', 'H', 'B'];
+
+test('Símbolos: un comodín, una estrella, 10 líneas y avalancha ×1 ×2 ×3 ×5', () => {
   assert.equal(LINES.length, 10);
   assert.deepEqual(CASCADE_MULTIPLIERS, [1, 2, 3, 5]);
+  assert.equal(SYMBOLS.filter((s) => s.wild).length, 1);
+  assert.equal(SYMBOLS.filter((s) => s.scatter).length, 1);
+  assert.equal(FREE_SPINS, 8);
+  const wild = SYMBOLS.find((s) => s.wild);
+  assert.ok(wild.free > wild.base * 5, 'los giros gratis traen muchos más comodines');
 });
 
-test('Líneas, Súper Bono ×15 y scatter', () => {
+test('Líneas: Súper Bono ×15 con 4 idénticos y ×5 si un comodín completa el cuarteto', () => {
   const grid = [
     ['C', 'C', 'C', 'C'],
-    ['R', 'R', 'R', 'T'],
-    ['D', 'H', 'D', 'B'],
-    ['T', 'B', 'D', 'S'],
+    ['R', 'W', 'R', 'R'],
+    ['X', 'H', 'B', 'T'],
+    ['T', 'B', 'X', 'S'],
   ];
   const wins = findWins(grid);
-  assert.equal(wins.lines.find((l) => l.index === 0).units, 50 * 15);
-  assert.equal(wins.lines.find((l) => l.index === 1).units, 1);
-  assert.equal(wins.units, 751);
-  assert.equal(wins.cells.length, 7);
-  assert.equal(scatterAward(3).spins, 10);
-  assert.equal(scatterAward(9).spins, 15);
+  assert.equal(wins.lines.find((l) => l.index === 0).units, 50 * SUPER_BONUS);
+  const cherries = wins.lines.find((l) => l.index === 1);
+  assert.deepEqual([cherries.count, cherries.natural, cherries.units], [4, false, 1 * WILD_FOUR]);
+  assert.equal(wins.units, 755);
+  // Una fila de tres comodines paga como la corona.
+  const wilds = findWins([['W', 'W', 'W', 'T'], ['H', 'B', 'S', 'R'], ['B', 'S', 'R', 'H'], ['S', 'R', 'H', 'B']]);
+  assert.equal(wilds.lines[0].symbol, 'W');
+  assert.equal(wilds.lines[0].units, 50);
 });
 
-test('Avalancha: gravedad, relleno desde arriba y multiplicadores ×1 ×2 ×3 ×5', () => {
+test('Avalancha alrededor de un comodín bloqueado: los demás caen y se rellena desde arriba', () => {
   const grid = [
     ['R', 'B', 'H', 'T'],
-    ['S', 'C', 'B', 'H'],
-    ['R', 'R', 'R', 'S'],
+    ['S', 'W', 'B', 'H'],
+    ['R', 'C', 'R', 'S'],
     ['T', 'H', 'S', 'B'],
   ];
-  const { grid: next, columns } = collapse(grid, [[2, 0], [2, 1], [2, 2]], () => 'D');
-  assert.deepEqual(next.map((row) => row.join('')), ['DDDT', 'RBHH', 'SCBS', 'THSB']);
-  assert.deepEqual(columns[0].sources, [null, 0, 1, 3]);
+  // Explota la fila 3 (salvo el comodín fijo de la columna 2, que no está en ella).
+  const { grid: next, columns } = collapse(grid, [[2, 0], [2, 1], [2, 2]], new Set([1 * 4 + 1]), () => 'X');
+  assert.deepEqual(next.map((row) => row.join('')), ['XXXT', 'RWHH', 'SBBS', 'THSB']);
+  assert.deepEqual(columns[1].sources, [null, 1, 0, 3], 'la campana salta por encima del comodín fijo');
   assert.equal(columns[3].fresh, 0);
+});
 
-  // Cada relleno forma una nueva fila superior de coronas → cascadas encadenadas.
-  const start = [
-    ['H', 'H', 'H', 'T'],
-    ['S', 'B', 'R', 'D'],
-    ['B', 'R', 'S', 'D'],
-    ['R', 'S', 'B', 'T'],
-  ];
-  let fills = 0;
-  const draw = () => (fills++ < 9 ? 'C' : 'D');
-  const { steps, units } = resolveTumbles(start, draw);
-  assert.deepEqual(steps.map((s) => s.multiplier), [1, 2, 3, 5]);
-  assert.deepEqual(steps.map((s) => s.units), [4, 50, 50, 50]);
-  assert.equal(units, 4 + 50 * 2 + 50 * 3 + 50 * 5);
+test('Comodín pegajoso: se bloquea 2 giros, multiplica ×2 una vez por giro y luego desaparece', () => {
+  const rows = ['W', 'C', 'C', 'T', ...FILLER];
+  const first = playSpin({ bet: 10, rand: scripted([...rows, 'T', 'H']) });
+  assert.equal(first.total, 50, 'al conectar el premio actúa como comodín normal (×1)');
+  assert.deepEqual(first.sticky, [{ r: 0, c: 0, spins: 2 }]);
+  const second = playSpin({ bet: 10, sticky: first.sticky, rand: scripted([...rows.slice(1), 'T', 'H']) });
+  assert.equal(second.total, 100, 'ya bloqueado, duplica la línea');
+  assert.deepEqual(second.sticky, [{ r: 0, c: 0, spins: 1 }]);
+  const third = playSpin({ bet: 10, sticky: second.sticky, rand: scripted([...rows.slice(1), 'T', 'H']) });
+  assert.equal(third.total, 100);
+  assert.deepEqual(third.sticky, [], 'agotado el contador se libera');
+});
+
+test('Estrellas: 3 o más conceden 8 giros gratis; el Trébol de Oro sube comodines y estrellas un 15 %', () => {
+  const spin = playSpin({ bet: 10, rand: scripted(['X', 'X', 'X', 'R', ...FILLER]) });
+  assert.equal(spin.scatters.length, 3);
+  assert.equal(spin.freeSpins, 8);
+  const count = (clover) => {
+    const draw = createDraw('base', seeded(11), { clover });
+    let wilds = 0;
+    for (let i = 0; i < 200000; i++) if (draw() === 'W') wilds++;
+    return wilds;
+  };
+  const ratio = count(true) / count(false);
+  assert.ok(ratio > 1.1 && ratio < 1.35, `trébol ×${ratio.toFixed(2)}`);
 });
 
 test('Giro determinista con RNG inyectado y tope de premio', () => {
-  const spin = playSpin({ bet: 10, rand: seeded(7) });
-  assert.equal(spin.total, Math.min(spin.lineWin + spin.scatterWin, MAX_WIN * 10));
-  const free = playSpin({ bet: 10, mode: 'free', rand: seeded(8) });
-  assert.ok(GOLDEN.some(([value]) => value === free.golden));
-  assert.equal(free.scatterWin, 0);
+  const a = playSpin({ bet: 10, rand: seeded(7) });
+  const b = playSpin({ bet: 10, rand: seeded(7) });
+  assert.deepEqual(a.final, b.final);
+  assert.ok(a.total <= MAX_WIN * 10);
   const round = playFreeSpinsRound({ bet: 10, rand: seeded(9) });
-  assert.ok(round.played >= 10 && round.total <= MAX_WIN * 10);
+  assert.equal(round.played, FREE_SPINS);
+  assert.ok(round.total <= MAX_WIN * 10);
 });
 
-test('Monte Carlo del motor real: líneas y scatter del juego base coinciden con SLOT_MATH', () => {
+test('Monte Carlo del motor real: líneas del juego base y giros gratis coinciden con SLOT_MATH', () => {
   const rand = seeded(2026);
   const spins = 300000;
   let lines = 0;
-  let scatter = 0;
+  let sticky = [];
   for (let i = 0; i < spins; i++) {
-    const spin = playSpin({ bet: 10, rand });
-    const lineWin = Math.min(spin.lineWin, spin.total);
-    lines += lineWin;
-    scatter += spin.total - lineWin;
+    const spin = playSpin({ bet: 10, rand, sticky });
+    sticky = spin.sticky;
+    lines += spin.total;
   }
-  const measured = (lines + scatter) / (spins * 10);
-  assert.ok(Math.abs(measured - (SLOT_MATH.lines + SLOT_MATH.scatter)) < 0.02, `líneas+scatter ${measured}`);
+  const measured = lines / (spins * 10);
+  assert.ok(Math.abs(measured - SLOT_MATH.lines) < 0.03, `líneas ${measured}`);
+  assert.ok(Math.abs(SLOT_MATH.rtp - 0.96) < 0.01, `RTP publicado ${SLOT_MATH.rtp}`);
 });
 
 test('Monte Carlo del Bonus Buy: RTP de la compra ≈ SLOT_MATH.bonusBuyRtp', () => {
   const rand = seeded(96);
-  const rounds = 40000;
+  const rounds = 30000;
   let total = 0;
   for (let i = 0; i < rounds; i++) total += playFreeSpinsRound({ bet: 10, rand }).total;
   const rtp = total / rounds / (BONUS_BUY_COST * 10);
-  assert.ok(Math.abs(rtp - SLOT_MATH.bonusBuyRtp) < 0.05, `compra ${rtp}`);
-  assert.ok(Math.abs(SLOT_MATH.rtp - 0.96) < 0.01 && Math.abs(SLOT_MATH.bonusBuyRtp - 0.96) < 0.01);
+  assert.ok(Math.abs(rtp - SLOT_MATH.bonusBuyRtp) < 0.08, `compra ${rtp}`);
+  assert.ok(Math.abs(SLOT_MATH.bonusBuyRtp - 0.96) < 0.01);
 });

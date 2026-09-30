@@ -4,8 +4,8 @@
 // El contexto se crea y se reanuda tras el primer gesto del usuario (política de autoplay).
 
 import { storage } from './storage.js';
-import { randomFloat, randomBetween } from './rng.js';
-import { LoungeBgm } from './music.js';
+import { randomFloat, randomBetween } from './engine/rng.js';
+import { LoungeBgm } from './engine/music.js';
 
 export const SOUND_KEYS = Object.freeze({ music: 'crd.bgm.v1', sfx: 'crd.sfx.v1' });
 const LEGACY_KEYS = Object.freeze(['crd.audio.v2', 'crd.audio.v1']);
@@ -495,6 +495,212 @@ class AudioEngine extends EventTarget {
     for (let i = 0; i < 4; i++) {
       this.#tone(t + i * 0.09 + randomFloat() * 0.04, { type: 'sawtooth', freq: 120, attack: 0.005, peak: 0.03, decay: 0.06 });
     }
+  }
+
+  // ---------- Cripto-Casino ----------
+
+  // Clavija de Plinko: golpecito de cristal cuyo tono sube hacia los extremos (`side` en -1…1).
+  plinkoPeg(side = 0) {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    const freq = 1500 + Math.abs(side) * 1100 + randomFloat() * 80;
+    this.#tone(t, { type: 'triangle', freq, peak: 0.045, decay: 0.05 });
+    this.#noiseBurst(t, { type: 'highpass', freq: 5200, attack: 0.001, peak: 0.025, decay: 0.012 });
+  }
+
+  // Bola en la cubeta: golpe amortiguado y campanilla según el multiplicador.
+  plinkoLand(multiplier = 1) {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#tone(t, { freq: 240, freqEnd: 90, peak: 0.12, decay: 0.12 });
+    if (multiplier >= 10) this.bell(1568, 0.02, 0.16);
+    else if (multiplier >= 1) this.bell(1046.5, 0.02, 0.08);
+  }
+
+  // Motor del cohete de Crash: ruido filtrado y un zumbido grave que suben con el multiplicador.
+  // Devuelve un control { update(multiplicador), stop() }.
+  rocket() {
+    if (!this.#ready()) return { update() {}, stop() {} };
+    const ctx = this.#ctx;
+    const t = this.#time();
+    const src = ctx.createBufferSource();
+    src.buffer = this.#noise;
+    src.loop = true;
+    const band = ctx.createBiquadFilter();
+    band.type = 'bandpass';
+    band.Q.value = 1.4;
+    band.frequency.value = 380;
+    const hum = ctx.createOscillator();
+    hum.type = 'sawtooth';
+    hum.frequency.value = 52;
+    const low = ctx.createBiquadFilter();
+    low.type = 'lowpass';
+    low.frequency.value = 260;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(SILENCE, t);
+    gain.gain.exponentialRampToValueAtTime(0.1, t + 0.35);
+    src.connect(band).connect(gain);
+    hum.connect(low).connect(gain);
+    gain.connect(this.#sfx);
+    src.start(t);
+    hum.start(t);
+    let stopped = false;
+    return {
+      update: (multiplier) => {
+        if (stopped) return;
+        const now = ctx.currentTime;
+        const lift = Math.min(1, Math.log(Math.max(1, multiplier)) / Math.log(20));
+        band.frequency.setTargetAtTime(380 + lift * 2600, now, 0.12);
+        hum.frequency.setTargetAtTime(52 + lift * 140, now, 0.12);
+      },
+      stop: () => {
+        if (stopped) return;
+        stopped = true;
+        const now = ctx.currentTime;
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setTargetAtTime(SILENCE, now, 0.05);
+        src.stop(now + 0.3);
+        hum.stop(now + 0.3);
+      },
+    };
+  }
+
+  // Explosión del cohete: estallido grave con cola de ruido.
+  crashBoom() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#noiseBurst(t, { type: 'lowpass', freq: 2200, freqEnd: 120, q: 0.7, attack: 0.003, peak: 0.5, decay: 0.9 });
+    this.#tone(t, { freq: 75, freqEnd: 28, attack: 0.004, peak: 0.55, decay: 0.7 });
+    this.#noiseBurst(t + 0.03, { type: 'highpass', freq: 5000, attack: 0.001, peak: 0.14, decay: 0.3 });
+  }
+
+  // Retiro a tiempo: cascada de fichas y tintineo ascendente.
+  cashout() {
+    if (!this.#ready()) return;
+    for (let i = 0; i < 6; i++) this.chip(i * 0.05);
+    this.bell(1318.5, 0.05, 0.14);
+    this.bell(1760, 0.16, 0.12);
+  }
+
+  // Alarma del Radar de Crash: dos pitidos agudos.
+  radar() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    for (const at of [0, 0.16]) this.#tone(t + at, { type: 'square', freq: 1760, attack: 0.003, peak: 0.05, decay: 0.08 });
+  }
+
+  // Gema descubierta: cristal cuyo tono sube con cada acierto seguido.
+  gem(step = 0) {
+    if (!this.#ready()) return;
+    const freq = 880 * 2 ** (Math.min(step, 24) / 12);
+    this.bell(freq, 0, 0.1);
+    this.#tone(this.#time(0.02), { freq: freq * 2, peak: 0.035, decay: 0.2 });
+  }
+
+  // Mina: detonación seca con metralla.
+  mine() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#noiseBurst(t, { freq: 2400, freqEnd: 180, q: 0.6, attack: 0.002, peak: 0.45, decay: 0.5 });
+    this.#tone(t, { freq: 95, freqEnd: 28, attack: 0.003, peak: 0.6, decay: 0.45 });
+    this.#noiseBurst(t + 0.02, { type: 'highpass', freq: 6000, attack: 0.001, peak: 0.16, decay: 0.25 });
+  }
+
+  // Dados: traqueteo en el cubilete y golpe final sobre el tapete.
+  diceRoll(duration = 0.5) {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    const hits = Math.max(4, Math.round(duration * 22));
+    for (let i = 0; i < hits; i++) {
+      const at = t + (i / hits) * duration + randomFloat() * 0.012;
+      this.#noiseBurst(at, { freq: randomBetween(1800, 3400), q: 2.2, attack: 0.001, peak: 0.1, decay: 0.022 });
+    }
+    this.#tone(t + duration, { type: 'triangle', freq: 320, freqEnd: 140, peak: 0.12, decay: 0.08 });
+  }
+
+  // Piso seguro de la torre: nota que sube con la altura y golpe de madera.
+  towerStep(floor = 0) {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#tone(t, { type: 'triangle', freq: 440 * 2 ** (floor / 12 * 2), peak: 0.1, decay: 0.18 });
+    this.#tone(t, { freq: 180, freqEnd: 90, peak: 0.1, decay: 0.06 });
+  }
+
+  // Trampa de la torre: caída al vacío y golpe sordo.
+  trap() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#noiseBurst(t, { freq: 2600, freqEnd: 200, q: 0.9, attack: 0.02, peak: 0.2, decay: 0.55 });
+    this.#tone(t + 0.45, { freq: 70, freqEnd: 30, attack: 0.004, peak: 0.5, decay: 0.4 });
+  }
+
+  // Botón HOLD del video póker: clic mecánico.
+  hold() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#tone(t, { type: 'square', freq: 1200, peak: 0.04, decay: 0.02 });
+    this.#noiseBurst(t, { type: 'highpass', freq: 3800, attack: 0.001, peak: 0.08, decay: 0.015 });
+  }
+
+  // Rueda de la fortuna: tic del puntero contra cada clavo.
+  wheelTick() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#tone(t, { type: 'square', freq: 2300 + randomFloat() * 200, peak: 0.035, decay: 0.014 });
+    this.#noiseBurst(t, { type: 'highpass', freq: 4200, attack: 0.001, peak: 0.05, decay: 0.01 });
+  }
+
+  // Cofre: traqueteo de madera mientras tiembla.
+  chestShake() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    for (let i = 0; i < 14; i++) {
+      const at = t + i * 0.09 + randomFloat() * 0.02;
+      this.#tone(at, { type: 'triangle', freq: randomBetween(140, 220), freqEnd: 90, peak: 0.08 + i * 0.006, decay: 0.05 });
+    }
+    this.riser(1.3);
+  }
+
+  // Cofre abierto: crujido de bisagra y destello.
+  chestOpen() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#tone(t, { type: 'sawtooth', freq: 190, freqEnd: 95, attack: 0.02, peak: 0.04, decay: 0.3 });
+    this.#noiseBurst(t, { freq: 800, freqEnd: 5000, q: 0.8, attack: 0.05, peak: 0.16, decay: 0.3 });
+    this.shimmer();
+  }
+
+  // Revelado de una reliquia: arpegio más largo cuanto más rara.
+  relicReveal(rarity = 'common') {
+    if (!this.#ready()) return;
+    const notes = { common: 2, rare: 3, epic: 4, legendary: 6 }[rarity] ?? 2;
+    const scale = [1046.5, 1318.5, 1568, 2093, 2637, 3136];
+    for (let i = 0; i < notes; i++) this.bell(scale[i], i * 0.09, 0.14);
+    if (rarity === 'legendary') this.fanfare();
+  }
+
+  // Subida de nivel: arpegio mayor brillante con fichas.
+  levelUp() {
+    if (!this.#ready()) return;
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => this.bell(freq * 2, i * 0.08, 0.16));
+    for (let i = 0; i < 4; i++) this.chip(0.4 + i * 0.06);
+  }
+
+  // Abundancia: marimba suave de dos notas.
+  abundance() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#tone(t, { freq: 783.99, attack: 0.004, peak: 0.07, decay: 0.28 });
+    this.#tone(t + 0.1, { freq: 1174.66, attack: 0.004, peak: 0.055, decay: 0.34 });
+    this.#noiseBurst(t, { type: 'bandpass', freq: 2400, q: 3, attack: 0.001, peak: 0.03, decay: 0.02 });
+  }
+
+  // Interferencia digital para los efectos de glitch.
+  glitch() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#noiseBurst(t, { type: 'highpass', freq: 2800, q: 3, attack: 0.001, peak: 0.07, decay: 0.05 });
+    this.#tone(t, { type: 'square', freq: randomBetween(200, 900), peak: 0.025, decay: 0.04 });
   }
 }
 

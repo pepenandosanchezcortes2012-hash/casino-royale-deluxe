@@ -1,48 +1,85 @@
 <!doctype html>
-<html lang="es" data-zone="alley">
+<html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
-  <meta name="description" content="El Último Crédito: RPG narrativo de supervivencia en un casino clandestino. Empieza con 1 crédito, sube del Callejón al Penthouse y reúne 100.000 créditos para comprar tu libertad. Blackjack, ruleta francesa y slots con fichas virtuales.">
-  <meta name="theme-color" content="#050407">
+  <meta name="description" content="Casino Royale Deluxe · Cyber-Ultra: el RPG narrativo «El Último Crédito» y un Cripto-Casino libre con 10 juegos provably fair (blackjack, ruleta, slots, Plinko, Crash, Minas, Dados, Torres, Video Póker y Rueda diaria), reliquias, misiones, niveles y terminal hacker. Fichas virtuales sin valor monetario.">
+  <meta name="theme-color" content="#030604">
   <meta name="color-scheme" content="dark">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Último Crédito">
+  <meta name="apple-mobile-web-app-title" content="Cyber-Ultra">
   <meta name="format-detection" content="telephone=no">
-  <title>El Último Crédito · Casino Royale Deluxe</title>
+  <title>Casino Royale Deluxe · Cyber-Ultra</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%23b3001b'/%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%23fff' stroke-width='8' stroke-dasharray='10.5 10.5'/%3E%3Ccircle cx='50' cy='50' r='27' fill='%23d4af37'/%3E%3Cpath d='M32 60 L29 38 L41 48 L50 32 L59 48 L71 38 L68 60Z' fill='%23600'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/themes.css">
   <link rel="stylesheet" href="css/tables.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/story.css">
+  <link rel="stylesheet" href="css/cyber.css">
+  <link rel="stylesheet" href="css/arcade.css">
+  <link rel="stylesheet" href="css/hacker_terminal.css">
+  <link rel="stylesheet" href="css/animations.css">
   <!-- Precarga de todos los módulos en paralelo: evita la cascada de imports (4 viajes de red → 1). -->
-  <link rel="modulepreload" href="js/engine/audio.js">
-  <link rel="modulepreload" href="js/engine/particles.js">
-  <link rel="modulepreload" href="js/engine/storage.js">
+  <link rel="modulepreload" href="js/audio.js">
+  <link rel="modulepreload" href="js/engine/wallet.js">
+  <link rel="modulepreload" href="js/event_bus.js">
   <link rel="modulepreload" href="js/games/blackjack.js">
+  <link rel="modulepreload" href="js/games/crash.js">
+  <link rel="modulepreload" href="js/games/dice.js">
+  <link rel="modulepreload" href="js/games/mines.js">
+  <link rel="modulepreload" href="js/games/plinko.js">
   <link rel="modulepreload" href="js/games/roulette.js">
   <link rel="modulepreload" href="js/games/slots.js">
+  <link rel="modulepreload" href="js/games/towers.js">
+  <link rel="modulepreload" href="js/games/video_poker.js">
+  <link rel="modulepreload" href="js/games/wheel.js">
+  <link rel="modulepreload" href="js/mode.js">
+  <link rel="modulepreload" href="js/particles.js">
+  <link rel="modulepreload" href="js/progression.js">
+  <link rel="modulepreload" href="js/relics.js">
+  <link rel="modulepreload" href="js/session.js">
+  <link rel="modulepreload" href="js/settings.js">
+  <link rel="modulepreload" href="js/storage.js">
+  <link rel="modulepreload" href="js/story/campaign.js">
+  <link rel="modulepreload" href="js/ui/cyber-hud.js">
   <link rel="modulepreload" href="js/ui/hud.js">
+  <link rel="modulepreload" href="js/ui/matrix.js">
+  <link rel="modulepreload" href="js/ui/menu.js">
   <link rel="modulepreload" href="js/ui/story-ui.js">
+  <link rel="modulepreload" href="js/ui/svg.js">
+  <link rel="modulepreload" href="js/ui/telemetry.js">
+  <link rel="modulepreload" href="js/ui/terminal-ui.js">
+  <link rel="modulepreload" href="js/ui/vault-ui.js">
   <link rel="modulepreload" href="js/ui/vip-ui.js">
   <link rel="modulepreload" href="js/engine/music.js">
   <link rel="modulepreload" href="js/engine/rng.js">
   <link rel="modulepreload" href="js/engine/store.js">
   <link rel="modulepreload" href="js/engine/vip.js">
-  <link rel="modulepreload" href="js/engine/wallet.js">
   <link rel="modulepreload" href="js/games/blackjack-rules.js">
+  <link rel="modulepreload" href="js/games/crash-math.js">
+  <link rel="modulepreload" href="js/games/dice-math.js">
+  <link rel="modulepreload" href="js/games/mines-math.js">
+  <link rel="modulepreload" href="js/games/plinko-math.js">
   <link rel="modulepreload" href="js/games/slots-engine.js">
+  <link rel="modulepreload" href="js/games/towers-math.js">
+  <link rel="modulepreload" href="js/games/video_poker-math.js">
+  <link rel="modulepreload" href="js/games/wheel-math.js">
+  <link rel="modulepreload" href="js/provably_fair.js">
   <link rel="modulepreload" href="js/story/achievements.js">
-  <link rel="modulepreload" href="js/story/campaign.js">
-  <link rel="modulepreload" href="js/story/narrative.js">
-  <link rel="modulepreload" href="js/story/zones.js">
-  <link rel="modulepreload" href="js/ui/input.js">
-  <link rel="modulepreload" href="js/ui/svg.js">
   <link rel="modulepreload" href="js/story/contracts.js">
+  <link rel="modulepreload" href="js/story/narrative.js">
   <link rel="modulepreload" href="js/story/titles.js">
+  <link rel="modulepreload" href="js/story/zones.js">
+  <link rel="modulepreload" href="js/terminal.js">
+  <link rel="modulepreload" href="js/ui/arcade.js">
+  <link rel="modulepreload" href="js/ui/bet-control.js">
+  <link rel="modulepreload" href="js/ui/input.js">
+  <link rel="modulepreload" href="js/ui/matrix-core.js">
+  <link rel="modulepreload" href="js/verify.js">
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
@@ -68,11 +105,16 @@
         <stop offset="0.5" stop-color="#b8c2cc"/>
         <stop offset="1" stop-color="#5d6770"/>
       </linearGradient>
-      <linearGradient id="g-gem" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#e8fdff"/>
-        <stop offset="0.5" stop-color="#5fd6ff"/>
-        <stop offset="1" stop-color="#1b5fd6"/>
+      <linearGradient id="g-wild" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#c084fc"/>
+        <stop offset="0.5" stop-color="#6d28d9"/>
+        <stop offset="1" stop-color="#2e1065"/>
       </linearGradient>
+      <radialGradient id="g-star" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stop-color="#fffbe0" stop-opacity="0.95"/>
+        <stop offset="0.55" stop-color="#5fd6ff" stop-opacity="0.35"/>
+        <stop offset="1" stop-color="#5fd6ff" stop-opacity="0"/>
+      </radialGradient>
       <linearGradient id="card-paper" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="#ffffff"/>
         <stop offset="1" stop-color="#f1ede4"/>
@@ -109,14 +151,23 @@
       <path fill="currentColor" d="M44 52H56C56 74 62 88 71 96H29C38 88 44 74 44 52Z"/>
     </symbol>
 
-    <symbol id="sym-D" viewBox="0 0 100 100">
-      <polygon points="30,20 70,20 90,40 50,90 10,40" fill="url(#g-gem)" stroke="#0d3b8a" stroke-width="2.5" stroke-linejoin="round"/>
-      <polygon points="30,20 50,40 70,20" fill="#ffffff" fill-opacity="0.55"/>
-      <polygon points="10,40 30,20 50,40" fill="#bff1ff" fill-opacity="0.7"/>
-      <polygon points="50,40 70,20 90,40" fill="#7fdcff" fill-opacity="0.6"/>
-      <polygon points="10,40 50,40 50,90" fill="#2d8bff" fill-opacity="0.45"/>
-      <polygon points="50,40 90,40 50,90" fill="#0b3fa8" fill-opacity="0.45"/>
-      <path d="M22 30 L28 24" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <!-- Estrella: scatter de las slots (3 o más → 8 giros gratis). -->
+    <symbol id="sym-X" viewBox="0 0 100 100">
+      <circle cx="50" cy="52" r="46" fill="url(#g-star)"/>
+      <polygon points="50,6 61,37 94,38 68,58 77,91 50,72 23,91 32,58 6,38 39,37" fill="url(#g-gold)" stroke="#7a4e06" stroke-width="2.5" stroke-linejoin="round"/>
+      <polygon points="50,20 57,40 78,41 61,53 67,74 50,62 33,74 39,53 22,41 43,40" fill="#fff6c2" fill-opacity="0.5"/>
+      <circle cx="42" cy="36" r="3.5" fill="#ffffff" fill-opacity="0.9"/>
+    </symbol>
+    <!-- Comodín: bufón con cascabeles; sustituye a los símbolos de pago y se queda fijo. -->
+    <symbol id="sym-W" viewBox="0 0 100 100">
+      <rect x="7" y="7" width="86" height="86" rx="16" fill="url(#g-wild)" stroke="#f7e08a" stroke-width="3"/>
+      <path d="M20 62 L29 25 L42 50 L50 16 L58 50 L71 25 L80 62 Z" fill="#a21caf" stroke="#f7e08a" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M29 25 L42 50 L50 16 L50 62 L20 62 Z" fill="#16a34a" fill-opacity="0.85"/>
+      <circle cx="29" cy="23" r="5.5" fill="url(#g-gold)" stroke="#7a4e06" stroke-width="1.5"/>
+      <circle cx="50" cy="14" r="5.5" fill="url(#g-gold)" stroke="#7a4e06" stroke-width="1.5"/>
+      <circle cx="71" cy="23" r="5.5" fill="url(#g-gold)" stroke="#7a4e06" stroke-width="1.5"/>
+      <rect x="17" y="60" width="66" height="9" rx="3" fill="url(#g-gold)" stroke="#7a4e06" stroke-width="1.5"/>
+      <text x="50" y="87" text-anchor="middle" font-family="Georgia, serif" font-size="15" font-weight="900" letter-spacing="3" fill="#fff6c2">WILD</text>
     </symbol>
     <symbol id="sym-C" viewBox="0 0 100 100">
       <path d="M14 70L9 28L31 48L50 16L69 48L91 28L86 70Z" fill="url(#g-gold)" stroke="#7a4e06" stroke-width="2.5" stroke-linejoin="round"/>
@@ -167,7 +218,6 @@
       <ellipse cx="61" cy="66" rx="5" ry="3.5" fill="#fff" fill-opacity="0.7"/>
     </symbol>
 
-
     <symbol id="gem" viewBox="0 0 100 100">
       <polygon points="28,14 72,14 94,38 50,92 6,38" fill="currentColor" stroke="#000" stroke-opacity="0.45" stroke-width="3" stroke-linejoin="round"/>
       <polygon points="28,14 50,38 72,14" fill="#fff" fill-opacity="0.55"/>
@@ -176,30 +226,80 @@
       <polygon points="6,38 50,38 50,92" fill="#000" fill-opacity="0.1"/>
       <polygon points="50,38 94,38 50,92" fill="#000" fill-opacity="0.28"/>
     </symbol>
+    <symbol id="mine" viewBox="0 0 100 100">
+      <path d="M50 8V20M50 80V92M8 50H20M80 50H92M20 20L29 29M71 71L80 80M80 20L71 29M29 71L20 80" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="50" cy="50" r="30" fill="currentColor"/>
+      <circle cx="40" cy="40" r="8" fill="#fff" fill-opacity="0.55"/>
+    </symbol>
   </svg>
 
   <a class="skip-link" href="#main">Saltar al contenido</a>
 
+  <div class="boot-screen" aria-hidden="true">
+    <span class="boot-logo">CASINO ROYALE <b>//</b> CYBER-ULTRA</span>
+    <span class="boot-bar"><span></span></span>
+    <span class="boot-text">Inicializando…</span>
+  </div>
+
+  <canvas id="matrix-canvas" class="matrix-canvas" aria-hidden="true" data-only="free menu"></canvas>
+
+  <!-- ===================== MENÚ PRINCIPAL ===================== -->
+  <main class="main-menu" id="main-menu" aria-labelledby="menu-title" data-only="menu">
+    <div class="menu-inner">
+      <p class="menu-kicker">Casino Royale Deluxe</p>
+      <h1 id="menu-title" class="menu-title glitch" data-text="CYBER-ULTRA">CYBER-ULTRA</h1>
+      <p class="menu-sub">Elige cómo quieres jugar esta noche</p>
+      <div class="menu-cards">
+        <article class="menu-card menu-card-story" aria-labelledby="menu-story-title">
+          <p class="menu-card-kicker">Modo Historia · Campaña</p>
+          <h2 id="menu-story-title" class="menu-card-title">El Último Crédito</h2>
+          <p class="menu-card-text">Neo-Madrid, 2089. Empiezas con un único crédito en el Callejón y tienes que reunir 100.000 para comprar tu libertad: zonas, encargos del Sindicato, Club VIP, salvavidas y finales.</p>
+          <p class="menu-save" id="menu-story-save"></p>
+          <button type="button" class="btn btn-primary menu-play" id="menu-story">Jugar la historia</button>
+        </article>
+        <article class="menu-card menu-card-free" aria-labelledby="menu-free-title">
+          <p class="menu-card-kicker">Modo Libre · Cripto-Casino</p>
+          <h2 id="menu-free-title" class="menu-card-title">Cripto-Casino</h2>
+          <p class="menu-card-text">10 juegos provably fair con semillas verificables, niveles 1–50, 6 rangos VIP, misiones diarias, reliquias, cofres, rueda diaria y una terminal hacker.</p>
+          <p class="menu-save" id="menu-free-save"></p>
+          <button type="button" class="btn btn-primary menu-play" id="menu-free">Entrar al Cripto-Casino</button>
+        </article>
+      </div>
+      <p class="menu-foot">Fichas y créditos virtuales sin valor monetario · +18 · Juega con responsabilidad</p>
+    </div>
+  </main>
+
+  <!-- ===================== ARMAZÓN DEL JUEGO ===================== -->
+  <div class="game-shell" data-only="story free">
   <header class="topbar">
-    <div class="brand">
+    <div class="brand" data-only="story">
       <svg class="brand-crown" viewBox="0 0 100 100" aria-hidden="true"><use href="#sym-C"/></svg>
       <div class="brand-text">
         <h1 class="brand-title neon-sign">El Último <span>Crédito</span></h1>
         <p class="brand-sub">Casino Royale Deluxe · Neo-Madrid 2089</p>
       </div>
     </div>
+    <div class="brand brand-cyber" data-only="free">
+      <span class="cyber-logo" aria-hidden="true">&gt;_</span>
+      <div class="brand-text">
+        <h1 class="cyber-title glitch" data-text="CYBER-ULTRA">CYBER-ULTRA</h1>
+        <p class="brand-sub">Cripto-Casino · provably fair</p>
+      </div>
+    </div>
 
-    <div class="hud" role="group" aria-label="Tus créditos">
-      <div class="hud-stat">
+    <div class="hud" role="group" aria-label="Marcador">
+      <div class="hud-stat hud-stat-balance">
         <span class="hud-label" id="hud-balance-label">Créditos</span>
         <output id="hud-balance" class="hud-value" aria-labelledby="hud-balance-label">1</output>
+        <span class="abundance-track" data-only="free" aria-hidden="true"><span class="abundance-fill" id="hud-abundance"></span></span>
       </div>
       <div class="hud-stat hud-stat-dim">
         <span class="hud-label" id="hud-inplay-label">En juego</span>
         <output id="hud-inplay" class="hud-value" aria-labelledby="hud-inplay-label">0</output>
       </div>
-      <button type="button" id="btn-lifeline" class="btn btn-lifeline" aria-haspopup="dialog" hidden>Sin créditos · Pedir ayuda</button>
-      <button type="button" id="btn-vip" class="btn btn-vip" aria-haspopup="dialog" aria-label="Club VIP">
+
+      <button type="button" id="btn-lifeline" class="btn btn-lifeline" aria-haspopup="dialog" data-only="story" hidden>Sin créditos · Pedir ayuda</button>
+      <button type="button" id="btn-vip" class="btn btn-vip" aria-haspopup="dialog" aria-label="Club VIP" data-only="story">
         <svg class="rank-gem" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><use href="#gem"/></svg>
         <span class="vip-meta">
           <span class="vip-rank" id="hud-rank">Bronce</span>
@@ -207,10 +307,27 @@
         </span>
         <span class="vip-badge" id="hud-vip-badge" aria-hidden="true" hidden>Bono</span>
       </button>
-      <button type="button" id="btn-dossier" class="btn btn-dossier" aria-haspopup="dialog">
+      <button type="button" id="btn-dossier" class="btn btn-dossier" aria-haspopup="dialog" data-only="story">
         <span class="dossier-kicker"><span id="hud-legend">Leyenda 1</span> · <span id="hud-zone">El Callejón</span></span>
         <span id="hud-title" class="dossier-title">Rata del Callejón</span>
       </button>
+
+      <button type="button" id="btn-career" class="btn btn-career" aria-haspopup="dialog" data-only="free">
+        <span class="level-badge">LV <output id="hud-level">1</output></span>
+        <span class="level-meta">
+          <span class="level-rank" id="hud-vip-rank">Bronce</span>
+          <span class="xp-track" aria-hidden="true"><span class="xp-fill" id="hud-level-fill"></span></span>
+        </span>
+        <span class="mission-count" aria-label="Misiones completadas"><span aria-hidden="true">◎</span> <output id="hud-missions">0/10</output></span>
+      </button>
+      <div class="relic-slots" id="hud-relics" role="group" aria-label="Reliquias equipadas" data-only="free"></div>
+      <button type="button" id="btn-turbo" class="btn btn-toggle-icon" aria-pressed="false" title="Modo turbo: animaciones al doble de velocidad" data-only="free">
+        <span aria-hidden="true">⚡</span><span class="btn-toggle-text">Turbo</span>
+      </button>
+      <button type="button" id="btn-terminal" class="btn btn-toggle-icon btn-terminal" aria-haspopup="dialog" title="Terminal hacker (tecla ~)" data-only="free">
+        <span aria-hidden="true">&gt;_</span><span class="btn-toggle-text">Terminal</span>
+      </button>
+
       <button type="button" id="btn-music" class="btn btn-audio btn-music" aria-pressed="true" aria-label="Música de fondo" title="Música de fondo lounge">
         <span class="audio-icon" aria-hidden="true">🎵</span>
         <span class="audio-text" aria-hidden="true"><span class="audio-name">Música: </span><span class="audio-state">ON</span></span>
@@ -219,10 +336,13 @@
         <span class="audio-icon" aria-hidden="true">🔊</span>
         <span class="audio-text" aria-hidden="true"><span class="audio-name">Efectos: </span><span class="audio-state">ON</span></span>
       </button>
+      <button type="button" id="btn-menu" class="btn btn-menu" title="Volver al menú principal">
+        <span aria-hidden="true">☰</span><span class="btn-toggle-text">Menú</span>
+      </button>
     </div>
   </header>
 
-  <nav class="zones" aria-label="Zonas del casino">
+  <nav class="zones" aria-label="Zonas del casino" data-only="story">
     <div class="zone-bar" id="zone-bar"></div>
     <div class="freedom" aria-hidden="true">
       <span class="freedom-label">Libertad</span>
@@ -242,12 +362,33 @@
       <button type="button" role="tab" class="tab" id="tab-slots" data-game="slots" aria-controls="panel-slots" aria-selected="false" tabindex="-1">
         <svg viewBox="0 0 100 100" aria-hidden="true"><use href="#sym-S"/></svg><span>Slots</span>
       </button>
+      <button type="button" role="tab" class="tab" id="tab-plinko" data-game="plinko" aria-controls="panel-plinko" aria-selected="false" tabindex="-1" data-only="free">
+        <svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor"><circle cx="50" cy="18" r="8"/><circle cx="33" cy="44" r="8"/><circle cx="67" cy="44" r="8"/><circle cx="16" cy="70" r="8"/><circle cx="50" cy="70" r="8"/><circle cx="84" cy="70" r="8"/><rect x="10" y="86" width="80" height="8" rx="4"/></g></svg><span>Plinko</span>
+      </button>
+      <button type="button" role="tab" class="tab" id="tab-crash" data-game="crash" aria-controls="panel-crash" aria-selected="false" tabindex="-1" data-only="free">
+        <svg viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" d="M50 6C67 20 72 43 65 66H35C28 43 33 20 50 6ZM35 66L22 86L40 77ZM65 66L78 86L60 77ZM43 72H57L54 94H46Z"/><circle cx="50" cy="36" r="8" fill="#000" fill-opacity="0.45"/></svg><span>Crash</span>
+      </button>
+      <button type="button" role="tab" class="tab" id="tab-mines" data-game="mines" aria-controls="panel-mines" aria-selected="false" tabindex="-1" data-only="free">
+        <svg viewBox="0 0 100 100" aria-hidden="true"><use href="#mine"/></svg><span>Minas</span>
+      </button>
+      <button type="button" role="tab" class="tab" id="tab-dice" data-game="dice" aria-controls="panel-dice" aria-selected="false" tabindex="-1" data-only="free">
+        <svg viewBox="0 0 100 100" aria-hidden="true"><rect x="12" y="12" width="76" height="76" rx="16" fill="none" stroke="currentColor" stroke-width="9"/><g fill="currentColor"><circle cx="33" cy="33" r="8"/><circle cx="50" cy="50" r="8"/><circle cx="67" cy="67" r="8"/></g></svg><span>Dados</span>
+      </button>
+      <button type="button" role="tab" class="tab" id="tab-towers" data-game="towers" aria-controls="panel-towers" aria-selected="false" tabindex="-1" data-only="free">
+        <svg viewBox="0 0 100 100" aria-hidden="true"><path fill="currentColor" d="M24 94V42H16V10H32V20H43V10H57V20H68V10H84V42H76V94H58V72C58 67 54 63 50 63C46 63 42 67 42 72V94Z"/></svg><span>Torres</span>
+      </button>
+      <button type="button" role="tab" class="tab" id="tab-video_poker" data-game="video_poker" aria-controls="panel-video_poker" aria-selected="false" tabindex="-1" data-only="free">
+        <svg viewBox="0 0 100 100" aria-hidden="true"><rect x="20" y="8" width="60" height="84" rx="9" fill="none" stroke="currentColor" stroke-width="8"/><use href="#suit-H" x="31" y="31" width="38" height="38"/></svg><span>Póker</span>
+      </button>
+      <button type="button" role="tab" class="tab" id="tab-wheel" data-game="wheel" aria-controls="panel-wheel" aria-selected="false" tabindex="-1" data-only="free">
+        <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" stroke-width="8"/><path d="M50 10V90M10 50H90M22 22L78 78M78 22L22 78" stroke="currentColor" stroke-width="5"/><circle cx="50" cy="50" r="10" fill="currentColor"/></svg><span>Rueda</span>
+      </button>
     </div>
   </nav>
 
   <div class="layout">
   <main id="main" class="stage">
-    <button type="button" class="log-ticker" id="log-ticker" aria-label="Última entrada de la bitácora: ir a la bitácora completa"></button>
+    <button type="button" class="log-ticker" id="log-ticker" aria-label="Última entrada de la bitácora: ir a la bitácora completa" data-only="story"></button>
     <!-- BLACKJACK MULTIMANO -->
     <section id="panel-blackjack" class="panel" role="tabpanel" aria-labelledby="tab-blackjack" data-mode="bet">
       <h2 class="visually-hidden">Blackjack · Reglas Las Vegas Strip</h2>
@@ -309,7 +450,7 @@
           <button type="button" class="toggle" id="bj-coach-toggle" aria-pressed="false">Coach de estrategia básica</button>
           <button type="button" class="toggle" id="bj-count-toggle" aria-pressed="false">Entrenador Hi-Lo</button>
         </div>
-        <p class="hint">Toca el círculo principal (y en el Salón de Neón, PP o 21+3) para apostar la ficha seleccionada. Clic derecho o pulsación larga para retirarla.</p>
+        <p class="hint" id="bj-hint">Toca el círculo principal (y en el Salón de Neón, PP o 21+3) para apostar la ficha seleccionada. Clic derecho o pulsación larga para retirarla.</p>
         <p class="hint" id="bj-side-edges"></p>
       </div>
     </section>
@@ -382,7 +523,7 @@
 
     <!-- SLOTS -->
     <section id="panel-slots" class="panel" role="tabpanel" aria-labelledby="tab-slots" hidden>
-      <h2 class="visually-hidden">Slots Matrix 4x4 con avalancha</h2>
+      <h2 class="visually-hidden">Slots Matrix 4x4 con avalancha y comodines pegajosos</h2>
       <div class="slot-cabinet">
         <div class="slot-marquee" aria-hidden="true">
           <span class="bulbs"></span>
@@ -401,10 +542,12 @@
             <span>Quedan <b id="sl-fs-left">0</b></span>
             <span>Bono <output id="sl-fs-total">0</output></span>
           </div>
+          <p class="sticky-note" id="sl-sticky-note" hidden></p>
         </div>
         <div id="sl-banner" class="slot-banner" aria-live="polite"></div>
         <div class="slot-window">
           <div id="sl-grid" class="slot-grid" aria-label="Rodillos"></div>
+          <div id="sl-sticky" class="slot-sticky" aria-hidden="true"></div>
           <svg id="sl-lines" class="slot-lines" viewBox="0 0 400 400" preserveAspectRatio="none" aria-hidden="true"></svg>
           <div id="sl-fx" class="slot-fx" aria-hidden="true"></div>
         </div>
@@ -429,16 +572,215 @@
           <button type="button" class="btn" id="sl-auto" aria-pressed="false" aria-haspopup="dialog">Auto-spin</button>
           <button type="button" class="btn btn-buy" id="sl-buy" aria-haspopup="dialog">Comprar bono · <output id="sl-buy-price">2000</output></button>
         </div>
-        <p id="sl-message" class="table-message" role="status" aria-live="polite">3 diamantes o la compra de bono activan los Giros Gratis</p>
+        <p id="sl-message" class="table-message" role="status" aria-live="polite">3 estrellas o la compra de bono activan 8 giros gratis</p>
         <details class="paytable">
           <summary>Tabla de pagos y reglas</summary>
           <div id="sl-paytable" class="paytable-body"></div>
         </details>
       </div>
     </section>
+
+    <!-- PLINKO -->
+    <section id="panel-plinko" class="panel arcade" role="tabpanel" aria-labelledby="tab-plinko" data-only="free" hidden>
+      <h2 class="visually-hidden">Plinko</h2>
+      <div class="arcade-layout">
+        <div class="arcade-stage pk-stage">
+          <canvas id="pk-board" class="pk-board" role="img" aria-label="Tablero de Plinko: 9 filas de clavijas y 9 cubetas con multiplicadores"></canvas>
+          <ol id="pk-recent" class="recent-strip" aria-label="Últimos resultados de Plinko"></ol>
+        </div>
+        <div class="arcade-controls">
+          <div class="seg-group" id="pk-risk" role="group" aria-label="Riesgo">
+            <span class="seg-label">Riesgo</span>
+            <button type="button" class="seg" data-risk="low" aria-pressed="true">Bajo</button>
+            <button type="button" class="seg" data-risk="medium" aria-pressed="false">Medio</button>
+            <button type="button" class="seg" data-risk="high" aria-pressed="false">Alto</button>
+          </div>
+          <div class="field-block">
+            <span class="field-label" id="pk-bets-label">Apuesta por bola</span>
+            <div class="seg-group seg-wrap" id="pk-bets" role="group" aria-labelledby="pk-bets-label"></div>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary btn-xl" id="pk-drop">Soltar bola</button>
+            <button type="button" class="btn btn-gold" id="pk-burst">Ráfaga ×5</button>
+          </div>
+          <dl class="arcade-stats">
+            <div><dt>RTP</dt><dd id="pk-rtp">97,20 %</dd></div>
+            <div><dt>En el aire</dt><dd id="pk-flying">0</dd></div>
+            <div><dt>Último</dt><dd id="pk-last">—</dd></div>
+          </dl>
+          <p id="pk-message" class="arcade-message" role="status" aria-live="polite">Elige el riesgo y la apuesta, y suelta la bola</p>
+          <p class="hint" id="pk-rules"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CRASH -->
+    <section id="panel-crash" class="panel arcade" role="tabpanel" aria-labelledby="tab-crash" data-only="free" hidden>
+      <h2 class="visually-hidden">Crash Rocket</h2>
+      <div class="arcade-layout">
+        <div class="arcade-stage cr-stage" id="cr-stage">
+          <canvas id="cr-canvas" class="cr-canvas" role="img" aria-label="Gráfica del cohete: el multiplicador sube hasta que explota"></canvas>
+          <div class="cr-readout" aria-hidden="true">
+            <span id="cr-mult" class="cr-mult">×1,00</span>
+            <span id="cr-state" class="cr-state">Listo para despegar</span>
+          </div>
+          <div id="cr-radar" class="cr-radar" role="alert" hidden>⚠ RADAR: zona de peligro</div>
+          <ol id="cr-history" class="recent-strip" aria-label="Últimos puntos de explosión"></ol>
+        </div>
+        <div class="arcade-controls">
+          <div class="bet-control" id="cr-bet" data-label="Apuesta"></div>
+          <label class="field">
+            <span>Retiro automático (×)</span>
+            <input type="number" id="cr-auto" min="1.01" max="10000" step="0.01" inputmode="decimal" placeholder="Sin retiro automático">
+          </label>
+          <p class="hint" id="cr-auto-hint">Opcional: se retira solo al llegar a ese multiplicador.</p>
+          <button type="button" class="btn btn-primary btn-xl" id="cr-action">Apostar</button>
+          <p id="cr-message" class="arcade-message" role="status" aria-live="polite">Apuesta y retírate antes de que el cohete explote</p>
+          <p class="hint" id="cr-rules"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- MINAS -->
+    <section id="panel-mines" class="panel arcade" role="tabpanel" aria-labelledby="tab-mines" data-only="free" hidden>
+      <h2 class="visually-hidden">Minas Cripto 5×5</h2>
+      <div class="arcade-layout">
+        <div class="arcade-stage mn-stage">
+          <div id="mn-grid" class="mn-grid" role="group" aria-label="Tablero de 25 casillas"></div>
+        </div>
+        <div class="arcade-controls">
+          <div class="bet-control" id="mn-bet" data-label="Apuesta"></div>
+          <label class="field">
+            <span>Minas</span>
+            <select id="mn-count"></select>
+          </label>
+          <dl class="arcade-stats">
+            <div><dt>Multiplicador</dt><dd id="mn-mult">×1,00</dd></div>
+            <div><dt>Siguiente</dt><dd id="mn-next">—</dd></div>
+            <div><dt>Premio</dt><dd id="mn-win">0</dd></div>
+          </dl>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary btn-xl" id="mn-start">Jugar</button>
+            <button type="button" class="btn" id="mn-random">Casilla al azar</button>
+            <button type="button" class="btn btn-gold btn-xl" id="mn-cashout">Retirar</button>
+          </div>
+          <p id="mn-message" class="arcade-message" role="status" aria-live="polite">Elige cuántas minas esconder y empieza a destapar gemas</p>
+          <p class="hint" id="mn-rules"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- DADOS -->
+    <section id="panel-dice" class="panel arcade" role="tabpanel" aria-labelledby="tab-dice" data-only="free" hidden>
+      <h2 class="visually-hidden">Dados Over/Under</h2>
+      <div class="arcade-layout">
+        <div class="arcade-stage dc-stage">
+          <output id="dc-roll" class="dc-roll">50,00</output>
+          <div class="dc-track" id="dc-track">
+            <span class="dc-zone" id="dc-zone" aria-hidden="true"></span>
+            <span class="dc-marker" id="dc-marker" aria-hidden="true"></span>
+            <input type="range" id="dc-slider" class="dc-slider" min="1" max="99" step="1" value="49" aria-label="Umbral de la tirada">
+          </div>
+          <div class="dc-scale" aria-hidden="true"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+          <ol id="dc-history" class="recent-strip" aria-label="Últimas tiradas"></ol>
+        </div>
+        <div class="arcade-controls">
+          <div class="bet-control" id="dc-bet" data-label="Apuesta"></div>
+          <div class="seg-group" id="dc-direction" role="group" aria-label="Condición de la tirada">
+            <button type="button" class="seg" data-direction="under" aria-pressed="true">Menor que</button>
+            <button type="button" class="seg" data-direction="over" aria-pressed="false">Mayor que</button>
+          </div>
+          <dl class="arcade-stats">
+            <div><dt>Probabilidad</dt><dd id="dc-chance">49 %</dd></div>
+            <div><dt>Objetivo</dt><dd id="dc-target">&lt; 49</dd></div>
+            <div><dt>Multiplicador</dt><dd id="dc-mult">×2,00</dd></div>
+            <div><dt>Premio</dt><dd id="dc-win">0</dd></div>
+          </dl>
+          <button type="button" class="btn btn-primary btn-xl" id="dc-roll-btn">Tirar</button>
+          <p id="dc-message" class="arcade-message" role="status" aria-live="polite">Elige probabilidad y condición, y tira</p>
+          <p class="hint" id="dc-rules"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TORRES -->
+    <section id="panel-towers" class="panel arcade" role="tabpanel" aria-labelledby="tab-towers" data-only="free" hidden>
+      <h2 class="visually-hidden">La Torre de la Muerte</h2>
+      <div class="arcade-layout">
+        <div class="arcade-stage tw-stage">
+          <ol id="tw-tower" class="tw-tower" aria-label="Torre de 8 pisos"></ol>
+        </div>
+        <div class="arcade-controls">
+          <div class="bet-control" id="tw-bet" data-label="Apuesta"></div>
+          <div class="seg-group" id="tw-difficulty" role="group" aria-label="Dificultad">
+            <span class="seg-label">Dificultad</span>
+            <button type="button" class="seg" data-difficulty="easy" aria-pressed="true">Fácil</button>
+            <button type="button" class="seg" data-difficulty="medium" aria-pressed="false">Media</button>
+            <button type="button" class="seg" data-difficulty="hard" aria-pressed="false">Difícil</button>
+          </div>
+          <dl class="arcade-stats">
+            <div><dt>Piso</dt><dd id="tw-floor">0 / 8</dd></div>
+            <div><dt>Multiplicador</dt><dd id="tw-mult">×1,00</dd></div>
+            <div><dt>Premio</dt><dd id="tw-win">0</dd></div>
+          </dl>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary btn-xl" id="tw-start">Jugar</button>
+            <button type="button" class="btn btn-gold btn-xl" id="tw-cashout">Retirar</button>
+          </div>
+          <p id="tw-message" class="arcade-message" role="status" aria-live="polite">Sube piso a piso eligiendo losas seguras</p>
+          <p class="hint" id="tw-rules"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIDEO PÓKER -->
+    <section id="panel-video_poker" class="panel arcade" role="tabpanel" aria-labelledby="tab-video_poker" data-only="free" hidden>
+      <h2 class="visually-hidden">Video Póker Jacks or Better</h2>
+      <div class="vp-machine">
+        <div class="vp-marquee" aria-hidden="true">JACKS <b>OR</b> BETTER</div>
+        <div class="vp-paytable-wrap"><table class="vp-paytable" id="vp-paytable"></table></div>
+        <div class="vp-hand" id="vp-hand" role="group" aria-label="Tu mano"></div>
+        <p id="vp-message" class="arcade-message" role="status" aria-live="polite">Elige moneda y apuesta, y reparte</p>
+        <div class="vp-controls">
+          <div class="field-block">
+            <span class="field-label" id="vp-coin-label">Valor de la moneda</span>
+            <div class="seg-group" id="vp-coin-values" role="group" aria-labelledby="vp-coin-label"></div>
+          </div>
+          <div class="field-block">
+            <span class="field-label" id="vp-coins-label">Monedas</span>
+            <div class="seg-group" id="vp-coins" role="group" aria-labelledby="vp-coins-label"></div>
+          </div>
+          <div class="btn-row">
+            <span class="bet-total">Apuesta: <output id="vp-stake">10</output></span>
+            <button type="button" class="btn" id="vp-max">Apuesta máxima</button>
+            <button type="button" class="btn btn-primary btn-xl" id="vp-deal">Repartir</button>
+          </div>
+        </div>
+        <p class="hint" id="vp-rules"></p>
+      </div>
+    </section>
+
+    <!-- RUEDA DIARIA -->
+    <section id="panel-wheel" class="panel arcade" role="tabpanel" aria-labelledby="tab-wheel" data-only="free" hidden>
+      <h2 class="visually-hidden">Rueda de la Fortuna diaria</h2>
+      <div class="wh-stage">
+        <div class="wh-wrap">
+          <canvas id="wh-canvas" class="wh-canvas" role="img" aria-label="Rueda de la fortuna con 10 gajos de premios"></canvas>
+          <span class="wh-pointer" aria-hidden="true"></span>
+        </div>
+        <div class="wh-side">
+          <h3 class="wh-title">Rueda de la Fortuna</h3>
+          <p class="wh-text">Una tirada gratis cada 24 horas: fichas, pociones ×2, cofres de reliquias y un bote de 10.000.</p>
+          <button type="button" class="btn btn-primary btn-xl" id="wh-spin">Girar la rueda</button>
+          <p id="wh-cooldown" class="wh-cooldown"></p>
+          <p id="wh-message" class="arcade-message" role="status" aria-live="polite"></p>
+          <table class="wh-odds" id="wh-odds"></table>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <aside class="log-panel" id="log-panel" aria-labelledby="log-title">
+  <aside class="log-panel" id="log-panel" aria-labelledby="log-title" data-only="story">
     <header class="log-head">
       <h2 id="log-title" class="log-title">Bitácora del Crupier</h2>
       <span id="log-dealer" class="log-dealer">Moss · crupier del sótano</span>
@@ -449,28 +791,73 @@
     </section>
     <ol id="log-list" class="log-list" aria-live="polite" aria-label="Entradas de la bitácora"></ol>
   </aside>
+
+  <aside class="telemetry" id="telemetry" aria-labelledby="tele-title" data-only="free">
+    <header class="tele-head">
+      <h2 id="tele-title" class="tele-title">Telemetría <span>provably fair</span></h2>
+      <span class="tele-status"><span class="tele-dot" aria-hidden="true"></span>En línea</span>
+    </header>
+    <section class="tele-seeds" aria-label="Semillas">
+      <div class="tele-field">
+        <span class="tele-label" id="tele-hash-label">Hash de la semilla del servidor · SHA-256</span>
+        <code class="tele-hash" id="tele-hash" aria-labelledby="tele-hash-label"></code>
+      </div>
+      <div class="tele-row">
+        <div class="tele-field">
+          <label class="tele-label" for="tele-client">Semilla del cliente</label>
+          <input type="text" id="tele-client" class="tele-input" maxlength="64" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
+        <div class="tele-field tele-nonce">
+          <span class="tele-label" id="tele-nonce-label">Nonce</span>
+          <output id="tele-nonce" aria-labelledby="tele-nonce-label">0</output>
+        </div>
+      </div>
+      <div class="btn-row tele-actions">
+        <button type="button" class="btn" id="tele-apply">Aplicar semilla</button>
+        <button type="button" class="btn" id="tele-rotate">Rotar y revelar</button>
+        <button type="button" class="btn btn-primary" id="tele-verify">Verificador</button>
+      </div>
+      <p class="tele-revealed" id="tele-revealed"></p>
+    </section>
+    <section class="tele-session" aria-label="Sesión">
+      <dl class="tele-stats">
+        <div><dt>Apostado</dt><dd id="tele-wagered">0</dd></div>
+        <div><dt>Pagado</dt><dd id="tele-paid">0</dd></div>
+        <div><dt>RTP real</dt><dd id="tele-rtp">—</dd></div>
+      </dl>
+    </section>
+    <section class="tele-feed-wrap" aria-labelledby="tele-feed-title">
+      <h3 id="tele-feed-title" class="tele-subtitle">Apuestas en vivo</h3>
+      <ol id="tele-feed" class="tele-feed" aria-live="polite"></ol>
+    </section>
+  </aside>
   </div>
 
   <footer class="footer">
-    <p>El Último Crédito es una ficción: créditos virtuales sin valor monetario, para mayores de 18 años. Juega con responsabilidad.</p>
-    <p>Azar: <code>crypto.getRandomValues()</code> · Blackjack 6 barajas S17 3:2 · Ruleta 2,70 % · Slots RTP ≈ 96 %</p>
+    <p data-only="story">El Último Crédito es una ficción: créditos virtuales sin valor monetario, para mayores de 18 años. Juega con responsabilidad.</p>
+    <p data-only="story">Azar: <code>crypto.getRandomValues()</code> · Blackjack 6 barajas S17 3:2 · Ruleta 2,70 % · Slots RTP ≈ 96 %</p>
+    <p data-only="free">Cripto-Casino: fichas virtuales sin valor monetario, para mayores de 18 años. Juega con responsabilidad.</p>
+    <p data-only="free">Provably fair: <code>HMAC-SHA256(semilla del servidor, "semilla del cliente:nonce")</code> · verifica cada jugada en la telemetría o con <code>verify</code> en la terminal</p>
   </footer>
+  </div>
 
   <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
 
-  <dialog id="dossier" class="modal dossier" aria-labelledby="dossier-title">
+  <!-- ===================== DIÁLOGOS DEL MODO HISTORIA ===================== -->
+  <dialog id="dossier" class="modal dossier" aria-labelledby="dossier-title" data-only="story">
     <div class="modal-head">
       <h2 id="dossier-title">Expediente</h2>
       <button type="button" class="btn btn-icon" id="dossier-close" aria-label="Cerrar expediente">✕</button>
     </div>
     <div id="dossier-body" class="dossier-body"></div>
+    <section class="dossier-global" id="dossier-global" aria-label="Carrera global"></section>
     <div class="modal-actions">
       <button type="button" class="btn" id="dossier-prologue">Ver el prólogo</button>
       <button type="button" class="btn btn-danger" id="dossier-restart">Reiniciar la leyenda</button>
     </div>
   </dialog>
 
-  <dialog id="vip-dialog" class="modal vip-dialog" aria-labelledby="vip-title">
+  <dialog id="vip-dialog" class="modal vip-dialog" aria-labelledby="vip-title" data-only="story">
     <div class="modal-head">
       <h2 id="vip-title">Club VIP</h2>
       <button type="button" class="btn btn-icon" id="vip-close" aria-label="Cerrar Club VIP">✕</button>
@@ -484,7 +871,7 @@
     <div id="vip-list" class="vip-list"></div>
   </dialog>
 
-  <dialog id="lifeline-dialog" class="modal lifeline-dialog" aria-labelledby="lifeline-title">
+  <dialog id="lifeline-dialog" class="modal lifeline-dialog" aria-labelledby="lifeline-title" data-only="story">
     <div class="modal-head">
       <h2 id="lifeline-title">Sin créditos</h2>
       <button type="button" class="btn btn-icon" id="lifeline-close" aria-label="Cerrar">✕</button>
@@ -493,7 +880,7 @@
     <div id="lifeline-list" class="lifeline-list"></div>
   </dialog>
 
-  <dialog id="intro" class="cinematic cinematic-intro" aria-labelledby="intro-title">
+  <dialog id="intro" class="cinematic cinematic-intro" aria-labelledby="intro-title" data-only="story">
     <div class="cine-rain" aria-hidden="true"></div>
     <div class="cine-body">
       <p class="cine-kicker" id="intro-legend">Leyenda nº 1</p>
@@ -506,7 +893,7 @@
     </div>
   </dialog>
 
-  <dialog id="finale" class="cinematic cinematic-finale" aria-labelledby="finale-title">
+  <dialog id="finale" class="cinematic cinematic-finale" aria-labelledby="finale-title" data-only="story">
     <div class="cine-body">
       <p class="cine-kicker">La libertad tiene precio</p>
       <h2 id="finale-title" class="cine-title">Dueño del Destino</h2>
@@ -518,7 +905,7 @@
     </div>
   </dialog>
 
-  <dialog id="gameover" class="cinematic cinematic-gameover" aria-labelledby="gameover-title">
+  <dialog id="gameover" class="cinematic cinematic-gameover" aria-labelledby="gameover-title" data-only="story">
     <div class="cine-rain" aria-hidden="true"></div>
     <div class="cine-body">
       <p class="cine-kicker">Fin de la leyenda</p>
@@ -531,7 +918,8 @@
     </div>
   </dialog>
 
-  <dialog id="sl-auto-dialog" class="modal" aria-labelledby="sl-auto-title">
+  <!-- ===================== DIÁLOGOS DE LAS SLOTS ===================== -->
+  <dialog id="sl-auto-dialog" class="modal" aria-labelledby="sl-auto-title" data-only="story free">
     <div class="modal-head">
       <h2 id="sl-auto-title">Auto-spin</h2>
     </div>
@@ -556,7 +944,7 @@
     </div>
   </dialog>
 
-  <dialog id="sl-buy-dialog" class="modal" aria-labelledby="sl-buy-title">
+  <dialog id="sl-buy-dialog" class="modal" aria-labelledby="sl-buy-title" data-only="story free">
     <div class="modal-head">
       <h2 id="sl-buy-title">Comprar Giros Gratis</h2>
     </div>
@@ -567,7 +955,84 @@
     </div>
   </dialog>
 
-  <div id="zone-transition" class="zone-transition" role="status" aria-live="assertive" hidden>
+  <!-- ===================== DIÁLOGOS DEL CRIPTO-CASINO ===================== -->
+  <dialog id="career-dialog" class="modal cyber-modal career-dialog" aria-labelledby="career-title" data-only="free">
+    <div class="modal-head">
+      <h2 id="career-title">Carrera y misiones</h2>
+      <button type="button" class="btn btn-icon" id="career-close" aria-label="Cerrar carrera y misiones">✕</button>
+    </div>
+    <section id="career-level" class="career-level" aria-label="Tu nivel"></section>
+    <h3 class="modal-subtitle">Rangos VIP</h3>
+    <ol id="career-ranks" class="rank-ladder career-ranks"></ol>
+    <h3 class="modal-subtitle">Misiones diarias <small id="career-reset" class="career-reset"></small></h3>
+    <ol id="career-missions" class="mission-list"></ol>
+  </dialog>
+
+  <dialog id="vault-dialog" class="modal cyber-modal vault-dialog" aria-labelledby="vault-title" data-only="free">
+    <div class="modal-head">
+      <h2 id="vault-title">Bóveda de Reliquias</h2>
+      <button type="button" class="btn btn-icon" id="vault-close" aria-label="Cerrar la bóveda">✕</button>
+    </div>
+    <h3 class="modal-subtitle">Equipadas · 4 ranuras</h3>
+    <ol id="vault-slots" class="vault-slots"></ol>
+    <h3 class="modal-subtitle">Colección <small id="vault-count"></small></h3>
+    <ul id="vault-grid" class="vault-grid"></ul>
+    <h3 class="modal-subtitle">Cofres y pociones</h3>
+    <div id="vault-store" class="vault-store"></div>
+  </dialog>
+
+  <dialog id="chest-dialog" class="modal cyber-modal chest-dialog" aria-labelledby="chest-title" data-only="free">
+    <h2 id="chest-title" class="chest-title">Abriendo cofre…</h2>
+    <div class="chest-stage" id="chest-stage">
+      <div class="chest" id="chest-box" aria-hidden="true">
+        <span class="chest-glow"></span>
+        <span class="chest-lid"></span>
+        <span class="chest-body"></span>
+      </div>
+      <div class="chest-reveal" id="chest-reveal" aria-live="polite" hidden></div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary" id="chest-close" disabled>Continuar</button>
+    </div>
+  </dialog>
+
+  <dialog id="verify-dialog" class="modal cyber-modal verify-dialog" aria-labelledby="verify-title" data-only="free">
+    <div class="modal-head">
+      <h2 id="verify-title">Verificador provably fair</h2>
+      <button type="button" class="btn btn-icon" id="verify-close" aria-label="Cerrar el verificador">✕</button>
+    </div>
+    <p class="modal-text">Recalcula cualquier jugada: <code>HMAC-SHA256(clave = semilla del servidor, mensaje = "semilla del cliente:nonce")</code>. Los 8 primeros caracteres hexadecimales ÷ 2<sup>32</sup> dan el primer número de la jugada.</p>
+    <div class="verify-form">
+      <label class="field"><span>Juego</span><select id="verify-game"></select></label>
+      <label class="field"><span>Nonce</span><input type="number" id="verify-nonce" min="0" step="1" inputmode="numeric"></label>
+      <label class="field field-wide"><span>Semilla del servidor (revelada)</span><input type="text" id="verify-server" maxlength="64" autocomplete="off" spellcheck="false"></label>
+      <label class="field field-wide"><span>Hash publicado antes de jugar (SHA-256)</span><input type="text" id="verify-hash" maxlength="64" autocomplete="off" spellcheck="false"></label>
+      <label class="field"><span>Semilla del cliente</span><input type="text" id="verify-client" maxlength="64" autocomplete="off" spellcheck="false"></label>
+      <label class="field"><span>Parámetros de la jugada (JSON)</span><input type="text" id="verify-params" autocomplete="off" spellcheck="false"></label>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary" id="verify-run">Verificar</button>
+    </div>
+    <div id="verify-result" class="verify-result" aria-live="polite"></div>
+  </dialog>
+
+  <dialog id="terminal" class="terminal" aria-labelledby="terminal-title" data-only="free">
+    <header class="term-bar">
+      <span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      <h2 id="terminal-title" class="term-title">cyber-ultra — bash</h2>
+      <button type="button" class="term-close" id="terminal-close" aria-label="Cerrar la terminal">✕</button>
+    </header>
+    <div class="term-screen" id="terminal-screen">
+      <ol class="term-output" id="terminal-output" aria-live="polite"></ol>
+      <div class="term-input-row">
+        <label for="terminal-input" class="term-prompt">root@cyber-ultra:~$</label>
+        <input type="text" id="terminal-input" class="term-input" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="send">
+      </div>
+    </div>
+  </dialog>
+  <input type="file" id="import-file" accept="application/json,.json" hidden data-only="free">
+
+  <div id="zone-transition" class="zone-transition" role="status" aria-live="assertive" data-only="story" hidden>
     <div class="zt-card">
       <span id="zt-level" class="zt-level">Nivel 1</span>
       <strong id="zt-name" class="zt-name neon-sign">El Callejón</strong>
@@ -575,11 +1040,12 @@
     </div>
   </div>
 
-  <div class="critical-veil" aria-hidden="true"></div>
-  <div class="ambient" aria-hidden="true"></div>
+  <div class="critical-veil" aria-hidden="true" data-only="story"></div>
+  <div class="ambient" aria-hidden="true" data-only="story"></div>
+  <div class="crt-overlay" aria-hidden="true" data-only="free menu"></div>
 
   <canvas id="fx-canvas" class="fx-canvas" aria-hidden="true"></canvas>
 
-  <noscript><p class="noscript">El Último Crédito necesita JavaScript para funcionar.</p></noscript>
+  <noscript><p class="noscript">Casino Royale Deluxe necesita JavaScript para funcionar.</p></noscript>
 </body>
 </html>

@@ -2,15 +2,20 @@
 // Tapete clásico + racetrack con apuestas anunciadas (Voisins, Tiers, Orphelins, Jeu Zéro y
 // vecinos). Toda apuesta, simple o anunciada, tiene ventaja de la casa 1 − 36/37 = 2,7027 %.
 
-import { randomInt, randomFloat, randomBetween } from '../engine/rng.js';
+import { randomFloat, randomBetween } from '../engine/rng.js';
 import { Store, PHASE, wait } from '../engine/store.js';
 import { wallet, money } from '../engine/wallet.js';
-import { audio } from '../engine/audio.js';
-import { storage } from '../engine/storage.js';
+import { audio } from '../audio.js';
+import { storage } from '../storage.js';
 import { hud, formatChips } from '../ui/hud.js';
 import { chipSvg, breakdown, el, svg, svgText } from '../ui/svg.js';
 import { bindRemoveGesture } from '../ui/input.js';
-import { campaign } from '../story/campaign.js';
+import { session } from '../session.js';
+import { scopedKey } from '../mode.js';
+import { settings } from '../settings.js';
+
+// En turbo la bola gira y rebota en el 40 % del tiempo (100 → 40 fotogramas de frenada).
+const TURBO_SPIN = 0.4;
 
 export const WHEEL_ORDER = Object.freeze([
   0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
@@ -19,8 +24,8 @@ export const WHEEL_ORDER = Object.freeze([
 export const POCKETS = 37;
 export const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 
-const SAVE_KEY = 'crd.roulette.v1';
-const PREFS_KEY = 'crd.roulette.prefs.v1';
+const SAVE_KEY = scopedKey('crd.roulette.v1');
+const PREFS_KEY = scopedKey('crd.roulette.prefs.v1');
 const HISTORY_LIMIT = 500;
 const STATS_WINDOW = 100;
 
@@ -285,9 +290,10 @@ class WheelRenderer {
   spin(number) {
     const now = performance.now();
     const index = WHEEL_ORDER.indexOf(number);
-    this.#wheel = { base: this.#wheelAngle(now), t0: now, w0: randomBetween(3.4, 4.2), k: 0.34 };
-    const T1 = randomBetween(4.4, 5.0);
-    const T2 = 2.9;
+    const pace = settings.turbo ? TURBO_SPIN : 1;
+    this.#wheel = { base: this.#wheelAngle(now), t0: now, w0: randomBetween(3.4, 4.2) / pace, k: 0.34 / pace };
+    const T1 = randomBetween(4.4, 5.0) * pace;
+    const T2 = 2.9 * pace;
     const A = randomBetween(-0.85, 0.85);
     const target = index * SEG;
     const start = randomFloat() * TAU;
@@ -297,8 +303,8 @@ class WheelRenderer {
     const vEnd = 2.1;
     const v0 = (2 * distance) / T1 - vEnd;
     const decel = (v0 - vEnd) / T1;
-    const lambda = 1.9;
-    const omega = 5.4;
+    const lambda = 1.9 / pace;
+    const omega = 5.4 / pace;
     const vRel = -vEnd - this.#wheelVelocity(now + T1 * 1000);
     const B = (vRel + lambda * A) / omega;
     this.#highlight = null;
@@ -864,7 +870,7 @@ export class RouletteGame {
       onPreview: (target, on) => this.#previewTrack(target, on),
     });
     this.#bind();
-    campaign.register('roulette', {
+    session.register('roulette', {
       hasPendingPlay: () => this.state.phase === PHASE.DEALING || this.state.phase === PHASE.RESOLVING,
       onZone: () => {
         this.#renderView();
@@ -982,7 +988,7 @@ export class RouletteGame {
   }
 
   #limits() {
-    return campaign.limits('roulette');
+    return session.limits('roulette');
   }
 
   #setView(view) {
@@ -1032,7 +1038,7 @@ export class RouletteGame {
 
   // Coloca un conjunto de apuestas de forma atómica (todas o ninguna).
   #place(parts, call, message) {
-    if (!this.#canBet() || !campaign.playable) return false;
+    if (!this.#canBet() || !session.playable) return false;
     const { spotMax, tableMax } = this.#limits();
     const s = this.state;
     const betting = s.phase === PHASE.BETTING;
@@ -1153,14 +1159,17 @@ export class RouletteGame {
 
   async spin() {
     const s = this.state;
-    if (s.busy || s.phase !== PHASE.BETTING || !campaign.playable) return;
+    if (s.busy || s.phase !== PHASE.BETTING || !session.playable) return;
     const stake = this.#total(s.bets);
     if (stake <= 0) return;
-    campaign.beginRound({ game: 'roulette', stake });
+    session.beginRound({ game: 'roulette', stake });
 
-    const result = randomInt(POCKETS);
+    // Casilla: entero uniforme de 0 a 36 del flujo de la jugada (verificable en el Cripto-Casino).
+    const stream = session.stream('roulette');
+    const result = stream.int(POCKETS);
     const payout = payoutFor(s.bets, result);
     wallet.settle('roulette', stake, payout);
+    session.record(stream, { stake, payout, summary: `${result} ${COLOR_NAME[colorOf(result)].toLowerCase()} · ${Object.keys(s.bets).length} apuesta${Object.keys(s.bets).length === 1 ? '' : 's'}`, params: {} });
     const history = [result, ...s.history].slice(0, HISTORY_LIMIT);
     this.#persist(history, s.bets, s.calls);
 
@@ -1169,7 +1178,7 @@ export class RouletteGame {
 
     this.#set('RESOLVE', { phase: PHASE.RESOLVING, result, history });
     this.#renderStats(history);
-    await wait(900);
+    await wait(900 * settings.speed);
 
     wallet.reveal('roulette');
     const net = money(payout - stake);
@@ -1189,8 +1198,8 @@ export class RouletteGame {
     } else {
       audio.lose();
     }
-    campaign.report({ game: 'roulette', stake, returned: payout, tags: this.#tags(s.bets, s.calls, result) });
-    await wait(500);
+    session.report({ game: 'roulette', stake, returned: payout, tags: this.#tags(s.bets, s.calls, result) });
+    await wait(500 * settings.speed);
     this.#set('READY', { busy: false });
   }
 

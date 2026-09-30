@@ -32,6 +32,8 @@ function mulberry32(seed) {
 
 let next = mulberry32(1);
 const rand = (n) => Math.floor((next() / 4294967296) * n);
+// Estado de la mesa de slots de la leyenda en curso (comodines fijos y su apuesta).
+let slots = { sticky: [], bet: 0 };
 
 function memoryStore() {
   const map = new Map();
@@ -160,14 +162,21 @@ function playRound(style, campaign, wallet) {
       tags.push('side-win');
     }
   } else {
-    const spin = playSpin({ bet, rand });
+    // Como en la mesa real: los comodines fijos pasan de un giro al siguiente y, mientras los haya,
+    // la apuesta queda bloqueada.
+    if (slots.sticky.length && slots.bet <= wallet.balance) stake = slots.bet;
+    const spin = playSpin({ bet: stake, rand, sticky: slots.sticky });
+    slots.sticky = spin.sticky;
+    slots.bet = stake;
     returned = spin.total;
     if (spin.steps.length >= 2) tags.push('cascade2');
     if (spin.steps.length >= 3) tags.push('cascade3');
-    if (spin.steps.some((step) => step.lines.some((line) => line.count === 4))) tags.push('super');
+    if (spin.steps.some((step) => step.lines.some((line) => line.count === 4 && line.natural))) tags.push('super');
     if (spin.freeSpins) {
       tags.push('freespins');
-      returned += playFreeSpinsRound({ bet, spins: spin.freeSpins, rand }).total;
+      const bonus = playFreeSpinsRound({ bet: stake, spins: spin.freeSpins, rand, sticky: slots.sticky });
+      returned += bonus.total;
+      slots.sticky = bonus.sticky;
     }
   }
   wallet.balance += returned - stake;
@@ -193,6 +202,7 @@ function simulate(style) {
   const roundsToWin = [];
   for (let run = 0; run < RUNS; run++) {
     next = mulberry32(1000 + run);
+    slots = { sticky: [], bet: 0 };
     const wallet = fakeWallet();
     const store = memoryStore();
     const vip = new VipClub({ store, now: () => 0 });

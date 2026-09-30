@@ -8,7 +8,7 @@ import { ZONES, FREEDOM_GOAL } from '../story/zones.js';
 import { ACHIEVEMENTS } from '../story/achievements.js';
 import { PROLOGUE, FINALE, GAME_OVER } from '../story/narrative.js';
 import { wallet } from '../engine/wallet.js';
-import { audio } from '../engine/audio.js';
+import { audio } from '../audio.js';
 import { hud, formatChips } from './hud.js';
 import { el } from './svg.js';
 

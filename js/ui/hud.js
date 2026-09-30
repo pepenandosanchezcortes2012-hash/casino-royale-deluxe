@@ -2,11 +2,12 @@
 // efectos, avisos y efectos visuales. La parte narrativa vive en story-ui.js.
 
 import { wallet, DENOMINATIONS } from '../engine/wallet.js';
-import { audio } from '../engine/audio.js';
-import { storage } from '../engine/storage.js';
+import { audio } from '../audio.js';
+import { storage } from '../storage.js';
+import { scopedKey } from '../mode.js';
 import { chipSvg, chipLabel, el } from './svg.js';
 
-const CHIP_KEY = 'crd.chip.v2';
+const CHIP_KEY = scopedKey('crd.chip.v2');
 const numberFormat = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2 });
 
 export function formatChips(value) {

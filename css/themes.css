@@ -1,0 +1,199 @@
+/* ==========================================================================
+   Temas del Cripto-Casino y del menú principal: Matrix Green, Cyberpunk Neon, Onyx, Gold
+   Imperial y Blood Red. Cada tema define la paleta «cyber» (--cy-*) y re-pinta los tokens de las
+   mesas clásicas (oro, tapete, paneles) para que blackjack, ruleta y slots cambien con él.
+   Los temas por zona del Modo Historia viven en story.css.
+   ========================================================================== */
+
+html[data-theme] {
+  --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", "Fira Code", Consolas, "Liberation Mono", monospace;
+  --cy-radius: 14px;
+  --cy-ok: #3dff9a;
+  --cy-warn: #ffd23f;
+  --cy-danger: #ff3b5c;
+}
+
+/* ---------- Matrix Green (por defecto) ---------- */
+
+html[data-theme="matrix"] {
+  --cy-bg: #020604;
+  --cy-bg-2: #06120b;
+  --cy-panel: rgba(3, 16, 9, 0.88);
+  --cy-panel-2: rgba(6, 28, 16, 0.92);
+  --cy-line: rgba(0, 255, 102, 0.3);
+  --cy-ink: #d8ffe8;
+  --cy-dim: #8fcfa9;
+  --cy-mute: #4f8a66;
+  --cy-accent: #00ff66;
+  --cy-accent-2: #00e5ff;
+  --cy-accent-ink: #001a0a;
+  --cy-glow: rgba(0, 255, 102, 0.45);
+  --matrix-ink: #00ff66;
+
+  --bg-0: #020604;
+  --bg-1: #06120b;
+  --panel: rgba(3, 16, 9, 0.88);
+  --panel-edge: rgba(0, 255, 102, 0.3);
+  --ink: #d8ffe8;
+  --ink-dim: #9fd9b5;
+  --ink-mute: #5f9a76;
+  --gold: #00ff66;
+  --gold-hi: #9dffc9;
+  --gold-lo: #00803a;
+  --gold-grad: linear-gradient(180deg, #d4ffe4 0%, #00ff66 50%, #008a3a 100%);
+  --felt-a: #0c4027;
+  --felt-b: #020e07;
+  --felt-line: rgba(0, 255, 102, 0.5);
+  --felt-ink: rgba(216, 255, 232, 0.92);
+  --felt-glow: rgba(0, 255, 102, 0.1);
+  --ambient-top: rgba(0, 255, 102, 0.12);
+  --ambient-corner: rgba(0, 229, 255, 0.08);
+}
+
+/* ---------- Cyberpunk Neon ---------- */
+
+html[data-theme="neon"] {
+  --cy-bg: #07020f;
+  --cy-bg-2: #12061f;
+  --cy-panel: rgba(16, 5, 30, 0.88);
+  --cy-panel-2: rgba(28, 8, 48, 0.92);
+  --cy-line: rgba(255, 43, 214, 0.34);
+  --cy-ink: #f6e9ff;
+  --cy-dim: #c9a8e6;
+  --cy-mute: #8a6aa8;
+  --cy-accent: #ff2bd6;
+  --cy-accent-2: #00e5ff;
+  --cy-accent-ink: #1f0019;
+  --cy-glow: rgba(255, 43, 214, 0.5);
+  --matrix-ink: #00e5ff;
+
+  --bg-0: #07020f;
+  --bg-1: #12061f;
+  --panel: rgba(16, 5, 30, 0.88);
+  --panel-edge: rgba(255, 43, 214, 0.34);
+  --ink: #f6e9ff;
+  --ink-dim: #d6bdf0;
+  --ink-mute: #8f72ad;
+  --gold: #ff2bd6;
+  --gold-hi: #7df9ff;
+  --gold-lo: #8a0f73;
+  --gold-grad: linear-gradient(180deg, #b6fbff 0%, #ff2bd6 55%, #6a0a58 100%);
+  --felt-a: #33105a;
+  --felt-b: #0a0316;
+  --felt-line: rgba(0, 229, 255, 0.5);
+  --felt-ink: rgba(246, 233, 255, 0.92);
+  --felt-glow: rgba(255, 43, 214, 0.12);
+  --ambient-top: rgba(255, 43, 214, 0.14);
+  --ambient-corner: rgba(0, 229, 255, 0.12);
+}
+
+/* ---------- Onyx ---------- */
+
+html[data-theme="onyx"] {
+  --cy-bg: #050506;
+  --cy-bg-2: #101114;
+  --cy-panel: rgba(18, 19, 22, 0.9);
+  --cy-panel-2: rgba(28, 30, 34, 0.94);
+  --cy-line: rgba(233, 237, 242, 0.24);
+  --cy-ink: #eef1f5;
+  --cy-dim: #b3bac4;
+  --cy-mute: #767d87;
+  --cy-accent: #e9edf2;
+  --cy-accent-2: #8ab4ff;
+  --cy-accent-ink: #0b0c0e;
+  --cy-glow: rgba(233, 237, 242, 0.35);
+  --matrix-ink: #9aa3ad;
+
+  --bg-0: #050506;
+  --bg-1: #101114;
+  --panel: rgba(18, 19, 22, 0.9);
+  --panel-edge: rgba(233, 237, 242, 0.24);
+  --ink: #eef1f5;
+  --ink-dim: #c3c9d1;
+  --ink-mute: #7d848e;
+  --gold: #e9edf2;
+  --gold-hi: #ffffff;
+  --gold-lo: #6b7280;
+  --gold-grad: linear-gradient(180deg, #ffffff 0%, #cfd5dd 50%, #6b7280 100%);
+  --felt-a: #26292f;
+  --felt-b: #08090b;
+  --felt-line: rgba(233, 237, 242, 0.42);
+  --felt-ink: rgba(238, 241, 245, 0.9);
+  --felt-glow: rgba(138, 180, 255, 0.06);
+  --ambient-top: rgba(233, 237, 242, 0.08);
+  --ambient-corner: rgba(138, 180, 255, 0.07);
+}
+
+/* ---------- Gold Imperial ---------- */
+
+html[data-theme="gold"] {
+  --cy-bg: #0a0702;
+  --cy-bg-2: #171005;
+  --cy-panel: rgba(22, 15, 4, 0.9);
+  --cy-panel-2: rgba(34, 24, 7, 0.94);
+  --cy-line: rgba(245, 197, 66, 0.32);
+  --cy-ink: #fff4d6;
+  --cy-dim: #d9c28a;
+  --cy-mute: #93804f;
+  --cy-accent: #f5c542;
+  --cy-accent-2: #ff8f3f;
+  --cy-accent-ink: #231700;
+  --cy-glow: rgba(245, 197, 66, 0.45);
+  --matrix-ink: #f5c542;
+
+  --bg-0: #0a0702;
+  --bg-1: #171005;
+  --panel: rgba(22, 15, 4, 0.9);
+  --panel-edge: rgba(245, 197, 66, 0.32);
+  --ink: #fff4d6;
+  --ink-dim: #e3cf9b;
+  --ink-mute: #9a8656;
+  --gold: #f5c542;
+  --gold-hi: #fff0b0;
+  --gold-lo: #8f6b16;
+  --gold-grad: linear-gradient(180deg, #fff3b0 0%, #f2c94c 45%, #b5851b 100%);
+  --felt-a: #12744a;
+  --felt-b: #063a21;
+  --felt-line: rgba(255, 236, 170, 0.55);
+  --felt-ink: rgba(255, 246, 220, 0.9);
+  --felt-glow: rgba(255, 215, 90, 0.08);
+  --ambient-top: rgba(245, 197, 66, 0.16);
+  --ambient-corner: rgba(255, 143, 63, 0.1);
+}
+
+/* ---------- Blood Red ---------- */
+
+html[data-theme="blood"] {
+  --cy-bg: #080102;
+  --cy-bg-2: #160306;
+  --cy-panel: rgba(24, 3, 7, 0.9);
+  --cy-panel-2: rgba(40, 5, 11, 0.94);
+  --cy-line: rgba(255, 42, 61, 0.34);
+  --cy-ink: #ffe3e6;
+  --cy-dim: #e0a2aa;
+  --cy-mute: #9a5a63;
+  --cy-accent: #ff2a3d;
+  --cy-accent-2: #ff9f43;
+  --cy-accent-ink: #1f0004;
+  --cy-glow: rgba(255, 42, 61, 0.5);
+  --matrix-ink: #ff2a3d;
+
+  --bg-0: #080102;
+  --bg-1: #160306;
+  --panel: rgba(24, 3, 7, 0.9);
+  --panel-edge: rgba(255, 42, 61, 0.34);
+  --ink: #ffe3e6;
+  --ink-dim: #efb6bd;
+  --ink-mute: #a2646d;
+  --gold: #ff2a3d;
+  --gold-hi: #ffc2c8;
+  --gold-lo: #7a0a16;
+  --gold-grad: linear-gradient(180deg, #ffd0d5 0%, #ff2a3d 50%, #6d0010 100%);
+  --felt-a: #520913;
+  --felt-b: #160205;
+  --felt-line: rgba(255, 159, 67, 0.5);
+  --felt-ink: rgba(255, 227, 230, 0.92);
+  --felt-glow: rgba(255, 42, 61, 0.1);
+  --ambient-top: rgba(255, 42, 61, 0.14);
+  --ambient-corner: rgba(255, 159, 67, 0.08);
+}

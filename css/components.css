@@ -864,6 +864,12 @@
   filter: drop-shadow(0 0 6px rgba(160, 240, 255, 0.95));
 }
 
+.btn-vip[data-rank="godfather"] .rank-gem,
+.rank-gem[data-rank="godfather"] {
+  color: #ff3b5c;
+  filter: drop-shadow(0 0 7px rgba(255, 190, 60, 0.95));
+}
+
 .btn-vip.is-rankup {
   animation: rankup 1.4s var(--ease-out);
 }

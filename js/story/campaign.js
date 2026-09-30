@@ -3,7 +3,7 @@
 // del Club VIP (XP, bono diario, rescates y tapetes), estadísticas y la Bitácora del Crupier.
 // Sin DOM: las mesas le informan de cada ronda y la interfaz escucha sus eventos.
 
-import { storage as defaultStore } from '../engine/storage.js';
+import { storage as defaultStore } from '../storage.js';
 import { randomInt } from '../engine/rng.js';
 import { wallet as defaultWallet } from '../engine/wallet.js';
 import { vip as defaultVip, feltById } from '../engine/vip.js';
@@ -610,4 +610,20 @@ export class Campaign extends EventTarget {
   }
 }
 
-export const campaign = new Campaign();
+// Instancia perezosa: la leyenda solo se crea (y solo toca la partida guardada) la primera vez
+// que alguien la usa, es decir, en el Modo Historia. En el Cripto-Casino nunca se instancia.
+let instance = null;
+const current = () => (instance ??= new Campaign());
+export const campaign = new Proxy({}, {
+  get(_, prop) {
+    const target = current();
+    const value = Reflect.get(target, prop, target);
+    return typeof value === 'function' ? value.bind(target) : value;
+  },
+  set(_, prop, value) {
+    return Reflect.set(current(), prop, value);
+  },
+  has(_, prop) {
+    return prop in current();
+  },
+});

@@ -4,7 +4,7 @@
 
 import { vip, RANKS, FELTS } from '../engine/vip.js';
 import { wallet } from '../engine/wallet.js';
-import { audio } from '../engine/audio.js';
+import { audio } from '../audio.js';
 import { campaign } from '../story/campaign.js';
 import { hud, formatChips } from './hud.js';
 import { el, svg, useRef } from './svg.js';

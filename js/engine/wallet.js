@@ -6,16 +6,25 @@
 // «El Último Crédito» empieza con un único crédito; las recompensas del Sindicato y las ayudas del
 // Club VIP entran con grant() y los tapetes de lujo se pagan con spend().
 
-import { storage } from './storage.js';
+import { storage } from '../storage.js';
+import { isFree } from '../mode.js';
 
-export const STARTING_BALANCE = 1;
-export const DENOMINATIONS = Object.freeze([1, 5, 10, 25, 100, 500, 1000, 5000, 10000]);
-export const GAMES = Object.freeze(['blackjack', 'roulette', 'slots']);
+// Cada modo tiene su monedero: la leyenda empieza con 1 crédito y el Cripto-Casino con 1.000 fichas.
+export const WALLET_CONFIG = Object.freeze({
+  story: Object.freeze({ key: 'crd.wallet.v2', starting: 1, denominations: Object.freeze([1, 5, 10, 25, 100, 500, 1000, 5000, 10000]) }),
+  free: Object.freeze({ key: 'crd.cyber.wallet.v1', starting: 1000, denominations: Object.freeze([10, 25, 50, 100, 500, 1000]) }),
+});
+const CONFIG = isFree ? WALLET_CONFIG.free : WALLET_CONFIG.story;
 
-// La mesa de blackjack reanuda su mano tras recargar, así que su escrow se conserva.
-const RESUMABLE = new Set(['blackjack']);
+export const STARTING_BALANCE = CONFIG.starting;
+export const DENOMINATIONS = CONFIG.denominations;
+export const GAMES = Object.freeze(['blackjack', 'roulette', 'slots', 'plinko', 'crash', 'mines', 'dice', 'towers', 'video_poker', 'wheel']);
 
-const KEY = 'crd.wallet.v2';
+// Mesas que reanudan su jugada tras recargar (mano de blackjack, tablero de minas, torre y mano de
+// video póker a medias): su escrow se conserva. Las demás lo devuelven al arrancar.
+export const RESUMABLE = Object.freeze(['blackjack', 'mines', 'towers', 'video_poker']);
+
+const KEY = CONFIG.key;
 const EPSILON = 1e-9;
 
 export const money = (value) => Math.round(value * 100) / 100;
@@ -58,7 +67,7 @@ class Wallet extends EventTarget {
         this.#s.pending[game] = 0;
         changed = true;
       }
-      if (!RESUMABLE.has(game) && this.#s.escrow[game] > 0) {
+      if (!RESUMABLE.includes(game) && this.#s.escrow[game] > 0) {
         this.#s.balance = money(this.#s.balance + this.#s.escrow[game]);
         this.#s.escrow[game] = 0;
         changed = true;
@@ -140,13 +149,16 @@ class Wallet extends EventTarget {
     this.#emit('settle');
   }
 
-  reveal(game) {
+  // Abona lo pendiente de la mesa. Con `part` ({ amount, stake }) solo revela una jugada de
+  // varias simultáneas (las bolas de Plinko en el aire), sin adelantar el resultado de las demás.
+  reveal(game, part = null) {
     this.#game(game);
-    const amount = this.#s.pending[game];
-    this.#staked[game] = 0;
+    const pending = this.#s.pending[game];
+    const amount = part ? Math.min(pending, Math.max(0, part.amount ?? 0)) : pending;
+    this.#staked[game] = part ? money(Math.max(0, this.#staked[game] - (part.stake ?? 0))) : 0;
     if (amount > 0) {
       this.#s.balance = money(this.#s.balance + amount);
-      this.#s.pending[game] = 0;
+      this.#s.pending[game] = money(pending - amount);
       this.#save();
     }
     this.#emit('payout');

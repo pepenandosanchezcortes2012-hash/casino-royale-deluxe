@@ -1,12 +1,14 @@
 {
   "name": "casino-royale-deluxe",
-  "version": "3.2.0",
-  "description": "El Último Crédito: RPG narrativo de supervivencia de casino (noir/cyberpunk) con blackjack multimano, ruleta francesa y slots 4x4. 100 % estático.",
+  "version": "4.0.0",
+  "description": "Casino Royale Deluxe · Cyber-Ultra: el RPG narrativo «El Último Crédito» (Modo Historia) y un Cripto-Casino libre con 10 juegos provably fair, reliquias, misiones, niveles y terminal hacker. 100 % estático.",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
     "simulate": "node tools/simulate-economy.mjs",
+    "slots": "node tools/measure-slots.mjs",
+    "preload": "node tools/update-preloads.mjs",
     "start": "python -m http.server 8080"
   },
   "license": "MIT"

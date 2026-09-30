@@ -1,0 +1,200 @@
+/* ==========================================================================
+   Animaciones del Cripto-Casino: sacudida por «trauma», glitch, cofres, reliquias, textos
+   flotantes, celdas que aparecen y ajustes del modo turbo.
+   Regla de rendimiento: las animaciones infinitas solo mueven opacity y transform (las resuelve
+   el compositor sin repintar); el resto son finitas.
+   ========================================================================== */
+
+/* ---------- Trauma: sacudida de pantalla que decae ---------- */
+
+.is-trauma-1 {
+  animation: trauma-1 0.35s ease-out;
+}
+
+.is-trauma-2 {
+  animation: trauma-2 0.45s ease-out;
+}
+
+.is-trauma-3 {
+  animation: trauma-3 0.6s ease-out;
+}
+
+@keyframes trauma-1 {
+  20% { transform: translate(-2px, 1px); }
+  40% { transform: translate(2px, -1px); }
+  60% { transform: translate(-1px, 1px); }
+  80% { transform: translate(1px, 0); }
+}
+
+@keyframes trauma-2 {
+  10% { transform: translate(-5px, 2px) rotate(-0.6deg); }
+  25% { transform: translate(5px, -3px) rotate(0.6deg); }
+  40% { transform: translate(-4px, 2px) rotate(-0.4deg); }
+  55% { transform: translate(3px, -1px) rotate(0.3deg); }
+  70% { transform: translate(-2px, 1px); }
+  85% { transform: translate(1px, 0); }
+}
+
+@keyframes trauma-3 {
+  8% { transform: translate(-9px, 4px) rotate(-1.2deg) scale(1.01); }
+  18% { transform: translate(9px, -5px) rotate(1.2deg); }
+  30% { transform: translate(-7px, 5px) rotate(-0.9deg); }
+  44% { transform: translate(6px, -3px) rotate(0.7deg); }
+  58% { transform: translate(-4px, 2px) rotate(-0.4deg); }
+  72% { transform: translate(3px, -1px); }
+  86% { transform: translate(-1px, 1px); }
+}
+
+/* ---------- Glitch del título: dos copias desplazadas que titilan ---------- */
+
+.glitch {
+  position: relative;
+  display: inline-block;
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.glitch::before {
+  color: var(--cy-accent-2, #00e5ff);
+  clip-path: inset(0 0 58% 0);
+  animation: glitch-top 4.2s steps(1) infinite;
+}
+
+.glitch::after {
+  color: #ff2bd6;
+  clip-path: inset(55% 0 0 0);
+  animation: glitch-bottom 4.2s steps(1) 0.12s infinite;
+}
+
+@keyframes glitch-top {
+  0%, 88%, 100% { opacity: 0; transform: none; }
+  89% { opacity: 0.85; transform: translate(-4px, -1px); }
+  91% { opacity: 0.85; transform: translate(3px, 1px); }
+  93% { opacity: 0; transform: none; }
+  95% { opacity: 0.7; transform: translate(-2px, 0); }
+  96% { opacity: 0; }
+}
+
+@keyframes glitch-bottom {
+  0%, 88%, 100% { opacity: 0; transform: none; }
+  89% { opacity: 0.8; transform: translate(4px, 1px); }
+  91% { opacity: 0.8; transform: translate(-3px, -1px); }
+  93% { opacity: 0; transform: none; }
+  96% { opacity: 0.6; transform: translate(2px, 0); }
+  97% { opacity: 0; }
+}
+
+/* ---------- Radar, textos flotantes y altas ---------- */
+
+@keyframes radar-pulse {
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes float-up {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 4px) scale(0.9);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -34px) scale(1);
+  }
+}
+
+@keyframes feed-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes tile-pop {
+  0% {
+    transform: scale(0.8);
+  }
+  60% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* ---------- Cofres y reliquias ---------- */
+
+@keyframes chest-shake {
+  0%, 100% { transform: none; }
+  20% { transform: translateX(-5px) rotate(-4deg); }
+  40% { transform: translateX(5px) rotate(4deg); }
+  60% { transform: translateX(-3px) rotate(-2deg); }
+  80% { transform: translateX(3px) rotate(2deg); }
+}
+
+@keyframes relic-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.6) rotate(-6deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1.06) rotate(1deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* ---------- Comodines pegajosos de las slots ---------- */
+
+@keyframes lock-in {
+  0% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(0.92);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* ---------- Modo turbo: las transiciones de las cartas van al doble de velocidad ---------- */
+
+html.is-turbo .card-inner {
+  transition-duration: 0.28s;
+}
+
+html.is-turbo .card.is-dealing {
+  animation-duration: 0.25s;
+}
+
+html.is-turbo .slot-cell.is-exploding {
+  animation-duration: 0.16s;
+}
+
+html.is-turbo .win-line {
+  animation-duration: 0.25s;
+}
+
+html.is-turbo .chest.is-shaking {
+  animation-duration: 0.18s;
+}
+
+html.is-turbo .dc-marker {
+  transition-duration: 0.22s;
+}
