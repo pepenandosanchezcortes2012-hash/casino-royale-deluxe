@@ -422,7 +422,7 @@ html[data-app] .hud-label {
 }
 
 .btn-career[data-rank="silver"] .level-rank { color: #c9d1d9; }
-.btn-career[data-rank="gold"] .level-rank { color: #f5c542; }
+.btn-career[data-rank="gold"] .level-rank { color: #e3bd5a; }
 .btn-career[data-rank="platinum"] .level-rank { color: #9fe8ff; }
 .btn-career[data-rank="diamond"] .level-rank { color: #6fb6ff; }
 .btn-career[data-rank="godfather"] .level-rank { color: #ff3b5c; }

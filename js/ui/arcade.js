@@ -38,11 +38,13 @@ export function trauma(node, level = 1) {
 export const pace = (ms) => ms * settings.speed;
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, pace(ms)));
 
-// Ajusta el lienzo a su tamaño en CSS con la densidad de la pantalla (máximo 2×).
+// Ajusta el lienzo a su tamaño en CSS a 1 píxel de lienzo por píxel CSS: en pantallas densas el
+// navegador lo amplía con image-rendering: pixelated (estética pixel art) y se pinta hasta 4 veces
+// menos.
 export function fitCanvas(canvas, aspect) {
   const width = Math.max(200, canvas.clientWidth || canvas.parentElement?.clientWidth || 320);
   const height = Math.round(width * aspect);
-  const dpr = Math.min(globalThis.devicePixelRatio || 1, 2);
+  const dpr = 1;
   canvas.style.height = `${height}px`;
   canvas.width = Math.round(width * dpr);
   canvas.height = Math.round(height * dpr);

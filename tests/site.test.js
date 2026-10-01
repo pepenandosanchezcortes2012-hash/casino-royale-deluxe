@@ -36,17 +36,27 @@ test('Carga: index.html precarga en paralelo todos los módulos de la app', () =
   for (const file of preloads) assert.ok(existsSync(new URL(file, root)), `falta ${file}`);
 });
 
-test('Sonido: sin síntesis de voz ni locuciones en ningún módulo', () => {
+test('Sonido: la voz vive solo en js/voice.js y hay silencio, volumen e interruptores accesibles', () => {
   const modules = moduleGraph('js/app.js');
-  for (const file of modules) {
+  assert.ok(modules.includes('js/voice.js'));
+  for (const file of modules.filter((f) => f !== 'js/voice.js')) {
     const source = read(file);
-    for (const pattern of [/speechSynthesis/, /SpeechSynthesisUtterance/, /\.speak\(/, /audio\.say\(/]) {
-      assert.equal(pattern.test(source), false, `${file} usa ${pattern}`);
-    }
+    for (const pattern of [/speechSynthesis/, /SpeechSynthesisUtterance/]) assert.equal(pattern.test(source), false, `${file} usa ${pattern}`);
   }
-  assert.equal(/Voz del crupier|snd-voice|sound-dialog/.test(html), false, 'controles de voz en el HTML');
-  assert.match(html, /id="btn-music"[^>]*aria-pressed/);
-  assert.match(html, /id="btn-sfx"[^>]*aria-pressed/);
+  assert.match(html, /id="btn-mute"[^>]*aria-pressed/);
+  assert.match(html, /<input type="range" id="volume"[^>]*aria-label="Volumen general"/);
+  for (const id of ['btn-music', 'btn-sfx', 'btn-voice', 'btn-lite']) assert.match(html, new RegExp(`id="${id}"[^>]*aria-pressed`), id);
+});
+
+test('Pixel art: fuente propia autoalojada, precargada y lienzos sin suavizado', () => {
+  assert.ok(existsSync(new URL('fonts/syndicate-pixel.woff', root)));
+  assert.match(html, /<link rel="preload" href="fonts\/syndicate-pixel.woff" as="font" type="font\/woff" crossorigin>/);
+  const pixel = read('css/pixel.css');
+  assert.match(pixel, /@font-face[^}]*Syndicate Pixel[^}]*url\("\.\.\/fonts\/syndicate-pixel\.woff"\)/s);
+  assert.match(pixel, /image-rendering: pixelated/);
+  assert.equal(CSS_FILES.at(-1), 'css/pixel.css', 'la hoja pixel se carga la última');
+  // Tamaños de la fuente pixel: siempre múltiplos de 10 px para que cada píxel caiga en la rejilla.
+  for (const match of pixel.matchAll(/font-size:\s*(\d+)px/g)) assert.equal(Number(match[1]) % 10, 0, `font-size ${match[1]}px`);
 });
 
 test('Estructura: una sola escalada con las 11 mesas ordenadas por piso', () => {

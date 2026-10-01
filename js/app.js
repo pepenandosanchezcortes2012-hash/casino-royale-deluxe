@@ -22,6 +22,8 @@ import { cyberHud } from './ui/cyber-hud.js';
 import { telemetry } from './ui/telemetry.js';
 import { terminalUi } from './ui/terminal-ui.js';
 import { vaultUi } from './ui/vault-ui.js';
+import { settingsUi } from './ui/settings-ui.js';
+import { announcer } from './ui/announcer.js';
 import { MatrixRain } from './ui/matrix.js';
 import { BlackjackGame } from './games/blackjack.js';
 import { RouletteGame } from './games/roulette.js';
@@ -240,6 +242,7 @@ class App {
     this.#applySettings();
     settings.addEventListener('change', () => this.#applySettings());
     this.#fx = new ParticleSystem(document.getElementById('fx-canvas'));
+    this.#fx.setLite(settings.lite);
     hud.init({ fx: this.#fx });
     setupAudioUnlock();
 
@@ -274,6 +277,8 @@ class App {
     telemetry.init();
     vaultUi.init();
     terminalUi.init({ telemetry, travel: (id) => climbUi.travel(id), takeRescue: () => climbUi.takeRescue() });
+    settingsUi.init();
+    announcer.init();
     new AbundanceTimer().start(document.getElementById('hud-abundance'));
     this.#shortcuts();
     this.#state = APP_STATES.CLIMB;
@@ -282,12 +287,14 @@ class App {
     requestAnimationFrame(() => root.classList.add('is-ready'));
   }
 
-  // Tema (automático: el del piso), turbo y scanlines.
+  // Tema (automático: el del piso), turbo, scanlines y modo ligero.
   #applySettings() {
     const before = root.dataset.theme;
     root.dataset.theme = settings.resolveTheme(climb.floor.theme);
     root.classList.toggle('is-turbo', settings.turbo);
     root.classList.toggle('has-crt', settings.scanlines);
+    root.classList.toggle('is-lite', settings.lite);
+    this.#fx?.setLite(settings.lite);
     if (before !== root.dataset.theme) this.#tint();
   }
 

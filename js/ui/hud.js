@@ -180,6 +180,7 @@ class Hud {
     const root = this.#dom?.toasts;
     if (!root) return;
     const node = el('div', `toast toast-${tone}`, message);
+    if (tone === 'warn') audio.alert();
     root.append(node);
     while (root.children.length > 4) root.firstElementChild.remove();
     setTimeout(() => {

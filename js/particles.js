@@ -39,6 +39,7 @@ export class ParticleSystem {
   #colors = [];
   #colorIndex = new Map();
   #sprite = null;
+  #budget = 1;
 
   constructor(canvas) {
     this.#canvas = canvas;
@@ -74,8 +75,10 @@ export class ParticleSystem {
     return this.#colorIndex.get(color) ?? 0;
   }
 
+  // Resolución 1:1 con los píxeles CSS: en pantallas densas el confeti se ve en bloques (estética
+  // pixel art) y el lienzo a pantalla completa cuesta hasta 4 veces menos de pintar.
   #resize() {
-    this.#dpr = Math.min(globalThis.devicePixelRatio || 1, 2);
+    this.#dpr = 1;
     this.#width = globalThis.innerWidth;
     this.#height = globalThis.innerHeight;
     this.#canvas.width = Math.round(this.#width * this.#dpr);
@@ -83,7 +86,13 @@ export class ParticleSystem {
   }
 
   #scale(count) {
-    return this.#reduced.matches ? Math.ceil(count / 4) : count;
+    const scaled = Math.ceil(count * this.#budget);
+    return this.#reduced.matches ? Math.ceil(scaled / 4) : scaled;
+  }
+
+  // Modo ligero: menos de la mitad de partículas en cada efecto.
+  setLite(on) {
+    this.#budget = on ? 0.4 : 1;
   }
 
   // Reserva una partícula del pool (-1 si está lleno).

@@ -235,7 +235,7 @@ class WheelRenderer {
     if (!box) return;
     const css = Math.round(Math.min(box - 12, 460));
     if (css <= 0 || css === this.#css) return;
-    const dpr = Math.min(globalThis.devicePixelRatio || 1, 2);
+    const dpr = 1;
     this.#css = css;
     this.#px = Math.round(css * dpr);
     this.#canvas.width = this.#px;

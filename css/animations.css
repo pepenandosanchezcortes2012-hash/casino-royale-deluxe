@@ -62,13 +62,13 @@
 }
 
 .glitch::before {
-  color: var(--cy-accent-2, #00e5ff);
+  color: var(--cy-accent-2, #4cc4dc);
   clip-path: inset(0 0 58% 0);
   animation: glitch-top 4.2s steps(1) infinite;
 }
 
 .glitch::after {
-  color: #ff2bd6;
+  color: #dc5cc0;
   clip-path: inset(55% 0 0 0);
   animation: glitch-bottom 4.2s steps(1) 0.12s infinite;
 }

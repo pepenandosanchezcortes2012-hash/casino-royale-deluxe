@@ -15,6 +15,8 @@ import { randomFloat } from '../engine/rng.js';
 import { hud, formatChips } from '../ui/hud.js';
 import { el } from '../ui/svg.js';
 import { fmtMult, outcomeTone, pushRecent, trauma } from '../ui/arcade.js';
+import { announcer } from '../ui/announcer.js';
+import { settings } from '../settings.js';
 import {
   SPECIES, FISH_RTP, FIRE_INTERVAL_MS, MAX_BULLETS, BULLET_LIFETIME_MS, VOLLEY_MS, VOLLEY_MAX,
   KRAKEN_EVERY_MS, KRAKEN_STAY_MS, captureChance, resolveShot, pickSpecies, speciesById, Volley,
@@ -29,7 +31,10 @@ const BULLET_SPEED = 820;
 const BULLET_RADIUS = 5;
 const MAX_BOUNCES = 3;
 const AUTO_INTERVAL_MS = 240;
-const DPR_CAP = 1.5;
+// Pixel art: el acuario se dibuja a media resolución y el navegador lo escala con
+// image-rendering: pixelated (bloques nítidos y 4 veces menos píxeles que pintar).
+const PIXEL_SCALE = 0.5;
+const PIXEL_FONT = '"Syndicate Pixel", ui-monospace, monospace';
 const CANNON_MARGIN = 30;
 const AIM_SPEED = 7;
 const TAU = Math.PI * 2;
@@ -38,8 +43,10 @@ const MAX_ANGLE = -0.12;
 const round2 = (value) => Math.round(value * 100) / 100;
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const percent = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2 });
-const FLOAT_FONT = '900 18px ui-monospace, Consolas, monospace';
-const FLOAT_FONT_BIG = '900 26px ui-monospace, Consolas, monospace';
+// A 20 y 40 px cada píxel de la fuente cae justo en 1 y 2 píxeles del lienzo.
+const FLOAT_FONT = `20px ${PIXEL_FONT}`;
+const FLOAT_FONT_BIG = `40px ${PIXEL_FONT}`;
+const snap = (value) => Math.round(value / 2) * 2;
 const reducedMotion = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
 // Pool de objetos de tamaño fijo con pila de huecos libres: acquire() y release() en O(1).
@@ -274,8 +281,8 @@ function paintSpecies(kind, dpr) {
   const w = Math.ceil(r * 2.8);
   const h = Math.ceil(r * 2.4);
   const { canvas, ctx } = spriteCanvas(w, h, dpr);
-  const color = `hsl(${kind.hue} 100% 62%)`;
-  const deep = `hsl(${kind.hue} 85% 20%)`;
+  const color = `hsl(${kind.hue} 72% 60%)`;
+  const deep = `hsl(${kind.hue} 60% 20%)`;
   ctx.shadowColor = color;
   ctx.shadowBlur = Math.max(6, r * 0.45);
   PAINTERS[kind.id](ctx, r, color, deep);
@@ -323,17 +330,17 @@ function paintCannon(dpr) {
 
 // Etiqueta «×8» cacheada por multiplicador.
 function paintLabel(text, dpr, color) {
-  const w = 12 + text.length * 9;
-  const h = 20;
+  const w = 12 + text.length * 12;
+  const h = 26;
   const { canvas, ctx } = spriteCanvas(w, h, dpr);
-  ctx.font = '800 13px ui-monospace, Consolas, monospace';
+  ctx.font = `20px ${PIXEL_FONT}`;
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = 'rgba(0,0,0,.75)';
-  ctx.strokeText(text, 0, 1);
+  ctx.textBaseline = 'alphabetic';
+  // Sombra dura de un píxel en lugar de contorno difuminado.
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.fillText(text, 2, 8);
   ctx.fillStyle = color;
-  ctx.fillText(text, 0, 1);
+  ctx.fillText(text, 0, 6);
   return { canvas, w, h };
 }
 
@@ -374,7 +381,6 @@ export class FishGame {
   #shake = 0;
   #recoil = 0;
   #lastNote = -1e9;
-  #betText = { value: null, text: '' };
 
   constructor(root) {
     this.#root = root;
@@ -411,6 +417,11 @@ export class FishGame {
         this.#renderControls();
       },
     });
+    // Las etiquetas del lienzo usan la fuente pixel: se repintan cuando termina de cargar.
+    document.fonts?.load(`20px ${PIXEL_FONT}`).then(() => {
+      this.#labels.clear();
+      for (const fish of this.#fish.items) fish.label = null;
+    }, () => {});
     this.#dom.rules.textContent = `Cada bala es una apuesta con su propio número verificable, comprometido al disparar. Al impactar, captura la criatura si ese número es menor que ${percent.format(FISH_RTP)} ÷ su multiplicador: el RTP es del 96 % apuntes a donde apuntes. La resistencia de las criaturas grandes es visual (cada impacto es un sorteo independiente) y el Mega Kraken aparece cada ${Math.round(KRAKEN_EVERY_MS / 1000)} s. Las balas disparadas en ${VOLLEY_MS / 1000} s (hasta ${VOLLEY_MAX}) forman una ronda. Si cambias de mesa o de pestaña, las balas en vuelo se devuelven.`;
     this.#renderControls();
   }
@@ -572,7 +583,7 @@ export class FishGame {
     const width = Math.max(280, canvas.clientWidth || canvas.parentElement?.clientWidth || 320);
     const aspect = width < 560 ? 1.02 : width < 820 ? 0.7 : 0.5;
     const height = Math.round(width * aspect);
-    const dpr = Math.min(globalThis.devicePixelRatio || 1, DPR_CAP);
+    const dpr = PIXEL_SCALE;
     canvas.style.height = `${height}px`;
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
@@ -729,6 +740,7 @@ export class FishGame {
     this.#dom.message.textContent = `¡El Mega Kraken ${fmtMult(kraken.mult)} entra en la sala! Cada impacto lo captura con un ${percent.format(captureChance(kraken.mult) * 100)} %`;
     audio.radar();
     audio.riser(1.2);
+    announcer.alert('Alerta. Mega Kraken en la sala.', 'Vera');
   }
 
   #krakenGone() {
@@ -909,7 +921,8 @@ export class FishGame {
     const kind = fish.kind;
     const big = fish.mult >= 20;
     const color = this.#sprites.get(kind.id)?.color ?? '#7ff';
-    const count = reducedMotion() ? 8 : fish.boss ? 90 : big ? 46 : fish.mult >= 8 ? 26 : 14;
+    const full = reducedMotion() ? 8 : fish.boss ? 90 : big ? 46 : fish.mult >= 8 ? 26 : 14;
+    const count = settings.lite ? Math.ceil(full / 2) : full;
     this.#burst(fish.x, fish.y, count, color, fish.boss ? 420 : big ? 300 : 200, fish.boss ? 1.6 : 0.9);
     if (fish.boss) {
       this.#burst(fish.x, fish.y, 40, '#fff36b', 520, 1.8);
@@ -1156,7 +1169,7 @@ export class FishGame {
 
     // Números flotantes.
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textBaseline = 'alphabetic';
     let font = '';
     for (const f of this.#floaters.items) {
       if (!f.active) continue;
@@ -1167,11 +1180,13 @@ export class FishGame {
         font = wanted;
         ctx.font = font;
       }
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.strokeText(f.text, f.x, f.y);
+      const x = snap(f.x);
+      const y = snap(f.y);
+      const drop = f.big ? 4 : 2;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+      ctx.fillText(f.text, x + drop, y + drop);
       ctx.fillStyle = f.color;
-      ctx.fillText(f.text, f.x, f.y);
+      ctx.fillText(f.text, x, y);
     }
     ctx.globalAlpha = 1;
 
@@ -1185,12 +1200,6 @@ export class FishGame {
       ctx.setTransform(dpr, 0, 0, dpr, dpr * (cx + shakeX), dpr * (cy + shakeY));
       ctx.drawImage(cannon.base.canvas, -cannon.base.w / 2, -cannon.base.h / 2, cannon.base.w, cannon.base.h);
     }
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '800 11px ui-monospace, Consolas, monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    if (this.#betText.value !== this.#bet) this.#betText = { value: this.#bet, text: formatChips(this.#bet) };
-    ctx.fillText(this.#betText.text, 0, 1);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 

@@ -5,7 +5,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { loadSoundPrefs, saveSoundPref, SOUND_KEYS, MUSIC_LEVEL, SFX_LEVEL } from '../js/audio.js';
+import { loadSoundPrefs, saveSoundPref, SOUND_KEYS, MUSIC_LEVEL, SFX_LEVEL, loadMix, MIX_KEYS, DEFAULT_VOLUME } from '../js/audio.js';
+import { splitPhrases, speakable, pickVoice, profileFor, PROFILES } from '../js/voice.js';
+import { Settings, lowEndDevice } from '../js/settings.js';
 import { MOODS, QUALITIES, VOICE_WINDOW, BASS_WINDOW, FADE_IN, FADE_OUT, chordTones, voiceLead, bassRoot } from '../js/engine/music.js';
 
 function memoryStore(initial = {}) {
@@ -92,4 +94,47 @@ test('Música: el contrabajo se mueve entre C2 y B2, con quinta y aproximaciones
       for (const note of [root, fifth, root - 1, root + 1]) assert.ok(note >= low && note <= high, `nota ${note}`);
     }
   }
+});
+
+test('Mezcla: volumen general (0–1, por defecto 0,8) y silencio guardados y saneados', () => {
+  const store = memoryStore();
+  assert.deepEqual(loadMix(store), { volume: DEFAULT_VOLUME, muted: false });
+  store.write(MIX_KEYS.volume, 3);
+  store.write(MIX_KEYS.muted, true);
+  assert.deepEqual(loadMix(store), { volume: 1, muted: true });
+  store.write(MIX_KEYS.volume, 'nada');
+  assert.equal(loadMix(store).volume, DEFAULT_VOLUME);
+});
+
+test('Voz: texto apto para leer, frases con pausas naturales y perfil por anfitrión', () => {
+  assert.equal(speakable('«Hola» ×8 y +10 🔒 & más'), 'Hola por 8 y más 10 y más');
+  const phrases = splitPhrases('Piso dos: La Bahía Arcade. ¡Alerta, Kraken!');
+  assert.deepEqual(phrases.map((p) => p.text), ['Piso dos:', 'La Bahía Arcade.', '¡Alerta,', 'Kraken!']);
+  assert.deepEqual(phrases.map((p) => p.pause), [220, 320, 140, 320]);
+  assert.deepEqual(splitPhrases('...'), []);
+  assert.ok(profileFor('SIBILA').pitch < profileFor('Vera').pitch, 'SIBILA más grave que Vera');
+  assert.equal(profileFor('desconocido'), PROFILES.Narrador);
+  for (const profile of Object.values(PROFILES)) {
+    assert.ok(profile.pitch > 0 && profile.pitch <= 2);
+    assert.ok(profile.rate >= 0.5 && profile.rate <= 1.5);
+  }
+  const voices = [{ name: 'English', lang: 'en-US' }, { name: 'Sabina', lang: 'es-MX', localService: true }, { name: 'Google español', lang: 'es-ES' }];
+  assert.equal(pickVoice(voices).name, 'Google español');
+  assert.equal(pickVoice([{ name: 'English', lang: 'en-US' }]), null);
+});
+
+test('Modo ligero: automático en equipos modestos, elegible y apaga lluvia y scanlines', () => {
+  assert.equal(lowEndDevice({ hardwareConcurrency: 4, deviceMemory: 8 }), true);
+  assert.equal(lowEndDevice({ hardwareConcurrency: 8, deviceMemory: 2 }), true);
+  assert.equal(lowEndDevice({ hardwareConcurrency: 8 }), false);
+  const weak = new Settings({ store: memoryStore(), lowEnd: true });
+  assert.equal(weak.lite, true);
+  assert.equal(weak.liteAuto, true);
+  assert.equal(weak.matrix, false);
+  assert.equal(weak.scanlines, false);
+  weak.setLite(false);
+  assert.equal(weak.liteAuto, false);
+  assert.equal(weak.matrix, true);
+  const strong = new Settings({ store: memoryStore(), lowEnd: false });
+  assert.equal(strong.lite, false);
 });

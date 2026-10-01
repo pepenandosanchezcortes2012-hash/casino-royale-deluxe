@@ -101,6 +101,7 @@ class ClimbUi {
   #restartArmed = false;
   #replaying = false;
   #pendingUnlocks = [];
+  #moving = false;
   #shown = { balance: null, floor: null, unlocked: null };
 
   // `games` = mesas por id; `onApply(floor)` se llama cada vez que cambia el piso visible
@@ -294,6 +295,8 @@ class ClimbUi {
   // Toma el ascensor (desde el selector, la torre, la tarjeta de acceso o la terminal).
   travel(id) {
     if (id === climb.floor.id) return { ok: false, reason: 'here' };
+    // Con el ascensor en marcha no se encadena otro viaje (evita transiciones solapadas).
+    if (this.#moving) return { ok: false, reason: 'moving' };
     const status = climb.travel(id);
     if (status.ok) {
       audio.click();
@@ -331,6 +334,7 @@ class ClimbUi {
 
   #transition(floor) {
     const d = this.#dom;
+    this.#moving = true;
     d.transitionLevel.textContent = `Piso ${floor.level}`;
     d.transitionName.textContent = floor.name;
     d.transitionDesc.textContent = floor.tagline;
@@ -339,7 +343,7 @@ class ClimbUi {
     d.transition.classList.remove('is-out');
     void d.transition.offsetWidth;
     d.transition.classList.add('is-in');
-    audio.whoosh();
+    audio.floorUp(floor.level);
     if (floor.level === 2) setTimeout(() => audio.neonBuzz(), 500);
     setTimeout(() => this.#applyFloor(floor), 420);
     setTimeout(() => {
@@ -347,6 +351,7 @@ class ClimbUi {
       d.transition.classList.add('is-out');
       setTimeout(() => {
         d.transition.hidden = true;
+        this.#moving = false;
       }, 600);
     }, 1900);
   }
@@ -429,7 +434,7 @@ class ClimbUi {
   #onAchievement(achievement) {
     const reward = achievement.reward > 0 ? ` · +${formatChips(achievement.reward)} créditos` : '';
     hud.toast(`Logro: ${achievement.name}${reward}`, 'success', 4200);
-    audio.win(1);
+    audio.reward(2);
     const rect = this.#dom.dossierButton.getBoundingClientRect();
     if (rect.width) hud.celebrate(1, { x: rect.left + rect.width / 2, y: rect.bottom });
   }
@@ -438,7 +443,7 @@ class ClimbUi {
     if (!done) return;
     hud.toast(`Encargo cumplido: +${formatChips(contract.reward)} créditos`, 'success', 3600);
     audio.chip();
-    audio.win(1);
+    audio.reward(1);
   }
 
   // Tarjeta de acceso: se muestra en cuanto las mesas están en reposo (una por piso).
@@ -564,6 +569,9 @@ class ClimbUi {
 
   #showEpilogue(animate) {
     const d = this.#dom;
+    // El epílogo nunca se apila sobre otra ventana: se cierran las que hubiera abiertas.
+    this.#pendingUnlocks = [];
+    for (const dialog of document.querySelectorAll('dialog[open]')) if (dialog !== d.epilogue) dialog.close();
     this.#statList(d.epilogueStats);
     this.#renderThrone();
     if (!d.epilogue.open) d.epilogue.showModal();

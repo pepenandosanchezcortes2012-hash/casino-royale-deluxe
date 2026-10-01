@@ -24,6 +24,8 @@
   <link rel="stylesheet" href="css/fish.css">
   <link rel="stylesheet" href="css/hacker_terminal.css">
   <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/pixel.css">
+  <link rel="preload" href="fonts/syndicate-pixel.woff" as="font" type="font/woff" crossorigin>
   <!-- Precarga de todos los módulos en paralelo: evita la cascada de imports (4 viajes de red → 1). -->
   <link rel="modulepreload" href="js/audio.js">
   <link rel="modulepreload" href="js/climb/climb.js">
@@ -48,10 +50,12 @@
   <link rel="modulepreload" href="js/session.js">
   <link rel="modulepreload" href="js/settings.js">
   <link rel="modulepreload" href="js/storage.js">
+  <link rel="modulepreload" href="js/ui/announcer.js">
   <link rel="modulepreload" href="js/ui/climb-ui.js">
   <link rel="modulepreload" href="js/ui/cyber-hud.js">
   <link rel="modulepreload" href="js/ui/hud.js">
   <link rel="modulepreload" href="js/ui/matrix.js">
+  <link rel="modulepreload" href="js/ui/settings-ui.js">
   <link rel="modulepreload" href="js/ui/telemetry.js">
   <link rel="modulepreload" href="js/ui/terminal-ui.js">
   <link rel="modulepreload" href="js/ui/vault-ui.js">
@@ -80,6 +84,7 @@
   <link rel="modulepreload" href="js/ui/matrix-core.js">
   <link rel="modulepreload" href="js/ui/svg.js">
   <link rel="modulepreload" href="js/verify.js">
+  <link rel="modulepreload" href="js/voice.js">
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
@@ -303,13 +308,14 @@
       <button type="button" id="btn-terminal" class="btn btn-toggle-icon btn-terminal" aria-haspopup="dialog" title="Terminal hacker (tecla ~)">
         <span aria-hidden="true">&gt;_</span><span class="btn-toggle-text">Terminal</span>
       </button>
-      <button type="button" id="btn-music" class="btn btn-audio btn-music" aria-pressed="true" aria-label="Música de fondo" title="Música de fondo lounge">
-        <span class="audio-icon" aria-hidden="true">🎵</span>
-        <span class="audio-text" aria-hidden="true"><span class="audio-name">Música: </span><span class="audio-state">ON</span></span>
-      </button>
-      <button type="button" id="btn-sfx" class="btn btn-audio btn-sfx" aria-pressed="true" aria-label="Efectos de sonido" title="Efectos de sonido">
-        <span class="audio-icon" aria-hidden="true">🔊</span>
-        <span class="audio-text" aria-hidden="true"><span class="audio-name">Efectos: </span><span class="audio-state">ON</span></span>
+      <div class="sound-group" role="group" aria-label="Volumen">
+        <button type="button" id="btn-mute" class="btn btn-toggle-icon btn-mute" aria-pressed="false" title="Silenciar todo (tecla M)">
+          <span class="mute-icon" aria-hidden="true">🔊</span><span class="btn-toggle-text">Silencio</span>
+        </button>
+        <input type="range" id="volume" class="volume-range" min="0" max="100" step="5" value="80" aria-label="Volumen general">
+      </div>
+      <button type="button" id="btn-settings" class="btn btn-toggle-icon" aria-haspopup="dialog" title="Ajustes de sonido, voz y pantalla">
+        <span aria-hidden="true">⚙</span><span class="btn-toggle-text">Ajustes</span>
       </button>
     </div>
   </header>
@@ -468,7 +474,7 @@
           <dl class="arcade-stats">
             <div><dt>RTP</dt><dd>96 %</dd></div>
             <div><dt>Rondas</dt><dd id="fs-volley">0</dd></div>
-            <div><dt>Balas en el aire</dt><dd id="fs-flying">0</dd></div>
+            <div><dt>En vuelo</dt><dd id="fs-flying">0</dd></div>
           </dl>
           <p id="fs-message" class="arcade-message" role="status" aria-live="polite">Apunta al cursor o al dedo y dispara. Mantén pulsado para disparar seguido.</p>
           <div class="fs-species-wrap"><table class="fs-species" id="fs-species"></table></div>
@@ -943,6 +949,42 @@
       <button type="button" class="btn" id="sl-buy-cancel">Cancelar</button>
       <button type="button" class="btn btn-primary" id="sl-buy-confirm">Comprar</button>
     </div>
+  </dialog>
+
+  <dialog id="settings-dialog" class="modal cyber-modal settings-dialog" aria-labelledby="settings-title">
+    <div class="modal-head">
+      <h2 id="settings-title">Ajustes</h2>
+      <button type="button" class="btn btn-icon" id="settings-close" aria-label="Cerrar ajustes">✕</button>
+    </div>
+    <h3 class="modal-subtitle">Sonido</h3>
+    <label class="volume-field" for="volume-panel">
+      <span class="volume-label">Volumen general</span>
+      <input type="range" id="volume-panel" class="volume-range" min="0" max="100" step="5" value="80">
+      <output id="volume-value" class="volume-value" for="volume-panel">80 %</output>
+    </label>
+    <div class="settings-grid">
+      <button type="button" id="btn-music" class="btn btn-audio btn-music" aria-pressed="true" aria-label="Música de fondo" title="Música de fondo lounge">
+        <span class="audio-icon" aria-hidden="true">🎵</span>
+        <span class="audio-text" aria-hidden="true"><span class="audio-name">Música: </span><span class="audio-state">ON</span></span>
+      </button>
+      <button type="button" id="btn-sfx" class="btn btn-audio btn-sfx" aria-pressed="true" aria-label="Efectos de sonido" title="Efectos de sonido">
+        <span class="audio-icon" aria-hidden="true">🔊</span>
+        <span class="audio-text" aria-hidden="true"><span class="audio-name">Efectos: </span><span class="audio-state">ON</span></span>
+      </button>
+      <button type="button" id="btn-voice" class="btn btn-audio btn-voice" aria-pressed="true" aria-label="Voz del Sindicato" title="Anuncios hablados de los anfitriones">
+        <span class="audio-icon" aria-hidden="true">🎙</span>
+        <span class="audio-text" aria-hidden="true"><span class="audio-name">Voz: </span><span class="audio-state">ON</span></span>
+      </button>
+      <button type="button" id="voice-test" class="btn">Probar la voz</button>
+    </div>
+    <p class="hint" id="voice-status"></p>
+    <h3 class="modal-subtitle">Pantalla</h3>
+    <div class="settings-grid">
+      <button type="button" id="btn-lite" class="btn btn-audio" aria-pressed="false"><span class="audio-icon" aria-hidden="true">🪶</span><span class="audio-text"><span class="audio-name">Modo ligero: </span><span class="audio-state">OFF</span></span></button>
+      <button type="button" id="btn-rain" class="btn btn-audio" aria-pressed="true"><span class="audio-icon" aria-hidden="true">≋</span><span class="audio-text"><span class="audio-name">Lluvia: </span><span class="audio-state">ON</span></span></button>
+      <button type="button" id="btn-crt" class="btn btn-audio" aria-pressed="true"><span class="audio-icon" aria-hidden="true">▤</span><span class="audio-text"><span class="audio-name">Scanlines: </span><span class="audio-state">ON</span></span></button>
+    </div>
+    <p class="hint" id="lite-status"></p>
   </dialog>
 
   <!-- ===================== CARRERA, RELIQUIAS, VERIFICADOR Y TERMINAL ===================== -->

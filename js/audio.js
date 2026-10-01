@@ -1,6 +1,7 @@
-// Motor de audio procedural con Web Audio API: ningún archivo de audio externo y ninguna voz.
-// Dos buses independientes: efectos de juego (SFX) y música de fondo lounge/jazz (BGM), cada uno
-// con su interruptor guardado en su propia clave de localStorage.
+// Motor de audio procedural con Web Audio API: ningún archivo de audio externo.
+// Dos buses independientes: efectos de juego (SFX, con capa chiptune para la interfaz) y música
+// de fondo lounge/jazz (BGM), cada uno con su interruptor, más un volumen general y un silencio
+// rápido que también respetan la voz del Sindicato (js/voice.js) y su efecto de radio.
 // El contexto se crea y se reanuda tras el primer gesto del usuario (política de autoplay).
 
 import { storage } from './storage.js';
@@ -8,6 +9,8 @@ import { randomFloat, randomBetween } from './engine/rng.js';
 import { LoungeBgm } from './engine/music.js';
 
 export const SOUND_KEYS = Object.freeze({ music: 'crd.bgm.v1', sfx: 'crd.sfx.v1' });
+export const MIX_KEYS = Object.freeze({ volume: 'crd.volume.v1', muted: 'crd.mute.v1' });
+export const DEFAULT_VOLUME = 0.8;
 const LEGACY_KEYS = Object.freeze(['crd.audio.v2', 'crd.audio.v1']);
 // Niveles de mezcla: la música queda de fondo, por debajo de fichas y cartas.
 export const MUSIC_LEVEL = 0.3;
@@ -42,6 +45,13 @@ export function saveSoundPref(store, kind, on) {
   store.write(SOUND_KEYS[kind], on ? 'on' : 'off');
 }
 
+// Volumen general (0–1) y silencio rápido.
+export function loadMix(store = storage) {
+  const raw = Number(store.read(MIX_KEYS.volume, DEFAULT_VOLUME));
+  const volume = Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : DEFAULT_VOLUME;
+  return { volume, muted: store.read(MIX_KEYS.muted, false) === true };
+}
+
 class AudioEngine extends EventTarget {
   #ctx = null;
   #master = null;
@@ -55,14 +65,59 @@ class AudioEngine extends EventTarget {
   #heartbeat = 0;
   #heartbeatStop = 0;
   #prefs;
+  #mix;
 
   constructor() {
     super();
     this.#prefs = loadSoundPrefs(storage);
+    this.#mix = loadMix(storage);
   }
 
   get prefs() {
     return { ...this.#prefs };
+  }
+
+  // Volumen general efectivo (0 con el silencio activo).
+  get level() {
+    return this.#mix.muted ? 0 : this.#mix.volume;
+  }
+
+  get volume() {
+    return this.#mix.volume;
+  }
+
+  get muted() {
+    return this.#mix.muted;
+  }
+
+  setVolume(value) {
+    const volume = Math.min(1, Math.max(0, Number(value) || 0));
+    if (volume === this.#mix.volume && !(this.#mix.muted && volume > 0)) return;
+    // Subir el volumen desde el silencio lo desactiva.
+    this.#mix = { volume, muted: volume > 0 ? false : this.#mix.muted };
+    storage.write(MIX_KEYS.volume, volume);
+    storage.write(MIX_KEYS.muted, this.#mix.muted);
+    this.#applyLevels();
+    this.dispatchEvent(new Event('change'));
+  }
+
+  setMuted(muted) {
+    const value = Boolean(muted);
+    if (value === this.#mix.muted) return;
+    this.#mix = { ...this.#mix, muted: value };
+    storage.write(MIX_KEYS.muted, value);
+    this.#applyLevels();
+    this.dispatchEvent(new Event('change'));
+  }
+
+  toggleMute() {
+    this.setMuted(!this.#mix.muted);
+    return this.#mix.muted;
+  }
+
+  // Contexto activo (lo usa la voz para su efecto de radio).
+  get context() {
+    return this.unlocked ? this.#ctx : null;
   }
 
   get unlocked() {
@@ -156,7 +211,7 @@ class AudioEngine extends EventTarget {
       if (immediate) param.value = value;
       else param.setTargetAtTime(value, now, 0.04);
     };
-    set(this.#master.gain, 1);
+    set(this.#master.gain, this.level);
     set(this.#sfx.gain, this.#prefs.sfx ? SFX_LEVEL : 0);
     // El encendido y apagado de la música lo hace el propio motor con sus fundidos.
     set(this.#musicBus.gain, MUSIC_LEVEL);
@@ -382,9 +437,61 @@ class AudioEngine extends EventTarget {
     this.#tone(t, { type: 'triangle', freq: 330, freqEnd: 196, attack: 0.01, peak: 0.1, decay: 0.45 });
   }
 
+  // ---------- Capa chiptune de la interfaz (onda cuadrada, cortes secos) ----------
+
+  // Clic de interfaz: un «blip» corto de onda cuadrada.
   click() {
     if (!this.#ready()) return;
-    this.#tone(this.#time(), { type: 'triangle', freq: 1800, peak: 0.06, decay: 0.03 });
+    const t = this.#time();
+    this.#tone(t, { type: 'square', freq: 1568, attack: 0.001, peak: 0.035, decay: 0.028 });
+    this.#tone(t + 0.022, { type: 'square', freq: 2093, attack: 0.001, peak: 0.025, decay: 0.02 });
+  }
+
+  // Aviso: dos notas descendentes (acción bloqueada, saldo insuficiente…).
+  alert() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#tone(t, { type: 'square', freq: 880, attack: 0.002, peak: 0.05, decay: 0.07 });
+    this.#tone(t + 0.09, { type: 'square', freq: 622.3, attack: 0.002, peak: 0.05, decay: 0.1 });
+  }
+
+  // Error: zumbido grave y corto.
+  error() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#tone(t, { type: 'square', freq: 146.8, freqEnd: 110, attack: 0.003, peak: 0.06, decay: 0.16 });
+  }
+
+  // Recompensa: arpegio mayor ascendente; `tier` alarga y agudiza el arpegio (1–3).
+  reward(tier = 1) {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    const notes = [523.3, 659.3, 784, 1046.5, 1318.5, 1568].slice(0, 2 + Math.min(3, Math.max(1, tier)) + 1);
+    notes.forEach((freq, i) => this.#tone(t + i * 0.055, { type: 'square', freq, attack: 0.002, peak: 0.04, decay: i === notes.length - 1 ? 0.24 : 0.06 }));
+  }
+
+  // Ascensor del Sindicato: barrido de aire y un arpegio que sube un escalón por piso.
+  floorUp(level = 1) {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#noiseBurst(t, { freq: 300, freqEnd: 2400, q: 0.9, attack: 0.3, peak: 0.12, decay: 0.4 });
+    const base = [392, 440, 523.3, 587.3][Math.min(3, Math.max(0, level - 1))];
+    [1, 1.25, 1.5, 2].forEach((ratio, i) => this.#tone(t + 0.35 + i * 0.08, { type: 'square', freq: base * ratio, attack: 0.002, peak: 0.035, decay: i === 3 ? 0.3 : 0.07 }));
+  }
+
+  // Apertura y cierre del canal de radio de la voz: chasquido y ráfaga de estática filtrada.
+  radioIn() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#tone(t, { type: 'square', freq: 2400, attack: 0.001, peak: 0.03, decay: 0.012 });
+    this.#noiseBurst(t + 0.01, { freq: 1800, q: 1.6, attack: 0.004, peak: 0.08, decay: 0.16 });
+  }
+
+  radioOut() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    this.#noiseBurst(t, { freq: 2200, freqEnd: 900, q: 1.4, attack: 0.003, peak: 0.07, decay: 0.12 });
+    this.#tone(t + 0.12, { type: 'square', freq: 1600, attack: 0.001, peak: 0.025, decay: 0.012 });
   }
 
   // ---------- Ambiente: zona de la música, tensión y efectos dramáticos ----------

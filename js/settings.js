@@ -1,6 +1,8 @@
-// Preferencias de la interfaz: modo turbo, tema de color, lluvia Matrix y scanlines CRT. Se
-// guardan juntas y avisan de cada cambio (evento `change`). El tema «auto» sigue al piso en el que
-// estás (Matrix en el Subsuelo, Neón en la Bahía, Sangre en el Salón VIP y Oro en el Olimpo).
+// Preferencias de la interfaz: modo turbo, tema de color, lluvia Matrix, scanlines CRT y modo
+// ligero. Se guardan juntas y avisan de cada cambio (evento `change`). El tema «auto» sigue al
+// piso en el que estás (Matrix en el Subsuelo, Neón en la Bahía, Sangre en el Salón VIP y Oro en
+// el Olimpo). El modo ligero, que se activa solo en equipos modestos si no se ha elegido, apaga
+// la lluvia, las scanlines y el ambiente animado y reduce las partículas.
 // El turbo solo acorta animaciones: nunca cambia una probabilidad ni un pago.
 
 import { storage as defaultStore } from './storage.js';
@@ -20,12 +22,19 @@ export const THEMES = Object.freeze([
 ]);
 export const themeById = (id) => THEMES.find((theme) => theme.id === id) ?? null;
 
-const DEFAULTS = Object.freeze({ turbo: false, theme: AUTO_THEME, matrix: true, scanlines: true });
+const DEFAULTS = Object.freeze({ turbo: false, theme: AUTO_THEME, matrix: true, scanlines: true, lite: null });
+
+// Equipo modesto: 4 núcleos o menos, o 4 GB de memoria o menos (si el navegador lo dice).
+export function lowEndDevice(nav = globalThis.navigator) {
+  const cores = Number(nav?.hardwareConcurrency) || 8;
+  const memory = Number(nav?.deviceMemory) || 8;
+  return cores <= 4 || memory <= 4;
+}
 
 function sanitize(raw) {
   const state = { ...DEFAULTS };
   if (!raw || typeof raw !== 'object') return state;
-  for (const key of ['turbo', 'matrix', 'scanlines']) if (typeof raw[key] === 'boolean') state[key] = raw[key];
+  for (const key of ['turbo', 'matrix', 'scanlines', 'lite']) if (typeof raw[key] === 'boolean') state[key] = raw[key];
   if (themeById(raw.theme)) state.theme = raw.theme;
   return state;
 }
@@ -34,9 +43,12 @@ export class Settings extends EventTarget {
   #store;
   #s;
 
-  constructor({ store = defaultStore } = {}) {
+  #autoLite;
+
+  constructor({ store = defaultStore, lowEnd = lowEndDevice() } = {}) {
     super();
     this.#store = store;
+    this.#autoLite = lowEnd;
     this.#s = sanitize(store.read(SETTINGS_KEY, null));
   }
 
@@ -85,8 +97,23 @@ export class Settings extends EventTarget {
     return true;
   }
 
+  // Modo ligero: el elegido o, si no se ha elegido, el que corresponde al equipo.
+  get lite() {
+    return this.#s.lite ?? this.#autoLite;
+  }
+
+  get liteAuto() {
+    return this.#s.lite === null;
+  }
+
+  setLite(on) {
+    this.#set('lite', Boolean(on));
+    return this.lite;
+  }
+
+  // La lluvia y las scanlines quedan apagadas en modo ligero.
   get matrix() {
-    return this.#s.matrix;
+    return this.#s.matrix && !this.lite;
   }
 
   setMatrix(on) {
@@ -95,7 +122,7 @@ export class Settings extends EventTarget {
   }
 
   get scanlines() {
-    return this.#s.scanlines;
+    return this.#s.scanlines && !this.lite;
   }
 
   setScanlines(on) {

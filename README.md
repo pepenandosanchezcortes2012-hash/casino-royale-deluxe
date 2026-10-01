@@ -4,7 +4,7 @@
 
 Neo-Madrid, 2089. Despiertas en un callejón con **10 créditos** en tu monedero cripto. Sobre ti se alza la torre del Sindicato: cuatro pisos de mesas, cada uno más alto, más caro y más peligroso. Reúne **10.000.000 de créditos** para comprar tu libertad y tomar el control del Sindicato.
 
-Es un juego **100 % estático** para GitHub Pages: HTML5 semántico, CSS3 y módulos ES nativos, sin frameworks, dependencias, CDN ni archivos de audio. Cada resultado sale de `HMAC-SHA256` con semillas comprometidas y se puede verificar a mano (*provably fair*). La música y los efectos se sintetizan con Web Audio API (sin voces) y los gráficos son SVG y Canvas 2D.
+Es un juego **100 % estático** para GitHub Pages: HTML5 semántico, CSS3 y módulos ES nativos, sin frameworks, dependencias, CDN ni archivos de audio. Cada resultado sale de `HMAC-SHA256` con semillas comprometidas y se puede verificar a mano (*provably fair*). La música, los efectos chiptune y el canal de radio de la voz se sintetizan con Web Audio API; los anfitriones hablan con Web Speech API. La interfaz es **pixel art** con una fuente propia y los gráficos son SVG y Canvas 2D.
 
 > Ficción de entretenimiento: créditos virtuales sin valor monetario, para mayores de 18 años.
 
@@ -16,6 +16,7 @@ Es un juego **100 % estático** para GitHub Pages: HTML5 semántico, CSS3 y mód
 - [Los 11 juegos](#los-11-juegos)
 - [Economía de la torre](#economía-de-la-torre)
 - [Provably fair: cómo verificar una jugada](#provably-fair-cómo-verificar-una-jugada)
+- [Pixel art, sonido y voz](#pixel-art-sonido-y-voz)
 - [Terminal hacker](#terminal-hacker)
 - [Persistencia](#persistencia)
 - [Decisiones de diseño](#decisiones-de-diseño)
@@ -187,6 +188,33 @@ Cada apuesta aparece en **Apuestas en vivo** con su nonce. Al pulsarla se abre e
 
 Es una **demostración del protocolo sin servidor**: la semilla oculta vive en tu navegador, así que alguien que lea `localStorage` podría conocerla antes de rotarla. Con créditos sin valor, solo se engañaría a sí mismo.
 
+## Pixel art, sonido y voz
+
+**Dirección visual.**
+
+- **Tipografía:** fuente pixel propia, «Syndicate Pixel» (`fonts/syndicate-pixel.woff`, 3,5 KB). Son glifos de 5 × 7 dibujados a mano con tildes, ñ, ü, ¿, ¡ y «». Se genera con `python tools/build-pixel-font.py` y se usa en títulos, cifras, etiquetas, pestañas y botones, siempre a 10, 20, 30 o 40 px para que cada píxel caiga en la rejilla (una prueba lo vigila). Los textos largos van en monoespaciada.
+- **Formas:** esquinas rectas, bordes de 2 px y sombras duras en lugar de halos. Los botones se hunden 2 px al pulsarlos.
+- **Detalles:** barras de estado segmentadas, cursor parpadeante en el piso actual, avisos que entran a saltos y fondo con tramado.
+- **Paleta:** los acentos cyberpunk de los 5 temas se han rebajado de saturación.
+- **Lienzos:** se pintan a 1 píxel por píxel CSS y el navegador los amplía con `image-rendering: pixelated`. Cyber-Fish se dibuja a media resolución, con sus etiquetas en la fuente pixel.
+
+**Sonido.**
+
+- **Volumen general y silencio:** el botón 🔊 y la tecla **M** silencian todo; el deslizador de la cabecera regula el volumen. Ambos se guardan.
+- **Ajustes (⚙):** volumen, música, efectos, voz, prueba de voz y opciones de pantalla.
+- **Capa chiptune** de onda cuadrada para la interfaz: clic, aviso (acción bloqueada o saldo insuficiente), recompensa (encargos y logros) y el arpegio del ascensor al cambiar de piso.
+
+**Voz del Sindicato** (`js/voice.js`, el único módulo que usa `speechSynthesis`):
+
+- **Perfil por anfitrión:** Moss grave y pausado, Vera ágil, Ferro mecánico, SIBILA sintética y profunda, y el Sindicato como locutor.
+- **Frases:** el texto se corta por la puntuación y se dice con pausas naturales.
+- **Canal de radio:** cada mensaje abre y cierra con un chasquido y una ráfaga de estática.
+- **Momentos:** solo habla en momentos clave (llegada a un piso, tarjeta de acceso, jugada crítica, limosna, encargos, logros, Kraken y victoria).
+- **Sin saturar:** los avisos importantes interrumpen; los normales esperan un enfriamiento de 3,5 s.
+- **Respeta** el volumen, el silencio, su interruptor y la pestaña oculta. Elige la mejor voz en español del sistema.
+
+**Modo ligero** (Ajustes → Pantalla): se activa solo en equipos de 4 núcleos o menos, o con 4 GB de memoria o menos. Apaga la lluvia de código, las scanlines y el ambiente animado, y reduce las partículas a menos de la mitad.
+
 ## Terminal hacker
 
 Se abre con **`~`** (o `º`/`` ` ``) o con el botón `>_`. Tiene historial con ↑/↓ y autocompletado con Tab.
@@ -240,17 +268,20 @@ Todo se guarda en `localStorage` con el prefijo `crd.climb.`:
 
 ## Rendimiento
 
+- **Sin fugas**: los bucles `requestAnimationFrame` se cancelan al ocultar cada mesa y con la pestaña oculta, los temporizadores se limpian y los oyentes se registran una sola vez. En una auditoría con recolección de basura forzada (viajes entre pisos, las 11 mesas, auto-disparo y diálogos, varias veces), la memoria JS se queda en unos 3,5 MB y los nodos y oyentes del DOM solo crecen hasta llenar las listas acotadas (bitácora, apuestas en vivo, resultados recientes).
+- **Lienzos 1:1 y pixelados**: hasta 4 veces menos píxeles en pantallas densas, también en el confeti a pantalla completa.
+
 - **Cyber-Fish**: **60 fps** en reposo y en auto-disparo. Con la CPU ralentizada ×4 (un móvil modesto), 57 fps en reposo y 28 fps en auto-disparo. Al ocultar la mesa el bucle se detiene: el hilo principal baja a ≈ 15 ms/s a CPU ×4.
 - **Repintados agrupados**: el monedero avisa a la interfaz una vez por fotograma (evento `update`), aunque una ráfaga de balas genere varios cambios. La telemetría pinta las apuestas en vivo por lotes cada 200 ms y el historial verificable se guarda con retardo.
 - **Lluvia Matrix en un Web Worker** con OffscreenCanvas, a 15 fps y media resolución. Toma el color del tema del piso.
 - **Animaciones solo en el compositor**: las animaciones infinitas (ambiente de cada piso incluido) mueven solo `opacity` y `transform`, y una prueba lo vigila.
-- **Carga**: 55 módulos precargados en paralelo con `modulepreload` (lista generada con `npm run preload` y comprobada por las pruebas).
+- **Carga**: 58 módulos precargados en paralelo con `modulepreload` (lista generada con `npm run preload` y comprobada por las pruebas).
 
 ## Accesibilidad y móvil
 
 - Pestañas con roles ARIA y flechas (que saltan las mesas bloqueadas), diálogos nativos, regiones `aria-live` (Cyber-Fish anuncia las capturas grandes y, como mucho, una pequeña cada 1,5 s) y etiquetas en cada control. El acuario se maneja también con el teclado: ← → giran el cañón y Espacio dispara.
 - En móvil la cabecera se compacta en 4 filas: piso y selector con los créditos; meta y en juego; título y nivel; reliquias e iconos. La limosna, cuando aparece, ocupa una fila entera. A 390 px no hay desplazamiento horizontal y el acuario se dispara con toques.
-- Respeta `prefers-reduced-motion`.
+- Respeta `prefers-reduced-motion`. El silencio y el volumen tienen etiqueta y estado accesibles (`aria-pressed`, `aria-valuetext`), y la tecla M silencia todo.
 
 ## Probar, verificar y publicar
 
@@ -258,7 +289,7 @@ Los módulos ES no se cargan desde `file://`, así que hay que servir la carpeta
 
 ```bash
 python -m http.server 8080      # → http://localhost:8080
-npm test                        # 91 pruebas (Node 20+, sin dependencias)
+npm test                        # 95 pruebas (Node 20+, sin dependencias)
 npm run simulate                # calibración de la escalada (150 escaladas por estilo)
 npm run slots                   # RTP de las slots con el motor real (--clover para el Trébol)
 npm run preload                 # regenera la precarga de módulos de index.html
@@ -283,17 +314,20 @@ css/main.css · themes.css     Variables, layout, pestañas, arranque y los 5 te
 css/cyber.css · arcade.css    HUD cyber, telemetría, bóveda, verificador y mesas arcade
 css/floors.css                Ambiente de cada piso, selector, meta, limosna, panel lateral, bitácora, tarjetas, epílogo
 css/fish.css                  Cyber-Fish Hunter
+css/pixel.css                 Dirección visual pixel art (se carga la última) y modo ligero
+fonts/syndicate-pixel.woff    Fuente pixel propia (tools/build-pixel-font.py)
 css/tables.css · components.css · hacker_terminal.css · animations.css
 js/app.js                     Arranque, router de pestañas con candados, abundancia y ajustes
 js/climb/                     Pisos, núcleo de la escalada, encargos, logros, títulos y narrativa
 js/session.js                 Puerta única entre las mesas y la escalada
 js/provably_fair.js · verify.js   SHA-256/HMAC, semillas, flujo, historial y verificador de los 11 juegos
 js/progression.js · relics.js     Carrera (niveles, rangos, misiones por piso) y reliquias
+js/voice.js                   Voz del Sindicato (Web Speech API) con perfiles y canal de radio
 js/terminal.js · settings.js · storage.js · audio.js · particles.js
 js/engine/                    RNG criptográfico, Store, monedero con escrow y música lounge
-js/ui/                        HUD, interfaz de la escalada, HUD cyber, telemetría, terminal, bóveda, lluvia (worker)
+js/ui/                        HUD, escalada, locutor, ajustes de sonido y pantalla, HUD cyber, telemetría, terminal, bóveda, lluvia (worker)
 js/games/*-math.js            Matemáticas puras (incluida fish-math.js)
 js/games/*.js                 Las 11 mesas
-tests/                        91 pruebas con node:test
+tests/                        95 pruebas con node:test
 tools/                        Simulación de la escalada, medición de las slots y precarga
 ```
