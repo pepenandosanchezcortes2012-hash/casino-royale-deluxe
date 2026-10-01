@@ -15,6 +15,17 @@ import { randomFloat } from '../engine/rng.js';
 import { hud, formatChips } from '../ui/hud.js';
 import { el } from '../ui/svg.js';
 import { fitCanvas, cssVar } from '../ui/arcade.js';
+import { SVG_SPRITES } from '../ui/pixel-sprites.js';
+
+// Pixel art: la rueda se pinta a media resolución (1 píxel del lienzo = 2 píxeles CSS) y se amplía
+// sin suavizado; los premios especiales llevan sus sprites (poción y regalo).
+const PIXEL = 2;
+const LABEL_FONT = '"Silkscreen", ui-monospace, monospace';
+let icons = null;
+const wheelIcons = () => (icons ??= {
+  potion: SVG_SPRITES['px-potion'].grid.toCanvas(SVG_SPRITES['px-potion'].palette),
+  gift: SVG_SPRITES['px-gift'].grid.toCanvas(SVG_SPRITES['px-gift'].palette),
+});
 import { WHEEL_SLICES, WHEEL_TOTAL_WEIGHT, spinWheel, wheelCooldown } from './wheel-math.js';
 
 const STATE_KEY = scopedKey('crd.wheel.v1');
@@ -174,7 +185,7 @@ export class WheelGame {
   // ---------- Dibujo ----------
 
   #layout() {
-    const { ctx, width } = fitCanvas(this.#dom.canvas, 1);
+    const { ctx, width } = fitCanvas(this.#dom.canvas, 1, PIXEL);
     this.#ctx = ctx;
     this.#size = { width, ink: cssVar('--cy-ink', '#d8ffe8'), accent: cssVar('--cy-accent', '#00ff66') };
     this.#draw();
@@ -204,25 +215,34 @@ export class WheelGame {
       ctx.stroke();
       ctx.globalAlpha = 1;
     });
-    // Clavos del borde.
+    ctx.restore();
+    // Clavos del borde: bloques de 2 × 2 píxeles del lienzo.
     ctx.fillStyle = '#fff6c2';
     for (let i = 0; i < WHEEL_SLICES.length; i++) {
-      const a = -Math.PI / 2 + i * SLICE - SLICE / 2;
-      ctx.beginPath();
-      ctx.arc(Math.cos(a) * (R - 5), Math.sin(a) * (R - 5), 3.2, 0, TAU);
-      ctx.fill();
+      const a = -Math.PI / 2 + i * SLICE - SLICE / 2 + this.#angle;
+      const x = Math.round((c + Math.cos(a) * (R - 6)) / PIXEL) * PIXEL;
+      const y = Math.round((c + Math.sin(a) * (R - 6)) / PIXEL) * PIXEL;
+      ctx.fillRect(x - PIXEL, y - PIXEL, 2 * PIXEL, 2 * PIXEL);
     }
-    ctx.restore();
     // Etiquetas siempre derechas: giran con su gajo pero el texto no se pone boca abajo.
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `800 ${Math.max(11, R * 0.08)}px ui-monospace, Consolas, monospace`;
+    ctx.font = `${R >= 150 ? 16 : 8}px ${LABEL_FONT}`;
+    const art = wheelIcons();
+    const icon = R >= 150 ? 32 : 16;
     WHEEL_SLICES.forEach((slice, i) => {
       const angle = -Math.PI / 2 + i * SLICE + this.#angle;
-      const x = c + Math.cos(angle) * R * 0.66;
-      const y = c + Math.sin(angle) * R * 0.66;
+      const x = Math.round((c + Math.cos(angle) * R * 0.66) / PIXEL) * PIXEL;
+      const y = Math.round((c + Math.sin(angle) * R * 0.66) / PIXEL) * PIXEL;
       ctx.fillStyle = slice.jackpot ? '#fff6c2' : ink;
-      ctx.fillText(slice.type === 'chips' ? slice.label : slice.type === 'potion' ? '🧪×2' : '🎁', x, y);
+      if (slice.type === 'chips') {
+        ctx.fillText(slice.label, x, y);
+      } else if (slice.type === 'potion') {
+        ctx.drawImage(art.potion, x - icon / 2, y - icon * 0.75, icon, icon);
+        ctx.fillText('×2', x, y + icon * 0.45);
+      } else {
+        ctx.drawImage(art.gift, x - icon / 2, y - icon / 2, icon, icon);
+      }
     });
     // Buje central.
     ctx.beginPath();
@@ -233,7 +253,7 @@ export class WheelGame {
     ctx.strokeStyle = accent;
     ctx.stroke();
     ctx.fillStyle = accent;
-    ctx.font = `900 ${Math.max(10, R * 0.07)}px ui-monospace, Consolas, monospace`;
+    ctx.font = `${R >= 150 ? 16 : 8}px ${LABEL_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('OLIMPO', c, c);

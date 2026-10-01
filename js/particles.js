@@ -1,15 +1,17 @@
-// Partículas en Canvas a pantalla completa: confeti con aleteo y chispas aditivas.
+// Partículas pixel art en Canvas a pantalla completa: confeti cuadrado con aleteo y chispas
+// aditivas en cruz.
 // Sin basura para el recolector: un pool fijo de partículas preasignadas (estructura de arrays
 // tipados, se reutilizan al morir) y un sprite de chispa pintado una sola vez en un lienzo aparte
 // que se estampa con drawImage. El bucle solo corre mientras haya partículas vivas.
 
 import { randomFloat, randomBetween, pick } from './engine/rng.js';
+import { pixelContext, noSmooth, sprite } from './ui/pixel-art.js';
 
 const CONFETTI = ['#f7e08a', '#d4af37', '#ff4d6d', '#ffffff', '#4dd0e1', '#7ee081', '#b388ff'];
 const GOLD = ['#fff3b0', '#f7e08a', '#d4af37', '#b8860b', '#ffe37a', '#ffffff'];
 const GRAVITY = 900;
 const MAX_PARTICLES = 1400;
-const SPRITE = 64;
+const SPARK = ['..c..', '.cwc.', 'cwwwc', '.cwc.', '..c..'];
 const CONFETTI_KIND = 0;
 const SPARK_KIND = 1;
 
@@ -43,7 +45,7 @@ export class ParticleSystem {
 
   constructor(canvas) {
     this.#canvas = canvas;
-    this.#ctx = canvas.getContext('2d');
+    this.#ctx = pixelContext(canvas);
     this.#reduced = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)') ?? { matches: false };
     for (const color of [...CONFETTI, ...GOLD]) this.#colorId(color);
     this.setTint('#f7c846');
@@ -51,20 +53,10 @@ export class ParticleSystem {
     globalThis.addEventListener('resize', () => this.#resize(), { passive: true });
   }
 
-  // Color de las chispas (dorado en la historia, el acento del tema en el Cripto-Casino).
+  // Chispa pixel (cruz de 5 × 5 con núcleo claro) del color del tema: dorado en la historia, el
+  // acento del tema en el Cripto-Casino. Se amplía sin suavizado.
   setTint(color) {
-    const sprite = document.createElement('canvas');
-    sprite.width = SPRITE;
-    sprite.height = SPRITE;
-    const g = sprite.getContext('2d');
-    const half = SPRITE / 2;
-    const glow = g.createRadialGradient(half, half, 0, half, half, half);
-    glow.addColorStop(0, 'rgba(255, 250, 225, 1)');
-    glow.addColorStop(0.3, color);
-    glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    g.fillStyle = glow;
-    g.fillRect(0, 0, SPRITE, SPRITE);
-    this.#sprite = sprite;
+    this.#sprite = sprite(SPARK, { c: color, w: '#fffae1' }).grid.toCanvas([null, color, '#fffae1']);
   }
 
   #colorId(color) {
@@ -83,6 +75,8 @@ export class ParticleSystem {
     this.#height = globalThis.innerHeight;
     this.#canvas.width = Math.round(this.#width * this.#dpr);
     this.#canvas.height = Math.round(this.#height * this.#dpr);
+    // Cambiar el tamaño del lienzo reinicia el contexto: se vuelve a quitar el suavizado.
+    if (this.#ctx) noSmooth(this.#ctx);
   }
 
   #scale(count) {
@@ -244,13 +238,14 @@ export class ParticleSystem {
     // Confeti: una matriz por pieza (rotación + aleteo) sin save/restore.
     for (let i = 0; i < this.#n; i++) {
       if (this.#kind[i] !== CONFETTI_KIND) continue;
-      const cos = Math.cos(this.#rot[i]);
-      const sin = Math.sin(this.#rot[i]);
-      const flap = Math.cos(this.#flutter[i]);
+      // Sin rotar (los píxeles no se tuercen): el aleteo alterna entre pieza ancha y estrecha.
+      const flap = Math.abs(Math.cos(this.#flutter[i])) > 0.5 ? 1 : 0.5;
+      const w = Math.max(2, Math.round((this.#w[i] * flap) / 2) * 2);
+      const h = Math.max(2, Math.round(this.#h[i] / 2) * 2);
       ctx.globalAlpha = Math.min(1, (this.#life[i] - this.#age[i]) * 2);
-      ctx.setTransform(dpr * cos, dpr * sin, -dpr * sin * flap, dpr * cos * flap, dpr * this.#x[i], dpr * this.#y[i]);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.fillStyle = this.#colors[this.#color[i]];
-      ctx.fillRect(-this.#w[i] / 2, -this.#h[i] / 2, this.#w[i], this.#h[i]);
+      ctx.fillRect(Math.round((this.#x[i] - w / 2) / 2) * 2, Math.round((this.#y[i] - h / 2) / 2) * 2, w, h);
     }
 
     // Chispas: el sprite cacheado, en modo aditivo.
@@ -258,9 +253,9 @@ export class ParticleSystem {
     ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < this.#n; i++) {
       if (this.#kind[i] !== SPARK_KIND) continue;
-      const r = this.#w[i] * 4;
+      const r = Math.max(5, Math.round(this.#w[i] * 2.5 / 5) * 5);
       ctx.globalAlpha = 1 - this.#age[i] / this.#life[i];
-      ctx.drawImage(this.#sprite, this.#x[i] - r, this.#y[i] - r, r * 2, r * 2);
+      ctx.drawImage(this.#sprite, Math.round(this.#x[i] - r / 2), Math.round(this.#y[i] - r / 2), r, r);
     }
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;

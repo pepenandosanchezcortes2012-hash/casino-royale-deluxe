@@ -7,10 +7,9 @@
 html[data-app] body,
 html[data-mode="menu"] body {
   background-color: var(--cy-bg);
-  background-image:
-    radial-gradient(1100px 600px at 50% -10%, var(--ambient-top), transparent 60%),
-    radial-gradient(900px 700px at 100% 100%, var(--ambient-corner), transparent 60%),
-    linear-gradient(180deg, var(--cy-bg-2), var(--cy-bg));
+  background-image: radial-gradient(1100px 600px at 50% -10%, var(--ambient-top) 0% 15%, color-mix(in srgb, transparent 33%, var(--ambient-top)) 15% 30%, color-mix(in srgb, transparent 67%, var(--ambient-top)) 30% 45%, transparent 45% 60%, transparent 60%),
+    radial-gradient(900px 700px at 100% 100%, var(--ambient-corner) 0% 15%, color-mix(in srgb, transparent 33%, var(--ambient-corner)) 15% 30%, color-mix(in srgb, transparent 67%, var(--ambient-corner)) 30% 45%, transparent 45% 60%, transparent 60%),
+    linear-gradient(180deg, var(--cy-bg-2) 0% 25%, color-mix(in srgb, var(--cy-bg) 33%, var(--cy-bg-2)) 25% 50%, color-mix(in srgb, var(--cy-bg) 67%, var(--cy-bg-2)) 50% 75%, var(--cy-bg) 75% 100%, var(--cy-bg) 100%);
   color: var(--cy-ink);
 }
 
@@ -41,9 +40,8 @@ html.has-crt .crt-overlay {
   z-index: 90;
   display: block;
   pointer-events: none;
-  background:
-    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0 1px, transparent 1px 3px),
-    radial-gradient(ellipse at center, transparent 62%, rgba(0, 0, 0, 0.45) 100%);
+  background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 62% 71.5%, color-mix(in srgb, rgba(0, 0, 0, 0.45) 33%, transparent) 71.5% 81%, color-mix(in srgb, rgba(0, 0, 0, 0.45) 67%, transparent) 81% 90.5%, rgba(0, 0, 0, 0.45) 90.5% 100%, rgba(0, 0, 0, 0.45) 100%);
   opacity: 0.5;
 }
 
@@ -81,7 +79,7 @@ html.has-crt .crt-overlay {
   line-height: 1;
   letter-spacing: 0.08em;
   color: var(--cy-accent);
-  text-shadow: 0 0 26px var(--cy-glow);
+  text-shadow: none;
 }
 
 .menu-sub {
@@ -102,10 +100,10 @@ html.has-crt .crt-overlay {
   gap: 10px;
   padding: 22px;
   border: 1px solid var(--cy-line);
-  border-radius: 20px;
+  border-radius: 0;
   background: var(--cy-panel);
   text-align: left;
-  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 22px 0 rgba(0, 0, 0, 0.55);
   transition: transform 0.25s var(--ease-out), border-color 0.25s, box-shadow 0.25s;
 }
 
@@ -113,20 +111,19 @@ html.has-crt .crt-overlay {
 .menu-card:focus-within {
   transform: translateY(-3px);
   border-color: var(--cy-accent);
-  box-shadow: 0 0 0 1px var(--cy-accent), 0 26px 70px rgba(0, 0, 0, 0.6), 0 0 40px var(--cy-glow);
+  box-shadow: 0 0 0 2px var(--cy-accent), 0 26px 0 rgba(0, 0, 0, 0.6);
 }
 
 .menu-card-story {
   border-color: rgba(212, 175, 55, 0.45);
-  background:
-    radial-gradient(420px 220px at 0% 0%, rgba(193, 18, 31, 0.22), transparent 70%),
-    linear-gradient(180deg, rgba(22, 16, 8, 0.94), rgba(8, 6, 4, 0.94));
+  background: radial-gradient(420px 220px at 0% 0%, rgba(193, 18, 31, 0.22) 0% 17.5%, color-mix(in srgb, transparent 33%, rgba(193, 18, 31, 0.22)) 17.5% 35%, color-mix(in srgb, transparent 67%, rgba(193, 18, 31, 0.22)) 35% 52.5%, transparent 52.5% 70%, transparent 70%),
+    linear-gradient(180deg, rgba(22, 16, 8, 0.94) 0% 25%, color-mix(in srgb, rgba(8, 6, 4, 0.94) 33%, rgba(22, 16, 8, 0.94)) 25% 50%, color-mix(in srgb, rgba(8, 6, 4, 0.94) 67%, rgba(22, 16, 8, 0.94)) 50% 75%, rgba(8, 6, 4, 0.94) 75% 100%, rgba(8, 6, 4, 0.94) 100%);
 }
 
 .menu-card-story:hover,
 .menu-card-story:focus-within {
   border-color: #d4af37;
-  box-shadow: 0 0 0 1px #d4af37, 0 26px 70px rgba(0, 0, 0, 0.6), 0 0 40px rgba(212, 175, 55, 0.35);
+  box-shadow: 0 0 0 2px #d4af37, 0 26px 0 rgba(0, 0, 0, 0.6);
 }
 
 .menu-card-kicker {
@@ -145,7 +142,7 @@ html.has-crt .crt-overlay {
 
 .menu-card-story .menu-card-title {
   font-family: var(--font-display);
-  background: linear-gradient(180deg, #fff3b0 0%, #f2c94c 45%, #b5851b 100%);
+  background: linear-gradient(180deg, #fff3b0 0% 11.25%, color-mix(in srgb, #f2c94c 33%, #fff3b0) 11.25% 22.5%, color-mix(in srgb, #f2c94c 67%, #fff3b0) 22.5% 33.75%, #f2c94c 33.75% 45%, #f2c94c 45% 58.75%, color-mix(in srgb, #b5851b 33%, #f2c94c) 58.75% 72.5%, color-mix(in srgb, #b5851b 67%, #f2c94c) 72.5% 86.25%, #b5851b 86.25% 100%, #b5851b 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -182,7 +179,7 @@ html.has-crt .crt-overlay {
   border-color: var(--cy-accent);
   background: var(--cy-accent);
   color: var(--cy-accent-ink);
-  box-shadow: 0 0 22px var(--cy-glow);
+  box-shadow: none;
 }
 
 .menu-foot {
@@ -195,7 +192,7 @@ html.has-crt .crt-overlay {
 
 html[data-app] .btn {
   border-color: var(--cy-line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.35)), var(--cy-panel-2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0% 25%, color-mix(in srgb, rgba(0, 0, 0, 0.35) 33%, rgba(255, 255, 255, 0.06)) 25% 50%, color-mix(in srgb, rgba(0, 0, 0, 0.35) 67%, rgba(255, 255, 255, 0.06)) 50% 75%, rgba(0, 0, 0, 0.35) 75% 100%, rgba(0, 0, 0, 0.35) 100%), var(--cy-panel-2);
   color: var(--cy-ink);
   font-family: var(--font-mono);
   letter-spacing: 0.04em;
@@ -205,12 +202,12 @@ html[data-app] .btn-primary {
   border-color: var(--cy-accent);
   background: var(--cy-accent);
   color: var(--cy-accent-ink);
-  box-shadow: 0 0 18px var(--cy-glow), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4);
 }
 
 html[data-app] .btn-gold {
   border-color: var(--cy-accent-2);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.4)), var(--cy-panel-2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0% 25%, color-mix(in srgb, rgba(0, 0, 0, 0.4) 33%, rgba(255, 255, 255, 0.08)) 25% 50%, color-mix(in srgb, rgba(0, 0, 0, 0.4) 67%, rgba(255, 255, 255, 0.08)) 50% 75%, rgba(0, 0, 0, 0.4) 75% 100%, rgba(0, 0, 0, 0.4) 100%), var(--cy-panel-2);
   color: var(--cy-accent-2);
 }
 
@@ -220,7 +217,7 @@ html[data-app] .btn-action {
 
 html[data-app] .btn-buy {
   border-color: #b566ff;
-  background: linear-gradient(180deg, #5b1d8c, #2a0b45);
+  background: linear-gradient(180deg, #5b1d8c 0% 25%, color-mix(in srgb, #2a0b45 33%, #5b1d8c) 25% 50%, color-mix(in srgb, #2a0b45 67%, #5b1d8c) 50% 75%, #2a0b45 75% 100%, #2a0b45 100%);
   color: #f5e8ff;
 }
 
@@ -233,16 +230,16 @@ html[data-app] .seg-radio input:checked + span {
 
 html[data-app] .modal {
   border-color: var(--cy-line);
-  background: linear-gradient(180deg, var(--cy-panel-2), var(--cy-bg));
+  background: linear-gradient(180deg, var(--cy-panel-2) 0% 25%, color-mix(in srgb, var(--cy-bg) 33%, var(--cy-panel-2)) 25% 50%, color-mix(in srgb, var(--cy-bg) 67%, var(--cy-panel-2)) 50% 75%, var(--cy-bg) 75% 100%, var(--cy-bg) 100%);
   color: var(--cy-ink);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 50px var(--cy-glow);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.6), 0 30px 0 rgba(0, 0, 0, 0.8);
 }
 
 html[data-app] .modal-head h2 {
   font-family: var(--font-mono);
   background: none;
   color: var(--cy-accent);
-  text-shadow: 0 0 12px var(--cy-glow);
+  text-shadow: none;
 }
 
 html[data-app] .toast {
@@ -254,7 +251,7 @@ html[data-app] .toast {
 
 html[data-app] .toast-success {
   border-color: var(--cy-accent);
-  box-shadow: 0 0 20px var(--cy-glow);
+  box-shadow: none;
 }
 
 html[data-app] .table-message {
@@ -268,15 +265,9 @@ html[data-app] .controls {
 }
 
 html[data-app] .slot-cabinet {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 30%),
-    linear-gradient(135deg, var(--cy-panel-2), var(--cy-bg) 45%, var(--cy-panel-2) 60%, var(--cy-bg));
-  box-shadow:
-    0 0 0 3px var(--cy-accent),
-    0 0 0 6px var(--cy-bg),
-    0 0 0 8px var(--cy-accent-2),
-    0 0 40px var(--cy-glow),
-    var(--shadow-lg);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0% 7.5%, color-mix(in srgb, transparent 33%, rgba(255, 255, 255, 0.06)) 7.5% 15%, color-mix(in srgb, transparent 67%, rgba(255, 255, 255, 0.06)) 15% 22.5%, transparent 22.5% 30%, transparent 30%),
+    linear-gradient(135deg, var(--cy-panel-2) 0% 11.25%, color-mix(in srgb, var(--cy-bg) 33%, var(--cy-panel-2)) 11.25% 22.5%, color-mix(in srgb, var(--cy-bg) 67%, var(--cy-panel-2)) 22.5% 33.75%, var(--cy-bg) 33.75% 45%, var(--cy-bg) 45% 48.75%, color-mix(in srgb, var(--cy-panel-2) 33%, var(--cy-bg)) 48.75% 52.5%, color-mix(in srgb, var(--cy-panel-2) 67%, var(--cy-bg)) 52.5% 56.25%, var(--cy-panel-2) 56.25% 60%, var(--cy-panel-2) 60% 70%, color-mix(in srgb, var(--cy-bg) 33%, var(--cy-panel-2)) 70% 80%, color-mix(in srgb, var(--cy-bg) 67%, var(--cy-panel-2)) 80% 90%, var(--cy-bg) 90% 100%, var(--cy-bg) 100%);
+  box-shadow: 0 0 0 4px var(--cy-accent), 0 0 0 6px var(--cy-bg), 0 0 0 8px var(--cy-accent-2), var(--shadow-lg);
 }
 
 html[data-app] .marquee-title {
@@ -288,7 +279,7 @@ html[data-app] .marquee-title {
 /* Sin desenfoque de fondo: con la lluvia animada detrás habría que recalcularlo en cada fotograma. */
 html[data-app] .topbar {
   border-bottom-color: var(--cy-line);
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.96), rgba(0, 0, 0, 0.9));
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.96) 0% 25%, color-mix(in srgb, rgba(0, 0, 0, 0.9) 33%, rgba(0, 0, 0, 0.96)) 25% 50%, color-mix(in srgb, rgba(0, 0, 0, 0.9) 67%, rgba(0, 0, 0, 0.96)) 50% 75%, rgba(0, 0, 0, 0.9) 75% 100%, rgba(0, 0, 0, 0.9) 100%);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
@@ -304,10 +295,10 @@ html[data-app] .topbar {
   width: 42px;
   height: 42px;
   border: 2px solid var(--cy-accent);
-  border-radius: 10px;
+  border-radius: 0;
   color: var(--cy-accent);
   font: 900 1.05rem var(--font-mono);
-  box-shadow: 0 0 14px var(--cy-glow), inset 0 0 10px var(--cy-glow);
+  box-shadow: none;
 }
 
 .cyber-title {
@@ -315,7 +306,7 @@ html[data-app] .topbar {
   font: 900 clamp(1.05rem, 2.6vw, 1.5rem) var(--font-mono);
   letter-spacing: 0.14em;
   color: var(--cy-accent);
-  text-shadow: 0 0 10px var(--cy-glow);
+  text-shadow: none;
   white-space: nowrap;
 }
 
@@ -333,7 +324,7 @@ html[data-app] .hud-stat {
 html[data-app] .hud-value {
   font-family: var(--font-mono);
   color: var(--cy-accent);
-  text-shadow: 0 0 10px var(--cy-glow);
+  text-shadow: none;
 }
 
 html[data-app] .hud-stat-dim .hud-value {
@@ -357,7 +348,7 @@ html[data-app] .hud-label {
   left: 10px;
   height: 2px;
   overflow: hidden;
-  border-radius: 1px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -376,7 +367,7 @@ html[data-app] .hud-label {
   min-height: var(--touch);
   padding: 0 12px;
   border: 1px solid var(--cy-line);
-  border-radius: 12px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.4);
   color: var(--cy-ink);
   font-family: var(--font-mono);
@@ -386,7 +377,7 @@ html[data-app] .hud-label {
 
 .btn-career:hover {
   border-color: var(--cy-accent);
-  box-shadow: 0 0 14px var(--cy-glow);
+  box-shadow: none;
 }
 
 .btn-career.is-levelup {
@@ -395,7 +386,7 @@ html[data-app] .hud-label {
 
 .level-badge {
   padding: 3px 8px;
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--cy-accent);
   color: var(--cy-accent-ink);
   font-size: 0.78rem;
@@ -429,7 +420,7 @@ html[data-app] .hud-label {
 
 .btn-career .xp-fill,
 .career-level .xp-bar-fill {
-  background: linear-gradient(90deg, var(--cy-accent), var(--cy-accent-2));
+  background: linear-gradient(90deg, var(--cy-accent) 0% 25%, color-mix(in srgb, var(--cy-accent-2) 33%, var(--cy-accent)) 25% 50%, color-mix(in srgb, var(--cy-accent-2) 67%, var(--cy-accent)) 50% 75%, var(--cy-accent-2) 75% 100%, var(--cy-accent-2) 100%);
 }
 
 .mission-count {
@@ -458,7 +449,7 @@ html[data-app] .hud-label {
   height: 36px;
   padding: 0;
   border: 1px solid var(--cy-line);
-  border-radius: 9px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.45);
   color: var(--cy-ink);
   font-size: 1.05rem;
@@ -481,17 +472,17 @@ html[data-app] .hud-label {
 
 .relic-slot[data-rarity="rare"] {
   border-color: #3fa9ff;
-  box-shadow: 0 0 8px rgba(63, 169, 255, 0.45);
+  box-shadow: none;
 }
 
 .relic-slot[data-rarity="epic"] {
   border-color: #b566ff;
-  box-shadow: 0 0 8px rgba(181, 102, 255, 0.5);
+  box-shadow: none;
 }
 
 .relic-slot[data-rarity="legendary"] {
   border-color: #ffb52e;
-  box-shadow: 0 0 10px rgba(255, 181, 46, 0.6);
+  box-shadow: none;
 }
 
 .relic-slots.has-chests::after {
@@ -502,7 +493,7 @@ html[data-app] .hud-label {
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  border-radius: 9px;
+  border-radius: 0;
   background: var(--cy-danger);
   color: #fff;
   font: 800 0.66rem/18px var(--font-mono);
@@ -514,7 +505,7 @@ html[data-app] .hud-label {
 .potion-badge {
   padding: 2px 6px;
   border: 1px solid #b566ff;
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(181, 102, 255, 0.22);
   color: #f0e2ff;
   font-size: 0.72rem;
@@ -531,7 +522,7 @@ html[data-app] .hud-label {
   border-color: var(--cy-accent);
   background: var(--cy-accent);
   color: var(--cy-accent-ink);
-  box-shadow: 0 0 14px var(--cy-glow);
+  box-shadow: none;
 }
 
 .btn-terminal > span:first-child {
@@ -563,7 +554,7 @@ html[data-app] .tab {
 html[data-app] .tab[aria-selected="true"] {
   background: var(--cy-accent);
   color: var(--cy-accent-ink);
-  box-shadow: 0 0 16px var(--cy-glow);
+  box-shadow: none;
 }
 
 /* Mensaje flotante sobre el saldo (+50 de la abundancia). */
@@ -571,7 +562,7 @@ html[data-app] .tab[aria-selected="true"] {
   position: fixed;
   z-index: 70;
   padding: 2px 8px;
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.7);
   color: var(--cy-accent-2);
   font: 800 0.9rem var(--font-mono);
@@ -589,10 +580,10 @@ html[data-app] .tab[aria-selected="true"] {
   margin: 0 var(--gutter) 24px;
   padding: 14px;
   border: 1px solid var(--cy-line);
-  border-radius: 18px;
+  border-radius: 0;
   background: var(--cy-panel);
   font-family: var(--font-mono);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 18px 0 rgba(0, 0, 0, 0.45);
 }
 
 @media (min-width: 1180px) {
@@ -638,9 +629,9 @@ html[data-app] .tab[aria-selected="true"] {
 .tele-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--cy-ok);
-  box-shadow: 0 0 8px var(--cy-ok);
+  box-shadow: none;
   animation: tele-blink 1.6s ease-in-out infinite;
 }
 
@@ -672,7 +663,7 @@ html[data-app] .tab[aria-selected="true"] {
   display: block;
   padding: 8px;
   border: 1px solid var(--cy-line);
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.45);
   color: var(--cy-accent-2);
   font-size: 0.72rem;
@@ -692,7 +683,7 @@ html[data-app] .tab[aria-selected="true"] {
   min-height: 40px;
   padding: 0 10px;
   border: 1px solid var(--cy-line);
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.5);
   color: var(--cy-ink);
   font: 0.85rem var(--font-mono);
@@ -712,7 +703,7 @@ html[data-app] .tab[aria-selected="true"] {
   min-width: 64px;
   min-height: 40px;
   border: 1px solid var(--cy-line);
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.45);
   color: var(--cy-accent);
   font-weight: 800;
@@ -746,7 +737,7 @@ html[data-app] .tab[aria-selected="true"] {
 .tele-stats div {
   padding: 8px;
   border: 1px solid var(--cy-line);
-  border-radius: 10px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.35);
 }
 
@@ -788,7 +779,7 @@ html[data-app] .tab[aria-selected="true"] {
   width: 100%;
   padding: 6px 8px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.03);
   color: var(--cy-ink);
   font: 0.74rem var(--font-mono);
@@ -852,7 +843,7 @@ html[data-app] .tab[aria-selected="true"] {
   gap: 14px;
   padding: 14px;
   border: 1px solid var(--cy-line);
-  border-radius: 16px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.04);
 }
 
@@ -912,7 +903,7 @@ html[data-app] .tab[aria-selected="true"] {
 
 .career-ranks .rank-row.is-current {
   background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px var(--cy-accent);
+  box-shadow: inset 0 0 0 2px var(--cy-accent);
 }
 
 .career-ranks .rank-row-name {
@@ -943,7 +934,7 @@ html[data-app] .tab[aria-selected="true"] {
   gap: 4px 10px;
   padding: 8px 10px;
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.04);
   font-size: 0.8rem;
 }
@@ -969,14 +960,14 @@ html[data-app] .tab[aria-selected="true"] {
   grid-column: 2 / 4;
   height: 5px;
   overflow: hidden;
-  border-radius: 3px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.1);
 }
 
 .mission-fill {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--cy-accent), var(--cy-accent-2));
+  background: linear-gradient(90deg, var(--cy-accent) 0% 25%, color-mix(in srgb, var(--cy-accent-2) 33%, var(--cy-accent)) 25% 50%, color-mix(in srgb, var(--cy-accent-2) 67%, var(--cy-accent)) 50% 75%, var(--cy-accent-2) 75% 100%, var(--cy-accent-2) 100%);
   transform: scaleX(0);
   transform-origin: left center;
   transition: transform 0.5s var(--ease-out);
@@ -1005,7 +996,7 @@ html[data-app] .tab[aria-selected="true"] {
   align-content: start;
   padding: 10px;
   border: 1px solid var(--cy-line);
-  border-radius: 14px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.35);
 }
 
@@ -1046,23 +1037,23 @@ html[data-app] .tab[aria-selected="true"] {
   gap: 3px;
   padding: 10px;
   border: 1px solid #b8c4cf;
-  border-radius: 12px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.04);
 }
 
 .relic-card.rarity-rare {
   border-color: #3fa9ff;
-  box-shadow: inset 0 0 18px rgba(63, 169, 255, 0.15);
+  box-shadow: none;
 }
 
 .relic-card.rarity-epic {
   border-color: #b566ff;
-  box-shadow: inset 0 0 18px rgba(181, 102, 255, 0.18);
+  box-shadow: none;
 }
 
 .relic-card.rarity-legendary {
   border-color: #ffb52e;
-  box-shadow: inset 0 0 22px rgba(255, 181, 46, 0.2);
+  box-shadow: none;
 }
 
 .relic-card.is-locked {
@@ -1122,13 +1113,13 @@ html[data-app] .tab[aria-selected="true"] {
   gap: 6px;
   padding: 12px;
   border: 1px solid var(--cy-line);
-  border-radius: 14px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.35);
 }
 
 .vault-chest.chest-legendary {
   border-color: #ffb52e;
-  background: linear-gradient(180deg, rgba(255, 181, 46, 0.12), rgba(0, 0, 0, 0.35));
+  background: linear-gradient(180deg, rgba(255, 181, 46, 0.12) 0% 25%, color-mix(in srgb, rgba(0, 0, 0, 0.35) 33%, rgba(255, 181, 46, 0.12)) 25% 50%, color-mix(in srgb, rgba(0, 0, 0, 0.35) 67%, rgba(255, 181, 46, 0.12)) 50% 75%, rgba(0, 0, 0, 0.35) 75% 100%, rgba(0, 0, 0, 0.35) 100%);
 }
 
 .vault-chest-name {
@@ -1190,18 +1181,17 @@ html[data-app] .tab[aria-selected="true"] {
   bottom: 0;
   height: 62%;
   border: 3px solid #d4a017;
-  border-radius: 6px 6px 12px 12px;
-  background:
-    linear-gradient(90deg, transparent 44%, #d4a017 44% 56%, transparent 56%),
-    linear-gradient(180deg, #7a4a1c, #3d220a);
+  border-radius: 0;
+  background: linear-gradient(90deg, transparent 44%, #d4a017 44% 56%, transparent 56%),
+    linear-gradient(180deg, #7a4a1c 0% 25%, color-mix(in srgb, #3d220a 33%, #7a4a1c) 25% 50%, color-mix(in srgb, #3d220a 67%, #7a4a1c) 50% 75%, #3d220a 75% 100%, #3d220a 100%);
 }
 
 .chest-lid {
   top: 0;
   height: 44%;
   border: 3px solid #d4a017;
-  border-radius: 40px 40px 6px 6px;
-  background: linear-gradient(180deg, #9a5f26, #5a3510);
+  border-radius: 0;
+  background: linear-gradient(180deg, #9a5f26 0% 25%, color-mix(in srgb, #5a3510 33%, #9a5f26) 25% 50%, color-mix(in srgb, #5a3510 67%, #9a5f26) 50% 75%, #5a3510 75% 100%, #5a3510 100%);
   transform-origin: 50% 100%;
   transition: transform 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
 }
@@ -1213,20 +1203,19 @@ html[data-app] .tab[aria-selected="true"] {
 }
 
 .chest-legendary .chest-lid {
-  background: linear-gradient(180deg, #7c3aed, #3b0f73);
+  background: linear-gradient(180deg, #7c3aed 0% 25%, color-mix(in srgb, #3b0f73 33%, #7c3aed) 25% 50%, color-mix(in srgb, #3b0f73 67%, #7c3aed) 50% 75%, #3b0f73 75% 100%, #3b0f73 100%);
 }
 
 .chest-legendary .chest-body {
-  background:
-    linear-gradient(90deg, transparent 44%, #ffe27a 44% 56%, transparent 56%),
-    linear-gradient(180deg, #5b21b6, #2e0f5c);
+  background: linear-gradient(90deg, transparent 44%, #ffe27a 44% 56%, transparent 56%),
+    linear-gradient(180deg, #5b21b6 0% 25%, color-mix(in srgb, #2e0f5c 33%, #5b21b6) 25% 50%, color-mix(in srgb, #2e0f5c 67%, #5b21b6) 50% 75%, #2e0f5c 75% 100%, #2e0f5c 100%);
 }
 
 .chest-glow {
   top: -30%;
   bottom: -30%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 240, 180, 0.9), transparent 65%);
+  border-radius: 0;
+  background: radial-gradient(circle, rgba(255, 240, 180, 0.9) 0% 16.25%, color-mix(in srgb, transparent 33%, rgba(255, 240, 180, 0.9)) 16.25% 32.5%, color-mix(in srgb, transparent 67%, rgba(255, 240, 180, 0.9)) 32.5% 48.75%, transparent 48.75% 65%, transparent 65%);
   opacity: 0;
   transform: scale(0.4);
   transition: opacity 0.4s, transform 0.5s;
@@ -1321,7 +1310,7 @@ html[data-app] .tab[aria-selected="true"] {
   grid-template-columns: minmax(120px, 0.6fr) minmax(0, 1.4fr);
   gap: 10px;
   padding: 6px 8px;
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.04);
   font-size: 0.76rem;
 }
@@ -1350,7 +1339,7 @@ html[data-app] .tab[aria-selected="true"] {
   justify-items: start;
   padding: 12px;
   border: 1px dashed var(--cy-line);
-  border-radius: 12px;
+  border-radius: 0;
   font-size: 0.8rem;
   color: var(--cy-dim);
 }

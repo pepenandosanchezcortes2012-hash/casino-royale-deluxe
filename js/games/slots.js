@@ -1,6 +1,6 @@
 // Slots Matrix 4×4 — interfaz: rodillos, avalancha animada (explosión y caída de símbolos),
-// escalera de multiplicadores ×1 ×2 ×3 ×5, comodines 🃏 pegajosos con candado y contador,
-// estrellas ⭐ que dan 8 giros gratis, Bonus Buy y Auto-Spin con límite de pérdida obligatorio.
+// escalera de multiplicadores ×1 ×2 ×3 ×5, comodines pegajosos con candado y contador,
+// estrellas que dan 8 giros gratis, Bonus Buy y Auto-Spin con límite de pérdida obligatorio.
 // La matemática vive en slots-engine.js; aquí solo se sortea, se liquida y se anima.
 // En el Cripto-Casino cada giro usa el flujo provably fair y actúan el Trébol de Oro (más
 // comodines y estrellas) y la Batería Cuántica (25 % de giro gratis tras una tirada sin premio).
@@ -12,7 +12,7 @@ import { storage } from '../storage.js';
 import { settings } from '../settings.js';
 import { relics, BATTERY_CHANCE } from '../relics.js';
 import { hud, formatChips } from '../ui/hud.js';
-import { symbolSvg, svg, el } from '../ui/svg.js';
+import { symbolSvg, svg, el, pixelIcon } from '../ui/svg.js';
 import { session } from '../session.js';
 import { scopedKey } from '../mode.js';
 import {
@@ -228,8 +228,8 @@ export class SlotsGame {
     rule(`Premios en apuestas de línea (apuesta ÷ ${LINE_COUNT}). 10 líneas: 4 filas, 4 columnas y 2 diagonales, contadas desde su primera celda.`);
     rule(`Avalancha: los símbolos ganadores explotan y caen nuevos en el mismo giro. Combos sucesivos: ${CASCADE_MULTIPLIERS.map((m) => `×${m}`).join(', ')} (se mantiene en ×5).`);
     rule(`Súper Bono ×${SUPER_BONUS}: 4 símbolos idénticos en fila, columna o diagonal. Si un comodín completa el cuarteto, paga ×${WILD_FOUR}.`);
-    rule(`Comodín 🃏: sustituye a los símbolos de pago y 3 comodines pagan como la corona. Cuando forma parte de un premio queda fijo ${STICKY_SPINS.join(' o ')} giros; en cada uno actúa una vez y multiplica ×${WILD_MULTIPLIER} las líneas que pasan por él (hasta ×${MAX_WILD_MULTIPLIER}). Mientras haya comodines fijos la apuesta queda bloqueada.`);
-    rule(`Estrella ⭐: 3 o más al final del giro dan ${FREE_SPINS} giros gratis con rodillos cargados de comodines.`);
+    rule(`Chip comodín: sustituye a los símbolos de pago y 3 comodines pagan como el diamante. Cuando forma parte de un premio queda fijo ${STICKY_SPINS.join(' o ')} giros; en cada uno actúa una vez y multiplica ×${WILD_MULTIPLIER} las líneas que pasan por él (hasta ×${MAX_WILD_MULTIPLIER}). Mientras haya comodines fijos la apuesta queda bloqueada.`);
+    rule(`Estrella: 3 o más al final del giro dan ${FREE_SPINS} giros gratis con rodillos cargados de comodines.`);
     rule(`Bonus Buy: ${FREE_SPINS} giros gratis por ${BONUS_BUY_COST} × apuesta · RTP de la compra ${pct(SLOT_MATH.bonusBuyRtp)}.`);
     rule(`Premio máximo: ${formatChips(MAX_WIN)} × apuesta por giro o por ronda de giros gratis.`);
     rule(`RTP ${pct(SLOT_MATH.rtp)} (líneas del juego base ${pct(SLOT_MATH.lines)} + giros gratis ${pct(SLOT_MATH.freeSpins)}), medido con ${formatChips(SLOT_MATH.spins / 1e6)} millones de tiradas del motor real. Giros gratis 1 de cada ${SLOT_MATH.triggerEvery} tiradas.`);
@@ -373,7 +373,7 @@ export class SlotsGame {
       hud.toast(`¡${outcome.freeSpins} GIROS GRATIS con comodines pegajosos!`, 'success', 4200);
     } else if (recharge) {
       audio.shimmer();
-      this.#banner('🔋 GIRO GRATIS', 'is-free');
+      this.#banner('GIRO GRATIS', 'is-free', 'px-battery');
     }
     this.#set('READY', { busy: false });
     this.#afterSpin(outcome, total, free || respin);
@@ -412,7 +412,7 @@ export class SlotsGame {
     const superBonus = outcome.steps.some((step) => step.lines.some((line) => line.count === 4 && line.natural));
     const crowns = outcome.steps.some((step) => step.lines.some((line) => line.count === 4 && line.natural && line.symbol === 'C'));
     if (crowns) {
-      this.#banner('JACKPOT REAL · 4 CORONAS', 'is-jackpot');
+      this.#banner('JACKPOT REAL · 4 DIAMANTES', 'is-jackpot');
       audio.win(3);
       hud.celebrate(3, origin);
     } else if (ratio >= 50) {
@@ -424,7 +424,7 @@ export class SlotsGame {
       audio.win(2);
       hud.celebrate(2, origin);
     } else if (ratio >= 10 || outcome.freeSpins) {
-      if (outcome.freeSpins) this.#banner(`⭐ ${outcome.freeSpins} GIROS GRATIS`, 'is-free');
+      if (outcome.freeSpins) this.#banner(`${outcome.freeSpins} GIROS GRATIS`, 'is-free', 'sym-X');
       audio.win(2);
       hud.celebrate(2, origin);
     } else if (total > 0) {
@@ -556,7 +556,7 @@ export class SlotsGame {
       win: 0,
       message: `Bono comprado: ${FREE_SPINS} giros gratis con comodines pegajosos`,
     });
-    this.#banner(`⭐ ${FREE_SPINS} GIROS GRATIS`, 'is-free');
+    this.#banner(`${FREE_SPINS} GIROS GRATIS`, 'is-free', 'sym-X');
     audio.win(2);
     const rect = this.#dom.grid.getBoundingClientRect();
     hud.celebrate(2, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
@@ -615,7 +615,7 @@ export class SlotsGame {
       audio.cascade(i);
       this.#showLines(step);
       const wild = Math.max(1, ...step.lines.map((line) => line.multiplier));
-      const extra = [step.multiplier > 1 ? `×${step.multiplier}` : '', wild > 1 ? `🃏×${wild}` : ''].filter(Boolean).join(' · ');
+      const extra = [step.multiplier > 1 ? `×${step.multiplier}` : '', wild > 1 ? `comodín ×${wild}` : ''].filter(Boolean).join(' · ');
       this.#popup(`+${formatChips(stepWin)}${extra ? ` · ${extra}` : ''}`);
       this.#meter(running);
       await wait(700 * k);
@@ -705,7 +705,9 @@ export class SlotsGame {
     badge.style.gridRow = String(r + 1);
     badge.style.gridColumn = String(c + 1);
     badge.dataset.cell = `${r}:${c}`;
-    badge.append(el('span', 'sticky-lock', '🔒'), el('span', 'sticky-count', String(spins)));
+    const lock = el('span', 'sticky-lock');
+    lock.append(pixelIcon('px-lock'));
+    badge.append(lock, el('span', 'sticky-count', String(spins)));
     badge.title = `Comodín fijo: ${spins} giro${spins === 1 ? '' : 's'} más`;
     return badge;
   }
@@ -717,7 +719,7 @@ export class SlotsGame {
     layer.replaceChildren(...list.map((item) => this.#stickyBadge(item)));
     const note = this.#dom.stickyNote;
     note.hidden = !list.length;
-    if (list.length) note.textContent = `🔒 ${list.length} ${list.length === 1 ? 'comodín fijo' : 'comodines fijos'} · apuesta bloqueada`;
+    if (list.length) note.replaceChildren(pixelIcon('px-lock'), ` ${list.length} ${list.length === 1 ? 'comodín fijo' : 'comodines fijos'} · apuesta bloqueada`);
   }
 
   #lockWilds(locked) {
@@ -748,8 +750,10 @@ export class SlotsGame {
     setTimeout(() => pop.remove(), 1200);
   }
 
-  #banner(text, variant) {
-    const node = el('div', `slot-banner-text ${variant}`, text);
+  #banner(text, variant, icon = null) {
+    const node = el('div', `slot-banner-text ${variant}`);
+    if (icon) node.append(pixelIcon(icon), ' ');
+    node.append(text);
     this.#dom.banner.replaceChildren(node);
     setTimeout(() => {
       if (node.isConnected) node.classList.add('is-leaving');
@@ -789,7 +793,7 @@ export class SlotsGame {
       d.spin.setAttribute('aria-label', `Detener auto-spin, quedan ${auto.left} tiradas`);
     } else {
       d.spin.disabled = !(idle && (free || respin || wallet.canAfford(s.bet)));
-      d.spin.textContent = free ? `GIRO GRATIS · ${s.fs.remaining}` : respin ? 'GIRO GRATIS 🔋' : 'GIRAR';
+      d.spin.textContent = free ? `GIRO GRATIS · ${s.fs.remaining}` : respin ? 'GIRO GRATIS' : 'GIRAR';
       d.spin.setAttribute('aria-label', free ? `Giro gratis, quedan ${s.fs.remaining}` : respin ? 'Giro gratis de la Batería Cuántica' : 'Girar');
     }
     d.spin.classList.toggle('is-auto', Boolean(auto));

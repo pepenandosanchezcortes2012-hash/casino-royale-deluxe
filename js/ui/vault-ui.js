@@ -5,7 +5,7 @@ import { relics, RELICS, RARITIES, CHESTS, SLOT_COUNT, relicById } from '../reli
 import { wallet } from '../engine/wallet.js';
 import { audio } from '../audio.js';
 import { hud, formatChips } from './hud.js';
-import { el } from './svg.js';
+import { el, withIcon } from './svg.js';
 import { settings } from '../settings.js';
 
 class VaultUi {
@@ -60,7 +60,7 @@ class VaultUi {
   #relicCard(relic, { tag = 'div', owned = true } = {}) {
     const card = el(tag, `relic-card rarity-${relic.rarity}${owned ? '' : ' is-locked'}`);
     card.append(
-      el('span', 'relic-icon', owned ? relic.icon : '?'),
+      owned ? withIcon('span', 'relic-icon', relic.sprite) : el('span', 'relic-icon', '?'),
       el('span', 'relic-name', owned ? relic.name : 'Sin descubrir'),
       el('span', 'relic-rarity', RARITIES[relic.rarity].name),
     );
@@ -151,7 +151,7 @@ class VaultUi {
       }
     });
     potion.append(
-      el('strong', 'vault-chest-name', '🧪 Poción ×2'),
+      withIcon('strong', 'vault-chest-name', 'px-potion', ' Poción ×2'),
       el('span', 'vault-chest-odds', 'Duplica el premio neto de tu próxima ronda ganadora (hasta 25 apuestas mínimas del piso; no vale en la rueda).'),
       el('span', 'vault-chest-owned', `Pociones: ${relics.potions}${relics.potionArmed ? ' · una activa' : ''}`),
       arm,

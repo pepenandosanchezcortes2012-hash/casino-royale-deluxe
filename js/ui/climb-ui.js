@@ -14,7 +14,8 @@ import { storage } from '../storage.js';
 import { scopedKey } from '../mode.js';
 import { audio } from '../audio.js';
 import { hud, formatChips } from './hud.js';
-import { el } from './svg.js';
+import { el, pixelIcon, useRef } from './svg.js';
+import { PORTRAIT_OF } from './pixel-sprites.js';
 
 const SIDE_KEY = scopedKey('crd.side.v1');
 const LOG_VISIBLE = 40;
@@ -36,6 +37,13 @@ const mmss = (ms) => {
 const range = (floor) => rangeText(floor, formatChips);
 
 // Máquina de escribir: revela párrafos carácter a carácter; skip() lo completa al instante.
+// Nombre de quien habla en la bitácora, con su retrato pixel art.
+function speakerTag(speaker) {
+  const tag = el('span', 'log-speaker');
+  tag.append(pixelIcon(PORTRAIT_OF[speaker] ?? 'npc-narrator', 'px-icon npc-portrait'), speaker);
+  return tag;
+}
+
 class Typewriter {
   #timer = 0;
   #finish = null;
@@ -169,6 +177,7 @@ class ClimbUi {
       transitionLevel: $('ft-level'),
       transitionName: $('ft-name'),
       transitionDesc: $('ft-desc'),
+      transitionHost: $('ft-host'),
     };
     this.#buildSelector();
     this.#bindSide();
@@ -190,7 +199,9 @@ class ClimbUi {
       const button = el('button', 'floor-door');
       button.type = 'button';
       button.dataset.floor = floor.id;
-      button.append(el('span', 'floor-door-num', String(floor.level)), el('span', 'floor-door-lock', '🔒'));
+      const lock = el('span', 'floor-door-lock');
+      lock.append(pixelIcon('px-lock'));
+      button.append(el('span', 'floor-door-num', String(floor.level)), lock);
       button.addEventListener('click', () => this.travel(floor.id));
       return button;
     });
@@ -338,6 +349,7 @@ class ClimbUi {
     d.transitionLevel.textContent = `Piso ${floor.level}`;
     d.transitionName.textContent = floor.name;
     d.transitionDesc.textContent = floor.tagline;
+    d.transitionHost.replaceChildren(useRef(PORTRAIT_OF[floor.host] ?? 'npc-narrator'));
     d.transition.hidden = false;
     d.transition.dataset.floor = String(floor.level);
     d.transition.classList.remove('is-out');
@@ -665,7 +677,8 @@ class ClimbUi {
     for (const item of ACHIEVEMENTS) {
       const unlocked = Object.hasOwn(s.achievements, item.id);
       const li = el('li', `achievement ${unlocked ? 'is-unlocked' : 'is-locked'}`);
-      const badge = el('span', 'achievement-badge', unlocked ? '★' : '·');
+      const badge = el('span', 'achievement-badge', unlocked ? null : '·');
+      if (unlocked) badge.append(pixelIcon('px-star'));
       badge.setAttribute('aria-hidden', 'true');
       const body = el('div', 'achievement-body');
       body.append(
@@ -695,7 +708,7 @@ class ClimbUi {
     li.dataset.floor = entry.floor;
     if (fresh) li.classList.add('is-new');
     const meta = el('div', 'log-meta');
-    meta.append(el('span', 'log-speaker', entry.speaker), el('time', 'log-time', timeFormat.format(new Date(entry.t))));
+    meta.append(speakerTag(entry.speaker), el('time', 'log-time', timeFormat.format(new Date(entry.t))));
     li.append(meta, el('p', 'log-text', entry.text));
     return li;
   }
@@ -717,7 +730,7 @@ class ClimbUi {
     const ticker = this.#dom.ticker;
     ticker.replaceChildren();
     if (!entry) return;
-    ticker.append(el('span', 'log-speaker', entry.speaker), el('span', 'ticker-text', entry.text));
+    ticker.append(speakerTag(entry.speaker), el('span', 'ticker-text', entry.text));
     ticker.dataset.tone = entry.tone;
   }
 
@@ -751,7 +764,7 @@ class ClimbUi {
     d.hudTitle.textContent = climb.title.name;
     d.hudTitle.dataset.tier = String(s.title);
     d.dossierButton.setAttribute('aria-label', `Expediente: ${climb.title.name}, récord ${formatChips(climb.record)} créditos`);
-    d.logDealer.textContent = `${floor.host} · ${floor.hostRole}`;
+    d.logDealer.replaceChildren(pixelIcon(PORTRAIT_OF[floor.host] ?? 'npc-narrator', 'px-icon npc-portrait npc-portrait-lg'), `${floor.host} · ${floor.hostRole}`);
     d.contractsTitle.textContent = `Encargos del Sindicato · Piso ${floor.level}`;
     const cards = climb.contracts.map((contract) => {
       const li = el('li', 'contract');

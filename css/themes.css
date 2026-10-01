@@ -40,7 +40,7 @@ html[data-theme="matrix"] {
   --gold: #3fd98a;
   --gold-hi: #9dffc9;
   --gold-lo: #00803a;
-  --gold-grad: linear-gradient(180deg, #d4ffe4 0%, #3fd98a 50%, #008a3a 100%);
+  --gold-grad: linear-gradient(180deg, #d4ffe4 0% 12.5%, color-mix(in srgb, #3fd98a 33%, #d4ffe4) 12.5% 25%, color-mix(in srgb, #3fd98a 67%, #d4ffe4) 25% 37.5%, #3fd98a 37.5% 50%, #3fd98a 50% 62.5%, color-mix(in srgb, #008a3a 33%, #3fd98a) 62.5% 75%, color-mix(in srgb, #008a3a 67%, #3fd98a) 75% 87.5%, #008a3a 87.5% 100%, #008a3a 100%);
   --felt-a: #0c4027;
   --felt-b: #020e07;
   --felt-line: rgba(63, 217, 138, 0.5);
@@ -77,7 +77,7 @@ html[data-theme="neon"] {
   --gold: #dc5cc0;
   --gold-hi: #7df9ff;
   --gold-lo: #8a0f73;
-  --gold-grad: linear-gradient(180deg, #b6fbff 0%, #dc5cc0 55%, #6a0a58 100%);
+  --gold-grad: linear-gradient(180deg, #b6fbff 0% 13.75%, color-mix(in srgb, #dc5cc0 33%, #b6fbff) 13.75% 27.5%, color-mix(in srgb, #dc5cc0 67%, #b6fbff) 27.5% 41.25%, #dc5cc0 41.25% 55%, #dc5cc0 55% 66.25%, color-mix(in srgb, #6a0a58 33%, #dc5cc0) 66.25% 77.5%, color-mix(in srgb, #6a0a58 67%, #dc5cc0) 77.5% 88.75%, #6a0a58 88.75% 100%, #6a0a58 100%);
   --felt-a: #33105a;
   --felt-b: #0a0316;
   --felt-line: rgba(76, 196, 220, 0.5);
@@ -114,7 +114,7 @@ html[data-theme="onyx"] {
   --gold: #e9edf2;
   --gold-hi: #ffffff;
   --gold-lo: #6b7280;
-  --gold-grad: linear-gradient(180deg, #ffffff 0%, #cfd5dd 50%, #6b7280 100%);
+  --gold-grad: linear-gradient(180deg, #ffffff 0% 12.5%, color-mix(in srgb, #cfd5dd 33%, #ffffff) 12.5% 25%, color-mix(in srgb, #cfd5dd 67%, #ffffff) 25% 37.5%, #cfd5dd 37.5% 50%, #cfd5dd 50% 62.5%, color-mix(in srgb, #6b7280 33%, #cfd5dd) 62.5% 75%, color-mix(in srgb, #6b7280 67%, #cfd5dd) 75% 87.5%, #6b7280 87.5% 100%, #6b7280 100%);
   --felt-a: #26292f;
   --felt-b: #08090b;
   --felt-line: rgba(233, 237, 242, 0.42);
@@ -151,7 +151,7 @@ html[data-theme="gold"] {
   --gold: #e3bd5a;
   --gold-hi: #fff0b0;
   --gold-lo: #8f6b16;
-  --gold-grad: linear-gradient(180deg, #fff3b0 0%, #f2c94c 45%, #b5851b 100%);
+  --gold-grad: linear-gradient(180deg, #fff3b0 0% 11.25%, color-mix(in srgb, #f2c94c 33%, #fff3b0) 11.25% 22.5%, color-mix(in srgb, #f2c94c 67%, #fff3b0) 22.5% 33.75%, #f2c94c 33.75% 45%, #f2c94c 45% 58.75%, color-mix(in srgb, #b5851b 33%, #f2c94c) 58.75% 72.5%, color-mix(in srgb, #b5851b 67%, #f2c94c) 72.5% 86.25%, #b5851b 86.25% 100%, #b5851b 100%);
   --felt-a: #12744a;
   --felt-b: #063a21;
   --felt-line: rgba(255, 236, 170, 0.55);
@@ -188,7 +188,7 @@ html[data-theme="blood"] {
   --gold: #e0505a;
   --gold-hi: #ffc2c8;
   --gold-lo: #7a0a16;
-  --gold-grad: linear-gradient(180deg, #ffd0d5 0%, #e0505a 50%, #6d0010 100%);
+  --gold-grad: linear-gradient(180deg, #ffd0d5 0% 12.5%, color-mix(in srgb, #e0505a 33%, #ffd0d5) 12.5% 25%, color-mix(in srgb, #e0505a 67%, #ffd0d5) 25% 37.5%, #e0505a 37.5% 50%, #e0505a 50% 62.5%, color-mix(in srgb, #6d0010 33%, #e0505a) 62.5% 75%, color-mix(in srgb, #6d0010 67%, #e0505a) 75% 87.5%, #6d0010 87.5% 100%, #6d0010 100%);
   --felt-a: #520913;
   --felt-b: #160205;
   --felt-line: rgba(255, 159, 67, 0.5);

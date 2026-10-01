@@ -15,7 +15,7 @@
   padding: 20px clamp(10px, 2.5vw, 32px) 22px;
   padding-bottom: 30px;
   border: 10px solid #3a200c;
-  border-radius: 44px 44px 34% 34% / 44px 44px 11% 11%;
+  border-radius: 0;
   outline: 2px solid rgba(212, 175, 55, 0.5);
   outline-offset: -16px;
   overflow: hidden;
@@ -38,7 +38,7 @@
   font-weight: 700;
   letter-spacing: 0.18em;
   color: var(--gold-hi);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
 }
 
 .bj-arc-rule {
@@ -62,9 +62,9 @@
   position: relative;
   width: 70px;
   height: 52px;
-  border-radius: 8px 8px 4px 4px;
-  background: linear-gradient(180deg, #2b2f35, #0e1013);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 6px 14px rgba(0, 0, 0, 0.5);
+  border-radius: 0;
+  background: linear-gradient(180deg, #2b2f35 0% 25%, color-mix(in srgb, #0e1013 33%, #2b2f35) 25% 50%, color-mix(in srgb, #0e1013 67%, #2b2f35) 50% 75%, #0e1013 75% 100%, #0e1013 100%);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.15), 0 6px 0 rgba(0, 0, 0, 0.5);
   transform: perspective(200px) rotateX(18deg);
 }
 
@@ -74,7 +74,7 @@
   right: 10px;
   bottom: 8px;
   height: 30px;
-  border-radius: 3px;
+  border-radius: 0;
   background: repeating-linear-gradient(45deg, #9e1228 0 3px, #7d0b1c 3px 6px);
   border: 1.5px solid #f3e7c9;
 }
@@ -103,7 +103,7 @@
   position: relative;
   width: 70px;
   height: 6px;
-  border-radius: 3px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.45);
   overflow: hidden;
 }
@@ -143,9 +143,9 @@
   min-width: 92px;
   padding: 8px 12px;
   border: 1px solid rgba(95, 214, 255, 0.45);
-  border-radius: 12px;
+  border-radius: 0;
   background: rgba(4, 18, 30, 0.72);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.4);
 }
 
 .count-title {
@@ -174,7 +174,7 @@
 
 .bj-count[data-trend="hot"] {
   border-color: rgba(62, 207, 142, 0.8);
-  box-shadow: 0 0 18px rgba(62, 207, 142, 0.35);
+  box-shadow: none;
 }
 
 .bj-count[data-trend="cold"] {
@@ -189,12 +189,12 @@
   z-index: 3;
   min-width: 22px;
   padding: 1px 5px;
-  border-radius: 999px;
+  border-radius: 0;
   font: 800 0.68rem/1.4 var(--font-ui);
   text-align: center;
   color: #fff;
   background: #4b515a;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
 }
 
 .bj-table.is-counting .card[data-hilo="+1"].is-face-up::after {
@@ -249,7 +249,7 @@
 .hand-total {
   min-width: 42px;
   padding: 2px 10px;
-  border-radius: 999px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   font-weight: 700;
@@ -285,12 +285,12 @@
   gap: 6px;
   min-width: 0;
   padding: 6px 2px 4px;
-  border-radius: 18px;
+  border-radius: 0;
   transition: opacity 0.3s, background 0.3s;
 }
 
 .bj-seat.is-playing {
-  background: radial-gradient(ellipse at 50% 100%, rgba(255, 240, 190, 0.07), transparent 70%);
+  background: radial-gradient(ellipse at 50% 100%, rgba(255, 240, 190, 0.07) 0% 17.5%, color-mix(in srgb, transparent 33%, rgba(255, 240, 190, 0.07)) 17.5% 35%, color-mix(in srgb, transparent 67%, rgba(255, 240, 190, 0.07)) 35% 52.5%, transparent 52.5% 70%, transparent 70%);
 }
 
 .bj-seat.is-idle {
@@ -319,13 +319,13 @@
 .bj-hand {
   position: relative;
   padding: 6px 4px 4px;
-  border-radius: 12px;
+  border-radius: 0;
   transition: background 0.3s, box-shadow 0.3s;
 }
 
 .bj-hand.is-active {
   background: rgba(255, 230, 150, 0.1);
-  box-shadow: 0 0 0 2px rgba(247, 224, 138, 0.75), 0 0 22px rgba(247, 224, 138, 0.3);
+  box-shadow: 0 0 0 2px rgba(247, 224, 138, 0.75);
 }
 
 .hand-meta {
@@ -336,7 +336,7 @@
 
 .hand-bet {
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid rgba(247, 224, 138, 0.5);
   color: var(--gold-hi);
   font-size: 0.78rem;
@@ -351,7 +351,7 @@
   z-index: 5;
   transform: translate(-50%, -50%) rotate(-8deg);
   padding: 3px 10px;
-  border-radius: 8px;
+  border-radius: 0;
   font-family: var(--font-display);
   font-size: clamp(0.72rem, 1.9vw, 1.05rem);
   font-weight: 800;
@@ -368,7 +368,7 @@
 .bj-hand[data-result="blackjack"] .hand-result {
   color: #1d1405;
   background: var(--gold-grad);
-  box-shadow: 0 0 22px rgba(247, 224, 138, 0.7);
+  box-shadow: none;
   animation: stamp 0.45s var(--ease-out);
 }
 
@@ -424,7 +424,7 @@
   aspect-ratio: 1;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: 0;
   background: transparent;
   cursor: pointer;
   touch-action: manipulation;
@@ -445,8 +445,8 @@
   position: absolute;
   inset: 0;
   border: 2.5px solid var(--felt-line);
-  border-radius: 50%;
-  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.35);
+  border-radius: 0;
+  box-shadow: none;
   transition: box-shadow 0.2s, border-color 0.2s;
 }
 
@@ -459,7 +459,7 @@
 .bet-spot:hover:not(:disabled) .bet-spot-ring,
 .bet-spot:focus-visible .bet-spot-ring {
   border-color: var(--gold-hi);
-  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.35), 0 0 16px rgba(247, 224, 138, 0.45);
+  box-shadow: none;
 }
 
 .bet-spot-label {
@@ -501,7 +501,7 @@
   z-index: 2;
   transform: translateX(-50%);
   padding: 0 6px;
-  border-radius: 999px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.75);
   color: var(--gold-hi);
   font-size: 0.7rem;
@@ -523,8 +523,8 @@
   content: "";
   position: absolute;
   inset: -2.5px;
-  border-radius: 50%;
-  box-shadow: 0 0 14px rgba(247, 224, 138, 0.3);
+  border-radius: 0;
+  box-shadow: none;
   opacity: 0;
   pointer-events: none;
   animation: glow-pulse 2.6s ease-in-out infinite;
@@ -554,20 +554,20 @@
   margin-top: 12px;
   padding: 12px 16px;
   border: 1px solid rgba(95, 214, 255, 0.4);
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(14, 34, 52, 0.92), rgba(8, 18, 28, 0.95));
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(14, 34, 52, 0.92) 0% 25%, color-mix(in srgb, rgba(8, 18, 28, 0.95) 33%, rgba(14, 34, 52, 0.92)) 25% 50%, color-mix(in srgb, rgba(8, 18, 28, 0.95) 67%, rgba(14, 34, 52, 0.92)) 50% 75%, rgba(8, 18, 28, 0.95) 75% 100%, rgba(8, 18, 28, 0.95) 100%);
   box-shadow: var(--shadow-md);
 }
 
 .coach-badge {
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: 0;
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: #04121c;
-  background: linear-gradient(180deg, #bff1ff, #5fd6ff);
+  background: linear-gradient(180deg, #bff1ff 0% 25%, color-mix(in srgb, #5fd6ff 33%, #bff1ff) 25% 50%, color-mix(in srgb, #5fd6ff 67%, #bff1ff) 50% 75%, #5fd6ff 75% 100%, #5fd6ff 100%);
 }
 
 .coach-tip {
@@ -614,8 +614,8 @@
 }
 
 .rl-wheel {
-  border-radius: 50%;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(212, 175, 55, 0.25);
+  border-radius: 0;
+  box-shadow: 0 30px 0 rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(212, 175, 55, 0.25);
 }
 
 .rl-result {
@@ -629,13 +629,13 @@
   place-items: center;
   width: 64px;
   height: 64px;
-  border-radius: 50%;
+  border-radius: 0;
   border: 3px solid var(--gold-hi);
   font-family: var(--font-display);
   font-size: 1.8rem;
   font-weight: 800;
   color: #fff;
-  box-shadow: 0 0 26px rgba(247, 224, 138, 0.55), 0 8px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.5);
   animation: badge-pop 0.5s var(--ease-out);
 }
 
@@ -651,7 +651,7 @@
   gap: 8px;
   padding: 16px;
   border: 1px solid var(--panel-edge);
-  border-radius: var(--radius);
+  border-radius: 0;
   background: var(--panel);
   box-shadow: var(--shadow-md);
 }
@@ -735,7 +735,7 @@
 .freq-bar {
   display: flex;
   height: 10px;
-  border-radius: 5px;
+  border-radius: 0;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.4);
 }
@@ -793,7 +793,7 @@
   min-width: 680px;
   padding: 16px 16px 20px;
   border: 8px solid #3a200c;
-  border-radius: 22px;
+  border-radius: 0;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
@@ -833,7 +833,7 @@
 .rb-zero {
   grid-row: 1;
   grid-column: 1;
-  border-radius: 50% 0 0 50% / 50% 0 0 50%;
+  border-radius: 0;
   font-size: 1.3rem;
 }
 
@@ -856,7 +856,7 @@
   place-items: center;
   width: 34px;
   height: 34px;
-  border-radius: 50%;
+  border-radius: 0;
 }
 
 .rb-num.is-red .rb-label {
@@ -873,7 +873,7 @@
 
 .rb-spot.is-result {
   background: rgba(255, 236, 170, 0.35);
-  box-shadow: inset 0 0 0 3px var(--gold-hi), 0 0 22px rgba(247, 224, 138, 0.6);
+  box-shadow: inset 0 0 0 4px var(--gold-hi);
   z-index: 1;
 }
 
@@ -892,7 +892,7 @@
   height: 26px;
   min-height: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: 0;
   transform: translate(-50%, -50%);
   pointer-events: auto;
 }
@@ -957,7 +957,7 @@
 @keyframes marker-win {
   50% {
     transform: translate(-50%, -50%) scale(1.25);
-    filter: drop-shadow(0 0 10px #ffe37a);
+    filter: none;
   }
 }
 
@@ -1088,7 +1088,7 @@
 .call-chip {
   padding: 4px 12px;
   border: 1px solid rgba(212, 175, 55, 0.55);
-  border-radius: 999px;
+  border-radius: 0;
   background: rgba(212, 175, 55, 0.14);
   color: var(--gold-hi);
   font-size: 0.82rem;
@@ -1107,17 +1107,12 @@
   max-width: 720px;
   margin: 0 auto;
   padding: 18px clamp(12px, 3vw, 28px) 20px;
-  border-radius: 34px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 30%),
-    linear-gradient(135deg, #3b2a0a, #120c03 40%, #3b2a0a 60%, #0d0902);
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0% 7.5%, color-mix(in srgb, transparent 33%, rgba(255, 255, 255, 0.08)) 7.5% 15%, color-mix(in srgb, transparent 67%, rgba(255, 255, 255, 0.08)) 15% 22.5%, transparent 22.5% 30%, transparent 30%),
+    linear-gradient(135deg, #3b2a0a 0% 10%, color-mix(in srgb, #120c03 33%, #3b2a0a) 10% 20%, color-mix(in srgb, #120c03 67%, #3b2a0a) 20% 30%, #120c03 30% 40%, #120c03 40% 45%, color-mix(in srgb, #3b2a0a 33%, #120c03) 45% 50%, color-mix(in srgb, #3b2a0a 67%, #120c03) 50% 55%, #3b2a0a 55% 60%, #3b2a0a 60% 70%, color-mix(in srgb, #0d0902 33%, #3b2a0a) 70% 80%, color-mix(in srgb, #0d0902 67%, #3b2a0a) 80% 90%, #0d0902 90% 100%, #0d0902 100%);
   border: 3px solid transparent;
   background-clip: padding-box;
-  box-shadow:
-    0 0 0 3px #b8912a,
-    0 0 0 6px #3b2a0a,
-    0 0 0 8px #f2d27a,
-    var(--shadow-lg);
+  box-shadow: 0 0 0 4px #b8912a, 0 0 0 6px #3b2a0a, 0 0 0 8px #f2d27a, var(--shadow-lg);
 }
 
 .slot-marquee {
@@ -1149,7 +1144,7 @@
   flex: 1;
   height: 10px;
   max-width: 140px;
-  background-image: radial-gradient(circle, #fff6c2 0 3px, transparent 3.5px);
+  background-image: radial-gradient(circle, #fff6c2 0px, #fff6c2 3px 3.12px, color-mix(in srgb, transparent 33%, #fff6c2) 3.12px 3.25px, color-mix(in srgb, transparent 67%, #fff6c2) 3.25px 3.38px, transparent 3.38px 3.5px, transparent 3.5px);
   background-size: 18px 10px;
 }
 
@@ -1158,9 +1153,9 @@
   content: "";
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, #d4af37 0 3px, transparent 3.5px);
+  background-image: radial-gradient(circle, #d4af37 0px, #d4af37 3px 3.12px, color-mix(in srgb, transparent 33%, #d4af37) 3.12px 3.25px, color-mix(in srgb, transparent 67%, #d4af37) 3.25px 3.38px, transparent 3.38px 3.5px, transparent 3.5px);
   background-size: 18px 10px;
-  filter: drop-shadow(0 0 4px #ffd76a);
+  filter: none;
   opacity: 0;
   animation: bulbs 0.9s steps(1) infinite;
 }
@@ -1173,12 +1168,7 @@
 }
 
 #panel-slots.is-free-spins .slot-cabinet {
-  box-shadow:
-    0 0 0 3px #5fd6ff,
-    0 0 0 6px #0b2a55,
-    0 0 0 8px #bff1ff,
-    0 0 50px rgba(95, 214, 255, 0.45),
-    var(--shadow-lg);
+  box-shadow: 0 0 0 4px #5fd6ff, 0 0 0 6px #0b2a55, 0 0 0 8px #bff1ff, var(--shadow-lg);
 }
 
 .slot-status {
@@ -1202,7 +1192,7 @@
   min-width: 48px;
   padding: 5px 10px;
   border: 1px solid rgba(212, 175, 55, 0.25);
-  border-radius: 999px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.45);
   color: var(--ink-mute);
   font: 800 0.95rem var(--font-display);
@@ -1218,7 +1208,7 @@
 .cascade-ladder li.is-active {
   color: #1d1405;
   background: var(--gold-grad);
-  box-shadow: 0 0 18px rgba(247, 224, 138, 0.7);
+  box-shadow: none;
   transform: scale(1.15);
 }
 
@@ -1230,8 +1220,8 @@
   gap: 4px 12px;
   padding: 6px 14px;
   border: 1px solid #5fd6ff;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #0b2a55, #061530);
+  border-radius: 0;
+  background: linear-gradient(180deg, #0b2a55 0% 25%, color-mix(in srgb, #061530 33%, #0b2a55) 25% 50%, color-mix(in srgb, #061530 67%, #0b2a55) 50% 75%, #061530 75% 100%, #061530 100%);
   color: #cfefff;
   font-size: 0.88rem;
 }
@@ -1259,7 +1249,7 @@
 
 .slot-banner-text {
   padding: 10px 26px;
-  border-radius: 14px;
+  border-radius: 0;
   font-family: var(--font-display);
   font-size: clamp(1.2rem, 5vw, 2.3rem);
   font-weight: 900;
@@ -1267,22 +1257,22 @@
   white-space: nowrap;
   color: #1d1405;
   background: var(--gold-grad);
-  box-shadow: 0 0 60px rgba(247, 224, 138, 0.8), 0 12px 30px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 12px 0 rgba(0, 0, 0, 0.6);
   animation: banner-in 0.6s var(--ease-out);
   transition: opacity 0.5s, transform 0.5s;
 }
 
 .slot-banner-text.is-free {
   color: #051a33;
-  background: linear-gradient(180deg, #e8fdff, #5fd6ff 55%, #1b5fd6);
-  box-shadow: 0 0 60px rgba(95, 214, 255, 0.8), 0 12px 30px rgba(0, 0, 0, 0.6);
+  background: linear-gradient(180deg, #e8fdff 0% 13.75%, color-mix(in srgb, #5fd6ff 33%, #e8fdff) 13.75% 27.5%, color-mix(in srgb, #5fd6ff 67%, #e8fdff) 27.5% 41.25%, #5fd6ff 41.25% 55%, #5fd6ff 55% 66.25%, color-mix(in srgb, #1b5fd6 33%, #5fd6ff) 66.25% 77.5%, color-mix(in srgb, #1b5fd6 67%, #5fd6ff) 77.5% 88.75%, #1b5fd6 88.75% 100%, #1b5fd6 100%);
+  box-shadow: 0 12px 0 rgba(0, 0, 0, 0.6);
 }
 
 .slot-banner-text.is-jackpot {
   color: #fff;
-  background: linear-gradient(180deg, #ff6b7d, #d0021b 55%, #6d0010);
+  background: linear-gradient(180deg, #ff6b7d 0% 13.75%, color-mix(in srgb, #d0021b 33%, #ff6b7d) 13.75% 27.5%, color-mix(in srgb, #d0021b 67%, #ff6b7d) 27.5% 41.25%, #d0021b 41.25% 55%, #d0021b 55% 66.25%, color-mix(in srgb, #6d0010 33%, #d0021b) 66.25% 77.5%, color-mix(in srgb, #6d0010 67%, #d0021b) 77.5% 88.75%, #6d0010 88.75% 100%, #6d0010 100%);
   text-shadow: 0 2px 0 #3a0008;
-  box-shadow: 0 0 70px rgba(255, 80, 100, 0.85), 0 12px 30px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 12px 0 rgba(0, 0, 0, 0.6);
 }
 
 .slot-banner-text.is-leaving {
@@ -1303,9 +1293,9 @@
 .slot-window {
   position: relative;
   padding: 10px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #0a0a0c, #1a1a20);
-  box-shadow: inset 0 0 0 2px rgba(212, 175, 55, 0.55), inset 0 10px 30px rgba(0, 0, 0, 0.9);
+  border-radius: 0;
+  background: linear-gradient(180deg, #0a0a0c 0% 25%, color-mix(in srgb, #1a1a20 33%, #0a0a0c) 25% 50%, color-mix(in srgb, #1a1a20 67%, #0a0a0c) 50% 75%, #1a1a20 75% 100%, #1a1a20 100%);
+  box-shadow: inset 0 0 0 2px rgba(212, 175, 55, 0.55), inset 0 10px 0 rgba(0, 0, 0, 0.9);
 }
 
 .slot-grid {
@@ -1318,10 +1308,9 @@
   position: relative;
   height: calc(var(--cell) * 4);
   overflow: hidden;
-  border-radius: 10px;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.55)),
-    linear-gradient(90deg, #d9d4c7, #fbf9f3 45%, #fbf9f3 55%, #cfc9ba);
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0% 4.5%, color-mix(in srgb, transparent 33%, rgba(0, 0, 0, 0.55)) 4.5% 9%, color-mix(in srgb, transparent 67%, rgba(0, 0, 0, 0.55)) 9% 13.5%, transparent 13.5% 18%, transparent 18%, transparent 82% 86.5%, color-mix(in srgb, rgba(0, 0, 0, 0.55) 33%, transparent) 86.5% 91%, color-mix(in srgb, rgba(0, 0, 0, 0.55) 67%, transparent) 91% 95.5%, rgba(0, 0, 0, 0.55) 95.5% 100%, rgba(0, 0, 0, 0.55) 100%),
+    linear-gradient(90deg, #d9d4c7 0% 11.25%, color-mix(in srgb, #fbf9f3 33%, #d9d4c7) 11.25% 22.5%, color-mix(in srgb, #fbf9f3 67%, #d9d4c7) 22.5% 33.75%, #fbf9f3 33.75% 45%, #fbf9f3 45%, #fbf9f3 55% 66.25%, color-mix(in srgb, #cfc9ba 33%, #fbf9f3) 66.25% 77.5%, color-mix(in srgb, #cfc9ba 67%, #fbf9f3) 77.5% 88.75%, #cfc9ba 88.75% 100%, #cfc9ba 100%);
 }
 
 .reel::after {
@@ -1329,7 +1318,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.25), transparent 30%, transparent 70%, rgba(0, 0, 0, 0.15));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0% 7.5%, color-mix(in srgb, transparent 33%, rgba(255, 255, 255, 0.25)) 7.5% 15%, color-mix(in srgb, transparent 67%, rgba(255, 255, 255, 0.25)) 15% 22.5%, transparent 22.5% 30%, transparent 30%, transparent 70% 77.5%, color-mix(in srgb, rgba(0, 0, 0, 0.15) 33%, transparent) 77.5% 85%, color-mix(in srgb, rgba(0, 0, 0, 0.15) 67%, transparent) 85% 92.5%, rgba(0, 0, 0, 0.15) 92.5% 100%, rgba(0, 0, 0, 0.15) 100%);
 }
 
 .reel-strip {
@@ -1341,7 +1330,7 @@
 }
 
 .reel.is-spinning .reel-strip {
-  filter: blur(1.4px);
+  filter: none;
 }
 
 .slot-cell {
@@ -1354,19 +1343,19 @@
 .slot-cell .symbol-svg {
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.35));
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35));
 }
 
 .slot-cell.is-win {
   position: relative;
   animation: cell-win 0.7s ease-in-out infinite;
-  background: radial-gradient(circle, rgba(255, 215, 90, 0.55), transparent 70%);
+  background: radial-gradient(circle, rgba(255, 215, 90, 0.55) 0% 17.5%, color-mix(in srgb, transparent 33%, rgba(255, 215, 90, 0.55)) 17.5% 35%, color-mix(in srgb, transparent 67%, rgba(255, 215, 90, 0.55)) 35% 52.5%, transparent 52.5% 70%, transparent 70%);
 }
 
 .slot-cell.is-scatter {
   position: relative;
   animation: cell-win 0.8s ease-in-out infinite;
-  background: radial-gradient(circle, rgba(95, 214, 255, 0.55), transparent 70%);
+  background: radial-gradient(circle, rgba(95, 214, 255, 0.55) 0% 17.5%, color-mix(in srgb, transparent 33%, rgba(95, 214, 255, 0.55)) 17.5% 35%, color-mix(in srgb, transparent 67%, rgba(95, 214, 255, 0.55)) 35% 52.5%, transparent 52.5% 70%, transparent 70%);
 }
 
 /* El destello de las celdas ganadoras: halo fijo cuya opacidad late (sin filtros animados). */
@@ -1375,21 +1364,21 @@
   content: "";
   position: absolute;
   inset: 6%;
-  border-radius: 50%;
-  box-shadow: 0 0 18px rgba(255, 215, 90, 0.85), inset 0 0 18px rgba(255, 240, 180, 0.45);
+  border-radius: 0;
+  box-shadow: none;
   opacity: 0;
   pointer-events: none;
   animation: glow-pulse 0.7s ease-in-out infinite;
 }
 
 .slot-cell.is-scatter::after {
-  box-shadow: 0 0 18px rgba(95, 214, 255, 0.85), inset 0 0 18px rgba(200, 245, 255, 0.45);
+  box-shadow: none;
   animation-duration: 0.8s;
 }
 
 .slot-cell.is-exploding {
   animation: explode 0.32s ease-in forwards;
-  background: radial-gradient(circle, rgba(255, 240, 180, 0.9), transparent 70%);
+  background: radial-gradient(circle, rgba(255, 240, 180, 0.9) 0% 17.5%, color-mix(in srgb, transparent 33%, rgba(255, 240, 180, 0.9)) 17.5% 35%, color-mix(in srgb, transparent 67%, rgba(255, 240, 180, 0.9)) 35% 52.5%, transparent 52.5% 70%, transparent 70%);
 }
 
 @keyframes cell-win {
@@ -1429,7 +1418,7 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
-  filter: drop-shadow(0 0 6px rgba(255, 215, 90, 0.95));
+  filter: none;
   stroke-dasharray: 1200;
   stroke-dashoffset: 1200;
   animation: line-draw 0.5s var(--ease-out) forwards;
@@ -1438,7 +1427,7 @@
 .win-line.is-super {
   stroke: #ff5d73;
   stroke-width: 7;
-  filter: drop-shadow(0 0 10px rgba(255, 90, 110, 0.95));
+  filter: none;
 }
 
 @keyframes line-draw {
@@ -1454,7 +1443,7 @@
   transform: translate(-50%, -50%);
   font: 900 clamp(1.2rem, 4.5vw, 2rem) var(--font-display);
   color: #fff6c2;
-  text-shadow: 0 0 12px rgba(255, 200, 60, 0.9), 0 3px 0 #7a4e06;
+  text-shadow: 0 4px 0 #7a4e06;
   white-space: nowrap;
   animation: pop-up 1.1s ease-out forwards;
 }
@@ -1489,12 +1478,12 @@
 
 .sticky-wild {
   position: relative;
-  border-radius: 12px;
-  box-shadow: inset 0 0 0 3px #c084fc, inset 0 0 22px rgba(192, 132, 252, 0.55), 0 0 16px rgba(192, 132, 252, 0.6);
+  border-radius: 0;
+  box-shadow: inset 0 0 0 4px #c084fc;
 }
 
 .slot-sticky.is-spinning .sticky-wild {
-  background: radial-gradient(circle, rgba(46, 16, 101, 0.92), rgba(20, 6, 45, 0.96));
+  background: radial-gradient(circle, rgba(46, 16, 101, 0.92) 0% 25%, color-mix(in srgb, rgba(20, 6, 45, 0.96) 33%, rgba(46, 16, 101, 0.92)) 25% 50%, color-mix(in srgb, rgba(20, 6, 45, 0.96) 67%, rgba(46, 16, 101, 0.92)) 50% 75%, rgba(20, 6, 45, 0.96) 75% 100%, rgba(20, 6, 45, 0.96) 100%);
 }
 
 .slot-sticky.is-spinning .sticky-wild::before {
@@ -1521,7 +1510,7 @@
   top: -6px;
   left: -6px;
   font-size: 0.9rem;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.8));
 }
 
 .sticky-count {
@@ -1531,7 +1520,7 @@
   height: 22px;
   padding: 0 5px;
   border: 2px solid #1d0a3a;
-  border-radius: 11px;
+  border-radius: 0;
   background: #f7e08a;
   color: #2e1065;
   font-size: 0.78rem;
@@ -1541,7 +1530,7 @@
   margin: 0;
   padding: 4px 12px;
   border: 1px solid #c084fc;
-  border-radius: 999px;
+  border-radius: 0;
   background: rgba(46, 16, 101, 0.6);
   color: #ead9ff;
   font-size: 0.8rem;
@@ -1549,7 +1538,7 @@
 
 .win-line.is-wild {
   stroke: #d8b4fe;
-  filter: drop-shadow(0 0 8px rgba(192, 132, 252, 0.95));
+  filter: none;
 }
 
 .slot-panel {
@@ -1565,9 +1554,9 @@
   justify-items: center;
   gap: 4px;
   padding: 8px 10px;
-  border-radius: 14px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.5);
-  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.35);
+  box-shadow: inset 0 0 0 2px rgba(212, 175, 55, 0.35);
 }
 
 .meter-label {
@@ -1588,7 +1577,7 @@
 
 .meter-win.is-lit {
   color: #9dffc9;
-  text-shadow: 0 0 14px rgba(62, 207, 142, 0.8);
+  text-shadow: none;
 }
 
 .meter-win.is-boosted {
@@ -1599,7 +1588,7 @@
   40% {
     transform: scale(1.35);
     color: #fff6c2;
-    text-shadow: 0 0 22px rgba(255, 215, 90, 1);
+    text-shadow: none;
   }
 }
 
@@ -1625,9 +1614,9 @@
 
 .paytable {
   width: 100%;
-  border-radius: 14px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.4);
-  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.25);
+  box-shadow: inset 0 0 0 2px rgba(212, 175, 55, 0.25);
 }
 
 .paytable summary {
@@ -1715,7 +1704,7 @@
     min-height: 560px;
     padding: 14px 6px 16px;
     border-width: 6px;
-    border-radius: 28px 28px 38% 38% / 28px 28px 14% 14%;
+    border-radius: 0;
   }
 
   .bj-arc {
@@ -1771,8 +1760,7 @@
   .seat-bets {
     display: grid;
     grid-template-columns: repeat(2, 44px);
-    grid-template-areas:
-      "pp side"
+    grid-template-areas: "pp side"
       "main main";
     justify-content: center;
     gap: 6px 6px;

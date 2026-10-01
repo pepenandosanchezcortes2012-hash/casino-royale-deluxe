@@ -13,6 +13,7 @@ import { bindRemoveGesture } from '../ui/input.js';
 import { session } from '../session.js';
 import { scopedKey } from '../mode.js';
 import { settings } from '../settings.js';
+import { PixelGrid, pixelContext, noSmooth } from '../ui/pixel-art.js';
 
 // En turbo la bola gira y rebota en el 40 % del tiempo (100 → 40 fotogramas de frenada).
 const TURBO_SPIN = 0.4;
@@ -185,12 +186,24 @@ const smoothstep = (a, b, x) => {
   return t * t * (3 - 2 * t);
 };
 
+const PIXEL_FONT = '"Silkscreen", ui-monospace, monospace';
+
+// Bola de marfil pixel de `cells` celdas: disco con brillo, sombra y contorno.
+function ballSprite(cells) {
+  const grid = new PixelGrid(cells + 2, cells + 2);
+  const c = (cells + 2) / 2;
+  grid.ellipse(c, c, cells / 2, cells / 2, 1);
+  grid.bevel(1, 2, 3).outline(4);
+  return grid.toCanvas([null, '#e9e9ec', '#ffffff', '#8d9096', 'rgba(0,0,0,0.6)']);
+}
+
 class WheelRenderer {
   #canvas;
   #ctx;
   #css = 0;
   #px = 0;
   #layers = null;
+  #ballSprite = null;
   #wheel = { base: 0, t0: 0, w0: IDLE_OMEGA, k: 0.35 };
   #ball = { mode: 'hidden', angle: 0, radius: 0, index: 0 };
   #spin = null;
@@ -205,7 +218,7 @@ class WheelRenderer {
 
   constructor(canvas) {
     this.#canvas = canvas;
-    this.#ctx = canvas.getContext('2d');
+    this.#ctx = pixelContext(canvas);
     this.#wheel.t0 = performance.now();
     const observer = new ResizeObserver(() => this.resize());
     observer.observe(canvas.parentElement);
@@ -235,15 +248,19 @@ class WheelRenderer {
     if (!box) return;
     const css = Math.round(Math.min(box - 12, 460));
     if (css <= 0 || css === this.#css) return;
-    const dpr = 1;
+    // Pixel art: 1 píxel del lienzo = 2 píxeles CSS (el zoom amplía bloques, no los suaviza).
+    const dpr = 1 / 2;
     this.#css = css;
     this.#px = Math.round(css * dpr);
     this.#canvas.width = this.#px;
     this.#canvas.height = this.#px;
     this.#canvas.style.width = `${css}px`;
     this.#canvas.style.height = `${css}px`;
+    // Cambiar el tamaño del lienzo reinicia el contexto: se vuelve a quitar el suavizado.
+    noSmooth(this.#ctx);
     this.#cam = { x: this.#px / 2, y: this.#px / 2, s: 1 };
     this.#layers = this.#buildLayers(this.#px);
+    this.#ballSprite = null;
     this.#draw(performance.now());
   }
 
@@ -402,85 +419,48 @@ class WheelRenderer {
     cam.y += (fy - cam.y) * blend;
   }
 
+  // Capas pixel art a la resolución del lienzo (1 píxel = 2 píxeles CSS): colores planos en
+  // anillos escalonados, sin degradados, sombras difusas ni curvas decorativas.
   #buildLayers(size) {
     const R = size / 2;
-    const make = (quality) => {
+    const make = () => {
       const canvas = document.createElement('canvas');
-      const pixels = Math.min(2048, Math.round(size * quality));
-      canvas.width = pixels;
-      canvas.height = pixels;
-      const ctx = canvas.getContext('2d');
-      const q = pixels / size;
-      ctx.setTransform(q, 0, 0, q, R * q, R * q);
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = pixelContext(canvas);
+      ctx.setTransform(1, 0, 0, 1, R, R);
       return { canvas, ctx };
     };
-
-    // Cuenco estático: madera, pista de la bola pulida y deflectores.
-    const bowl = make(1.5);
-    let g = bowl.ctx;
-    let grad = g.createRadialGradient(0, 0, R * 0.7, 0, 0, R);
-    grad.addColorStop(0, '#4a240b');
-    grad.addColorStop(0.6, '#6b3814');
-    grad.addColorStop(1, '#2a1205');
-    g.fillStyle = grad;
-    g.beginPath();
-    g.arc(0, 0, R * 0.995, 0, TAU);
-    g.fill();
-    g.strokeStyle = 'rgba(255, 220, 160, 0.06)';
-    for (let i = 0; i < 9; i++) {
-      g.lineWidth = R * 0.004;
+    const disc = (g, r, color) => {
+      g.fillStyle = color;
       g.beginPath();
-      g.arc(0, 0, R * (0.94 + i * 0.006), 0, TAU);
-      g.stroke();
-    }
-    g.lineWidth = R * 0.014;
-    g.strokeStyle = '#c9a23a';
-    g.beginPath();
-    g.arc(0, 0, R * 0.935, 0, TAU);
-    g.stroke();
-    grad = g.createRadialGradient(0, 0, R * 0.78, 0, 0, R * 0.93);
-    grad.addColorStop(0, '#120904');
-    grad.addColorStop(0.45, '#3b2312');
-    grad.addColorStop(0.8, '#5a3a20');
-    grad.addColorStop(1, '#1a0d05');
-    g.fillStyle = grad;
-    g.beginPath();
-    g.arc(0, 0, R * 0.928, 0, TAU);
-    g.arc(0, 0, R * 0.79, 0, TAU, true);
-    g.fill();
-    g.strokeStyle = 'rgba(255, 240, 210, 0.18)';
-    g.lineWidth = R * 0.006;
-    g.beginPath();
-    g.arc(0, 0, R * 0.9, -2.4, -0.9);
-    g.stroke();
+      g.arc(0, 0, r, 0, TAU);
+      g.fill();
+    };
+
+    // Cuenco estático: madera en tres anillos, aro dorado, pista de la bola y deflectores.
+    const bowl = make();
+    let g = bowl.ctx;
+    disc(g, R * 0.995, '#2a1205');
+    disc(g, R * 0.97, '#6b3814');
+    disc(g, R * 0.95, '#4a240b');
+    disc(g, R * 0.94, '#c9a23a');
+    disc(g, R * 0.925, '#5a3a20');
+    disc(g, R * 0.88, '#3b2312');
+    disc(g, R * 0.83, '#120904');
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * TAU + SEG / 2;
-      g.save();
-      g.rotate(a);
-      g.translate(0, -R * 0.815);
+      const side = Math.max(2, Math.round(R * 0.03));
+      const x = Math.round(Math.sin(a) * R * 0.815);
+      const y = Math.round(-Math.cos(a) * R * 0.815);
+      g.fillStyle = '#7a5a14';
+      g.fillRect(x - side / 2 - 1, y - side / 2 - 1, side + 2, side + 2);
       g.fillStyle = '#e8c25a';
-      g.strokeStyle = '#7a5a14';
-      g.lineWidth = R * 0.004;
-      g.beginPath();
-      if (i % 2) {
-        g.moveTo(0, -R * 0.022);
-        g.lineTo(R * 0.012, 0);
-        g.lineTo(0, R * 0.022);
-        g.lineTo(-R * 0.012, 0);
-      } else {
-        g.moveTo(-R * 0.022, 0);
-        g.lineTo(0, -R * 0.012);
-        g.lineTo(R * 0.022, 0);
-        g.lineTo(0, R * 0.012);
-      }
-      g.closePath();
-      g.fill();
-      g.stroke();
-      g.restore();
+      g.fillRect(x - side / 2, y - side / 2, side, side);
     }
 
-    // Rotor en alta resolución (nítido durante el zoom): casillas, trastes y torreta.
-    const rotor = make(2);
+    // Rotor: casillas (franja del número y fondo del bolsillo más oscuro), trastes y torreta.
+    const rotor = make();
     g = rotor.ctx;
     const rOut = R * 0.785;
     const rNum = R * 0.665;
@@ -497,10 +477,7 @@ class WheelRenderer {
       g.arc(0, 0, rNum, a1, a0, true);
       g.closePath();
       g.fill();
-      const pocketGrad = g.createRadialGradient(0, 0, rIn, 0, 0, rNum);
-      pocketGrad.addColorStop(0, dark);
-      pocketGrad.addColorStop(1, bright);
-      g.fillStyle = pocketGrad;
+      g.fillStyle = dark;
       g.beginPath();
       g.arc(0, 0, rNum, a0, a1);
       g.arc(0, 0, rIn, a1, a0, true);
@@ -509,14 +486,14 @@ class WheelRenderer {
       g.save();
       g.rotate(i * SEG);
       g.fillStyle = '#fdf6e3';
-      g.font = `700 ${Math.round(R * 0.068)}px Georgia, serif`;
+      g.font = `8px ${PIXEL_FONT}`;
       g.textAlign = 'center';
       g.textBaseline = 'middle';
-      g.fillText(String(n), 0, -(rNum + rOut) / 2);
+      g.fillText(String(n), 0, -Math.round((rNum + rOut) / 2));
       g.restore();
     }
     g.strokeStyle = '#d9d4c7';
-    g.lineWidth = R * 0.007;
+    g.lineWidth = 1;
     for (let i = 0; i < POCKETS; i++) {
       const a = i * SEG - SEG / 2 - Math.PI / 2;
       g.beginPath();
@@ -526,67 +503,36 @@ class WheelRenderer {
     }
     g.strokeStyle = '#d4af37';
     for (const r of [rOut, rNum, rIn]) {
-      g.lineWidth = r === rNum ? R * 0.006 : R * 0.012;
+      g.lineWidth = r === rNum ? 1 : 2;
       g.beginPath();
       g.arc(0, 0, r, 0, TAU);
       g.stroke();
     }
-    grad = g.createRadialGradient(-R * 0.12, -R * 0.12, R * 0.05, 0, 0, rIn);
-    grad.addColorStop(0, '#9a6232');
-    grad.addColorStop(0.6, '#5c3314');
-    grad.addColorStop(1, '#2e1706');
-    g.fillStyle = grad;
-    g.beginPath();
-    g.arc(0, 0, rIn - R * 0.006, 0, TAU);
-    g.fill();
-    g.strokeStyle = 'rgba(212, 175, 55, 0.55)';
-    g.lineWidth = R * 0.004;
-    for (let i = 0; i < 4; i++) {
-      g.save();
-      g.rotate((i * Math.PI) / 2 + Math.PI / 4);
-      g.beginPath();
-      g.moveTo(0, -R * 0.12);
-      g.quadraticCurveTo(R * 0.06, -R * 0.3, 0, -R * 0.47);
-      g.quadraticCurveTo(-R * 0.06, -R * 0.3, 0, -R * 0.12);
-      g.stroke();
-      g.restore();
-    }
-    const gold = g.createLinearGradient(-R * 0.2, -R * 0.2, R * 0.2, R * 0.2);
-    gold.addColorStop(0, '#fff3b0');
-    gold.addColorStop(0.5, '#d4af37');
-    gold.addColorStop(1, '#7a5a14');
+    disc(g, rIn - 1, '#2e1706');
+    disc(g, rIn * 0.8, '#5c3314');
+    disc(g, rIn * 0.45, '#9a6232');
+    // Torreta: cuatro brazos de bloques dorados con luz arriba y sombra abajo.
+    const arm = Math.max(2, Math.round(R * 0.036));
     for (let i = 0; i < 4; i++) {
       g.save();
       g.rotate((i * Math.PI) / 2);
-      g.fillStyle = gold;
-      g.fillRect(-R * 0.018, -R * 0.24, R * 0.036, R * 0.2);
-      g.beginPath();
-      g.arc(0, -R * 0.25, R * 0.035, 0, TAU);
-      g.fill();
+      g.fillStyle = '#7a5a14';
+      g.fillRect(-arm / 2, -Math.round(R * 0.28), arm, Math.round(R * 0.24));
+      g.fillStyle = '#d4af37';
+      g.fillRect(-arm / 2, -Math.round(R * 0.28), arm - 1, Math.round(R * 0.24) - 1);
+      g.fillStyle = '#fff3b0';
+      g.fillRect(-arm, -Math.round(R * 0.3), arm * 2, arm);
       g.restore();
     }
-    const dome = g.createRadialGradient(-R * 0.03, -R * 0.03, R * 0.01, 0, 0, R * 0.08);
-    dome.addColorStop(0, '#fffbe0');
-    dome.addColorStop(0.5, '#e0b943');
-    dome.addColorStop(1, '#6b4c0e');
-    g.fillStyle = dome;
-    g.beginPath();
-    g.arc(0, 0, R * 0.08, 0, TAU);
-    g.fill();
+    const hub = Math.max(4, Math.round(R * 0.16));
+    g.fillStyle = '#6b4c0e';
+    g.fillRect(-hub / 2, -hub / 2, hub, hub);
+    g.fillStyle = '#e0b943';
+    g.fillRect(-hub / 2, -hub / 2, hub - 2, hub - 2);
+    g.fillStyle = '#fffbe0';
+    g.fillRect(-hub / 2 + 1, -hub / 2 + 1, 2, 2);
 
-    // Brillo especular fijo (no gira con el rotor).
-    const glare = make(1);
-    g = glare.ctx;
-    grad = g.createLinearGradient(-R, -R, R * 0.4, R * 0.4);
-    grad.addColorStop(0, 'rgba(255, 255, 255, 0.16)');
-    grad.addColorStop(0.45, 'rgba(255, 255, 255, 0.02)');
-    grad.addColorStop(1, 'rgba(0, 0, 0, 0.18)');
-    g.fillStyle = grad;
-    g.beginPath();
-    g.arc(0, 0, R * 0.93, 0, TAU);
-    g.fill();
-
-    return { bowl: bowl.canvas, rotor: rotor.canvas, glare: glare.canvas };
+    return { bowl: bowl.canvas, rotor: rotor.canvas };
   }
 
   #draw(now) {
@@ -605,12 +551,11 @@ class WheelRenderer {
     ctx.rotate(wheel);
     ctx.drawImage(this.#layers.rotor, -R, -R, size, size);
     if (this.#highlight) {
-      const pulse = 0.55 + 0.45 * Math.sin((now - this.#highlight.since) / 160);
+      // Parpadeo a pasos (encendido / medio / apagado) en lugar de un pulso suave.
+      const pulse = [1, 0.6, 0.25, 0.6][Math.floor((now - this.#highlight.since) / 160) % 4];
       const a0 = this.#highlight.index * SEG - SEG / 2 - Math.PI / 2;
       ctx.strokeStyle = `rgba(255, 226, 120, ${pulse})`;
-      ctx.lineWidth = R * 0.02;
-      ctx.shadowColor = '#ffd76a';
-      ctx.shadowBlur = R * 0.06;
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(0, 0, R * 0.8, a0, a0 + SEG);
       ctx.arc(0, 0, R * 0.52, a0 + SEG, a0, true);
@@ -618,34 +563,30 @@ class WheelRenderer {
       ctx.stroke();
     }
     ctx.restore();
-    ctx.drawImage(this.#layers.glare, 0, 0, size, size);
 
     if (this.#ball.mode !== 'hidden') {
+      // Bola pixel con sombra dura de un píxel.
       const { x: bx, y: by } = this.#ballPosition(now);
-      const br = R * 0.03;
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-      ctx.beginPath();
-      ctx.ellipse(bx + br * 0.35, by + br * 0.45, br, br * 0.8, 0, 0, TAU);
-      ctx.fill();
-      const shine = ctx.createRadialGradient(bx - br * 0.35, by - br * 0.4, br * 0.1, bx, by, br);
-      shine.addColorStop(0, '#ffffff');
-      shine.addColorStop(0.55, '#e9e9ec');
-      shine.addColorStop(1, '#8d9096');
-      ctx.fillStyle = shine;
-      ctx.beginPath();
-      ctx.arc(bx, by, br, 0, TAU);
-      ctx.fill();
+      this.#ballSprite ??= ballSprite(Math.max(4, Math.round(R * 0.06)));
+      const ball = this.#ballSprite;
+      const left = Math.round(bx - ball.width / 2);
+      const top = Math.round(by - ball.height / 2);
+      ctx.drawImage(ball, left, top);
     }
 
-    // Viñeta cinematográfica proporcional al zoom.
+    // Viñeta escalonada (marcos de bloques cada vez más oscuros) proporcional al zoom.
     const zoomed = (s - 1) / (ZOOM - 1);
     if (zoomed > 0.02) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      const vignette = ctx.createRadialGradient(R, R, R * 0.55, R, R, R * 1.05);
-      vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
-      vignette.addColorStop(1, `rgba(0, 0, 0, ${0.6 * zoomed})`);
-      ctx.fillStyle = vignette;
-      ctx.fillRect(0, 0, size, size);
+      const band = Math.max(2, Math.round(size * 0.04));
+      for (let k = 0; k < 3; k++) {
+        ctx.fillStyle = `rgba(0, 0, 0, ${(0.2 * (3 - k) * zoomed).toFixed(3)})`;
+        const o = k * band;
+        ctx.fillRect(o, o, size - 2 * o, band);
+        ctx.fillRect(o, size - o - band, size - 2 * o, band);
+        ctx.fillRect(o, o + band, band, size - 2 * o - 2 * band);
+        ctx.fillRect(size - o - band, o + band, band, size - 2 * o - 2 * band);
+      }
     }
   }
 }

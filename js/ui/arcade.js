@@ -4,6 +4,7 @@
 
 import { settings } from '../settings.js';
 import { el } from './svg.js';
+import { noSmooth } from './pixel-art.js';
 
 const fixed2 = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -38,17 +39,17 @@ export function trauma(node, level = 1) {
 export const pace = (ms) => ms * settings.speed;
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, pace(ms)));
 
-// Ajusta el lienzo a su tamaño en CSS a 1 píxel de lienzo por píxel CSS: en pantallas densas el
-// navegador lo amplía con image-rendering: pixelated (estética pixel art) y se pinta hasta 4 veces
-// menos.
-export function fitCanvas(canvas, aspect) {
+// Ajusta el lienzo a su tamaño en CSS con `pixel` píxeles CSS por píxel de lienzo (1 o 2): el
+// navegador lo amplía con image-rendering: pixelated y el contexto no suaviza al escalar, así que
+// todo se ve en bloques nítidos (y se pinta hasta 4 veces menos). Se dibuja en coordenadas CSS.
+export function fitCanvas(canvas, aspect, pixel = 1) {
   const width = Math.max(200, canvas.clientWidth || canvas.parentElement?.clientWidth || 320);
   const height = Math.round(width * aspect);
-  const dpr = 1;
+  const dpr = 1 / pixel;
   canvas.style.height = `${height}px`;
   canvas.width = Math.round(width * dpr);
   canvas.height = Math.round(height * dpr);
-  const ctx = canvas.getContext('2d');
+  const ctx = noSmooth(canvas.getContext('2d'));
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   return { ctx, width, height, dpr };
 }

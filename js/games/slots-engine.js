@@ -39,8 +39,8 @@ export const SCATTER_ID = 'X';
 // Pesos por celda (juego base y giros gratis) y pago con 3 en línea (en apuestas de línea).
 export const SYMBOLS = Object.freeze([
   Object.freeze({ id: 'X', name: 'Estrella', base: 18, free: 14, pay3: 0, scatter: true }),
-  Object.freeze({ id: 'W', name: 'Comodín', base: 4, free: 45, pay3: 50, wild: true }),
-  Object.freeze({ id: 'C', name: 'Corona Real', base: 58, free: 150, pay3: 50 }),
+  Object.freeze({ id: 'W', name: 'Chip Comodín', base: 4, free: 45, pay3: 50, wild: true }),
+  Object.freeze({ id: 'C', name: 'Diamante', base: 58, free: 150, pay3: 50 }),
   Object.freeze({ id: 'S', name: '7 de Oro', base: 88, free: 160, pay3: 20 }),
   Object.freeze({ id: 'B', name: 'Campana', base: 128, free: 170, pay3: 8 }),
   Object.freeze({ id: 'H', name: 'Herradura', base: 180, free: 160, pay3: 4 }),

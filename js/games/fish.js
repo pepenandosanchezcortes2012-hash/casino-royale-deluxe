@@ -1,8 +1,8 @@
 // Cyber-Fish Hunter: acuario en Canvas 2D con un cañón que apunta al cursor o al dedo. Cada bala
 // es una apuesta provably fair (fish-math.js): su número se compromete al disparar y decide la
 // captura al impactar (r < 0,96 / multiplicador). Peces, balas, partículas, burbujas y números
-// flotantes salen de pools de tamaño fijo (el bucle no crea objetos), los sprites de las
-// criaturas se pintan una sola vez y el bucle requestAnimationFrame solo corre con la mesa
+// flotantes salen de pools de tamaño fijo (el bucle no crea objetos), las criaturas son sprites
+// pixel art de 3 fotogramas (js/ui/pixel-sprites.js) rasterizados una sola vez y el bucle requestAnimationFrame solo corre con la mesa
 // visible y la pestaña del navegador activa. Al ocultarse, las balas en vuelo se devuelven (su
 // número sigue oculto: devolverlas no revela nada).
 
@@ -16,6 +16,8 @@ import { hud, formatChips } from '../ui/hud.js';
 import { el } from '../ui/svg.js';
 import { fmtMult, outcomeTone, pushRecent, trauma } from '../ui/arcade.js';
 import { settings } from '../settings.js';
+import { pixelContext } from '../ui/pixel-art.js';
+import { fishFrames, fishColor, cannonSprites, bulletSprite } from '../ui/pixel-sprites.js';
 import {
   SPECIES, FISH_RTP, FIRE_INTERVAL_MS, MAX_BULLETS, BULLET_LIFETIME_MS, VOLLEY_MS, VOLLEY_MAX,
   KRAKEN_EVERY_MS, KRAKEN_STAY_MS, captureChance, resolveShot, pickSpecies, speciesById, Volley,
@@ -33,7 +35,7 @@ const AUTO_INTERVAL_MS = 240;
 // Pixel art: el acuario se dibuja a media resolución y el navegador lo escala con
 // image-rendering: pixelated (bloques nítidos y 4 veces menos píxeles que pintar).
 const PIXEL_SCALE = 0.5;
-const PIXEL_FONT = '"Syndicate Pixel", ui-monospace, monospace';
+const PIXEL_FONT = '"Press Start 2P", ui-monospace, monospace';
 const CANNON_MARGIN = 30;
 const AIM_SPEED = 7;
 const TAU = Math.PI * 2;
@@ -42,9 +44,13 @@ const MAX_ANGLE = -0.12;
 const round2 = (value) => Math.round(value * 100) / 100;
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const percent = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2 });
-// A 20 y 40 px cada píxel de la fuente cae justo en 1 y 2 píxeles del lienzo.
-const FLOAT_FONT = `20px ${PIXEL_FONT}`;
-const FLOAT_FONT_BIG = `40px ${PIXEL_FONT}`;
+// Press Start 2P vive en una rejilla de 8 px: a 16 y 32 px CSS cada píxel de la fuente cae justo en
+// 1 y 2 píxeles del lienzo.
+const FLOAT_FONT = `16px ${PIXEL_FONT}`;
+const FLOAT_FONT_BIG = `32px ${PIXEL_FONT}`;
+const LABEL_FONT = '16px "Silkscreen", ui-monospace, monospace';
+// Fotogramas de nado en vaivén.
+const SWIM = [0, 1, 2, 1];
 const snap = (value) => Math.round(value / 2) * 2;
 const reducedMotion = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
@@ -79,267 +85,35 @@ class Pool {
   }
 }
 
-// ---------- Sprites (se pintan una vez por especie y densidad de pantalla) ----------
+// ---------- Sprites pixel art (se rasterizan una vez: 1 celda = 1 píxel del lienzo) ----------
 
-function spriteCanvas(w, h, dpr) {
+// Lienzo de un sprite y su tamaño en píxeles CSS (cada celda mide 1 / PIXEL_SCALE píxeles CSS).
+function bake({ grid, palette }) {
+  return { canvas: grid.toCanvas(palette), w: grid.w / PIXEL_SCALE, h: grid.h / PIXEL_SCALE };
+}
+
+// Tres fotogramas de nado por especie (aletas y cola) que se reproducen en vaivén 0-1-2-1.
+function paintSpecies(kind) {
+  const frames = fishFrames(kind.id).map(bake);
+  return { frames, w: frames[0].w, h: frames[0].h, color: fishColor(kind.id) };
+}
+
+// Etiqueta «×8» cacheada por multiplicador, en Silkscreen (más estrecha) con sombra dura.
+function paintLabel(text, color) {
+  const w = 8 + text.length * 12;
+  const h = 22;
   const canvas = document.createElement('canvas');
-  canvas.width = Math.ceil(w * dpr);
-  canvas.height = Math.ceil(h * dpr);
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, (w / 2) * dpr, (h / 2) * dpr);
-  return { canvas, ctx };
-}
-
-function eye(ctx, x, y, r) {
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, TAU);
-  ctx.fill();
-  ctx.fillStyle = '#05060a';
-  ctx.beginPath();
-  ctx.arc(x + r * 0.25, y, r * 0.55, 0, TAU);
-  ctx.fill();
-}
-
-const PAINTERS = {
-  neon(ctx, r, color, deep) {
-    const body = ctx.createLinearGradient(0, -r * 0.6, 0, r * 0.6);
-    body.addColorStop(0, color);
-    body.addColorStop(1, deep);
-    ctx.fillStyle = body;
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.75, 0);
-    ctx.lineTo(-r * 1.3, -r * 0.55);
-    ctx.lineTo(-r * 1.2, 0);
-    ctx.lineTo(-r * 1.3, r * 0.55);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(r * 0.05, 0, r, r * 0.55, 0, 0, TAU);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,.75)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.1, -r * 0.5);
-    ctx.lineTo(r * 0.25, -r * 0.85);
-    ctx.lineTo(r * 0.45, -r * 0.45);
-    ctx.fill();
-    eye(ctx, r * 0.55, -r * 0.12, r * 0.17);
-  },
-  jelly(ctx, r, color, deep) {
-    const dome = ctx.createRadialGradient(0, -r * 0.5, r * 0.1, 0, -r * 0.2, r);
-    dome.addColorStop(0, '#ffffff');
-    dome.addColorStop(0.35, color);
-    dome.addColorStop(1, deep);
-    ctx.fillStyle = dome;
-    ctx.beginPath();
-    ctx.ellipse(0, -r * 0.1, r * 0.85, r * 0.7, 0, Math.PI, 0);
-    ctx.quadraticCurveTo(0, r * 0.05, -r * 0.85, -r * 0.1);
-    ctx.fill();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    for (let i = 0; i < 5; i++) {
-      const x = -r * 0.6 + i * r * 0.3;
-      ctx.beginPath();
-      ctx.moveTo(x, -r * 0.05);
-      ctx.bezierCurveTo(x - r * 0.2, r * 0.35, x + r * 0.2, r * 0.6, x - r * 0.05, r * 1.0);
-      ctx.stroke();
-    }
-    // Chispas eléctricas.
-    ctx.strokeStyle = '#fff6a8';
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.3, -r * 0.55);
-    ctx.lineTo(-r * 0.1, -r * 0.35);
-    ctx.lineTo(-r * 0.2, -r * 0.3);
-    ctx.lineTo(r * 0.05, -r * 0.1);
-    ctx.stroke();
-  },
-  manta(ctx, r, color, deep) {
-    const wing = ctx.createLinearGradient(-r, 0, r, 0);
-    wing.addColorStop(0, deep);
-    wing.addColorStop(0.6, color);
-    wing.addColorStop(1, deep);
-    ctx.fillStyle = wing;
-    ctx.beginPath();
-    ctx.moveTo(r * 0.85, 0);
-    ctx.quadraticCurveTo(r * 0.2, -r * 0.2, -r * 0.1, -r * 0.95);
-    ctx.quadraticCurveTo(-r * 0.25, -r * 0.3, -r * 0.6, 0);
-    ctx.quadraticCurveTo(-r * 0.25, r * 0.3, -r * 0.1, r * 0.95);
-    ctx.quadraticCurveTo(r * 0.2, r * 0.2, r * 0.85, 0);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,.7)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.6, 0);
-    ctx.lineTo(-r * 1.25, r * 0.05);
-    ctx.stroke();
-    // Circuitos de las alas.
-    ctx.strokeStyle = 'rgba(255,255,255,.45)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(r * 0.1, -r * 0.1);
-    ctx.lineTo(-r * 0.05, -r * 0.55);
-    ctx.lineTo(-r * 0.2, -r * 0.6);
-    ctx.moveTo(r * 0.1, r * 0.1);
-    ctx.lineTo(-r * 0.05, r * 0.55);
-    ctx.lineTo(-r * 0.2, r * 0.6);
-    ctx.stroke();
-    eye(ctx, r * 0.55, -r * 0.12, r * 0.08);
-    eye(ctx, r * 0.55, r * 0.12, r * 0.08);
-  },
-  shark(ctx, r, color, deep) {
-    const body = ctx.createLinearGradient(0, -r * 0.4, 0, r * 0.4);
-    body.addColorStop(0, color);
-    body.addColorStop(1, deep);
-    ctx.fillStyle = body;
-    // Aleta dorsal y cola.
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.1, -r * 0.3);
-    ctx.lineTo(-r * 0.35, -r * 0.75);
-    ctx.lineTo(-r * 0.45, -r * 0.28);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.85, 0);
-    ctx.lineTo(-r * 1.3, -r * 0.55);
-    ctx.lineTo(-r * 1.12, 0);
-    ctx.lineTo(-r * 1.3, r * 0.45);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(0, 0, r * 0.95, r * 0.34, 0, 0, TAU);
-    ctx.fill();
-    // Cabeza de martillo.
-    ctx.beginPath();
-    ctx.roundRect(r * 0.75, -r * 0.55, r * 0.26, r * 1.1, r * 0.12);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,.8)';
-    ctx.lineWidth = 1.3;
-    ctx.stroke();
-    // Placas de blindaje.
-    ctx.strokeStyle = 'rgba(0,0,0,.45)';
-    ctx.lineWidth = 2;
-    for (const x of [-r * 0.45, -r * 0.1, r * 0.25]) {
-      ctx.beginPath();
-      ctx.moveTo(x, -r * 0.3);
-      ctx.quadraticCurveTo(x + r * 0.08, 0, x, r * 0.3);
-      ctx.stroke();
-    }
-    eye(ctx, r * 0.88, -r * 0.48, r * 0.09);
-    eye(ctx, r * 0.88, r * 0.48, r * 0.09);
-  },
-  kraken(ctx, r, color, deep) {
-    ctx.strokeStyle = color;
-    ctx.lineCap = 'round';
-    for (let i = 0; i < 8; i++) {
-      const spread = (i - 3.5) / 3.5;
-      ctx.lineWidth = r * 0.11;
-      ctx.beginPath();
-      ctx.moveTo(spread * r * 0.35, r * 0.05);
-      ctx.bezierCurveTo(spread * r * 0.6, r * 0.45, spread * r * 1.05 + r * 0.15 * Math.sin(i * 1.7), r * 0.55, spread * r * 0.95, r * 0.95);
-      ctx.stroke();
-    }
-    const head = ctx.createRadialGradient(-r * 0.15, -r * 0.55, r * 0.05, 0, -r * 0.3, r * 0.7);
-    head.addColorStop(0, '#ffd0ec');
-    head.addColorStop(0.35, color);
-    head.addColorStop(1, deep);
-    ctx.fillStyle = head;
-    ctx.beginPath();
-    ctx.ellipse(0, -r * 0.32, r * 0.62, r * 0.58, 0, 0, TAU);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,.6)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    // Ojos que brillan.
-    ctx.shadowColor = '#fff36b';
-    ctx.shadowBlur = r * 0.2;
-    ctx.fillStyle = '#fff36b';
-    for (const x of [-r * 0.22, r * 0.22]) {
-      ctx.beginPath();
-      ctx.ellipse(x, -r * 0.25, r * 0.11, r * 0.07, 0, 0, TAU);
-      ctx.fill();
-    }
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#16000a';
-    for (const x of [-r * 0.22, r * 0.22]) {
-      ctx.beginPath();
-      ctx.ellipse(x, -r * 0.25, r * 0.03, r * 0.06, 0, 0, TAU);
-      ctx.fill();
-    }
-  },
-};
-
-function paintSpecies(kind, dpr) {
-  const r = kind.size;
-  const w = Math.ceil(r * 2.8);
-  const h = Math.ceil(r * 2.4);
-  const { canvas, ctx } = spriteCanvas(w, h, dpr);
-  const color = `hsl(${kind.hue} 72% 60%)`;
-  const deep = `hsl(${kind.hue} 60% 20%)`;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = Math.max(6, r * 0.45);
-  PAINTERS[kind.id](ctx, r, color, deep);
-  return { canvas, w, h, color };
-}
-
-// Bala con su halo ya pintado (shadowBlur en cada fotograma sería caro).
-function paintBullet(dpr) {
-  const size = BULLET_RADIUS * 6;
-  const { canvas, ctx } = spriteCanvas(size, size, dpr);
-  ctx.shadowColor = '#00e5ff';
-  ctx.shadowBlur = BULLET_RADIUS * 1.8;
-  ctx.fillStyle = '#e8fdff';
-  ctx.beginPath();
-  ctx.arc(0, 0, BULLET_RADIUS, 0, TAU);
-  ctx.fill();
-  return { canvas, w: size, h: size };
-}
-
-// Cañón: base (fija) y tubo (gira con la puntería), pintados una vez.
-function paintCannon(dpr) {
-  const base = spriteCanvas(52, 52, dpr);
-  const glow = base.ctx.createRadialGradient(-6, -6, 2, 0, 0, 24);
-  glow.addColorStop(0, '#ffffff');
-  glow.addColorStop(0.4, '#ff2bd6');
-  glow.addColorStop(1, '#3a0533');
-  base.ctx.fillStyle = glow;
-  base.ctx.beginPath();
-  base.ctx.arc(0, 0, 22, 0, TAU);
-  base.ctx.fill();
-  const barrel = spriteCanvas(96, 24, dpr);
-  const metal = barrel.ctx.createLinearGradient(0, -9, 0, 9);
-  metal.addColorStop(0, '#9ff8ff');
-  metal.addColorStop(0.5, '#1aa5c4');
-  metal.addColorStop(1, '#063a4a');
-  barrel.ctx.fillStyle = metal;
-  barrel.ctx.beginPath();
-  barrel.ctx.roundRect(4, -9, 34, 18, 5);
-  barrel.ctx.fill();
-  barrel.ctx.strokeStyle = '#e8fdff';
-  barrel.ctx.lineWidth = 1.5;
-  barrel.ctx.stroke();
-  return { base: { canvas: base.canvas, w: 52, h: 52 }, barrel: { canvas: barrel.canvas, w: 96, h: 24 } };
-}
-
-// Etiqueta «×8» cacheada por multiplicador.
-function paintLabel(text, dpr, color) {
-  const w = 12 + text.length * 12;
-  const h = 26;
-  const { canvas, ctx } = spriteCanvas(w, h, dpr);
-  ctx.font = `20px ${PIXEL_FONT}`;
+  canvas.width = Math.ceil(w * PIXEL_SCALE);
+  canvas.height = Math.ceil(h * PIXEL_SCALE);
+  const ctx = pixelContext(canvas);
+  ctx.setTransform(PIXEL_SCALE, 0, 0, PIXEL_SCALE, (w / 2) * PIXEL_SCALE, (h / 2) * PIXEL_SCALE);
+  ctx.font = LABEL_FONT;
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  // Sombra dura de un píxel en lugar de contorno difuminado.
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-  ctx.fillText(text, 2, 8);
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#000000';
+  ctx.fillText(text, 2, 2);
   ctx.fillStyle = color;
-  ctx.fillText(text, 0, 6);
+  ctx.fillText(text, 0, 0);
   return { canvas, w, h };
 }
 
@@ -586,7 +360,7 @@ export class FishGame {
     canvas.style.height = `${height}px`;
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
-    this.#ctx = canvas.getContext('2d');
+    this.#ctx = pixelContext(canvas);
     const prev = this.#geo;
     this.#geo = { w: width, h: height, dpr, cx: width / 2, cy: height - CANNON_MARGIN };
     // Al cambiar de tamaño, todo lo que nada se reescala con el acuario.
@@ -607,77 +381,78 @@ export class FishGame {
     if (!prev || prev.dpr !== dpr) {
       this.#sprites.clear();
       this.#labels.clear();
-      for (const kind of SPECIES) this.#sprites.set(kind.id, paintSpecies(kind, dpr));
-      this.#bulletSprite = paintBullet(dpr);
-      this.#cannon = paintCannon(dpr);
+      for (const kind of SPECIES) this.#sprites.set(kind.id, paintSpecies(kind));
+      this.#bulletSprite = bake(bulletSprite());
+      const cannon = cannonSprites();
+      this.#cannon = { base: bake(cannon.base), barrel: bake(cannon.barrel) };
       for (const fish of this.#fish.items) fish.label = null;
     }
     this.#paintBackground();
     this.#draw();
   }
 
-  // El fondo se pinta una vez en su propio lienzo, debajo del de la acción.
+  // El fondo se pinta una vez en su propio lienzo, debajo del de la acción, directamente en
+  // píxeles del lienzo: agua en bandas planas con tramado entre ellas, haces de luz escalonados,
+  // rejilla de puntos, fondo marino con algas y la plataforma del cañón.
   #paintBackground() {
     const { w, h, dpr } = this.#geo;
     const canvas = this.#dom.bg;
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
-    const ctx = canvas.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const water = ctx.createLinearGradient(0, 0, 0, h);
-    water.addColorStop(0, '#04263a');
-    water.addColorStop(0.55, '#031827');
-    water.addColorStop(1, '#010a12');
-    ctx.fillStyle = water;
-    ctx.fillRect(0, 0, w, h);
-    // Rayos de luz desde la superficie.
-    ctx.globalCompositeOperation = 'lighter';
+    const cw = Math.round(w * dpr);
+    const ch = Math.round(h * dpr);
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = pixelContext(canvas);
+    const bands = ['#06344f', '#05293f', '#041f31', '#031827', '#02121e', '#010d17', '#010a12'];
+    const bandH = Math.ceil(ch / bands.length);
+    bands.forEach((color, i) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(0, i * bandH, cw, bandH);
+    });
+    // Tramado de damero de 2 filas en cada frontera de banda.
+    for (let i = 1; i < bands.length; i++) {
+      ctx.fillStyle = bands[i];
+      for (let y = i * bandH - 2; y < i * bandH; y++) for (let x = y % 2; x < cw; x += 2) ctx.fillRect(x, y, 1, 1);
+    }
+    // Haces de luz: escalones diagonales semitransparentes.
+    ctx.fillStyle = '#5adcff';
     for (let i = 0; i < 5; i++) {
-      const x = (w * (i + 0.5)) / 5 + (i % 2 ? 30 : -20);
-      const ray = ctx.createLinearGradient(x, 0, x + 60, h * 0.8);
-      ray.addColorStop(0, 'rgba(90, 220, 255, 0.10)');
-      ray.addColorStop(1, 'rgba(90, 220, 255, 0)');
-      ctx.fillStyle = ray;
-      ctx.beginPath();
-      ctx.moveTo(x - 30, 0);
-      ctx.lineTo(x + 30, 0);
-      ctx.lineTo(x + 140, h * 0.8);
-      ctx.lineTo(x + 40, h * 0.8);
-      ctx.closePath();
-      ctx.fill();
+      const x0 = Math.round((cw * (i + 0.4)) / 5);
+      for (let y = 0; y < ch * 0.7; y += 2) {
+        ctx.globalAlpha = 0.07 * (1 - y / (ch * 0.7));
+        ctx.fillRect(Math.round(x0 + y * 0.35), y, 8 + Math.floor(y / 24), 2);
+      }
     }
-    ctx.globalCompositeOperation = 'source-over';
-    // Rejilla cibernética del fondo.
-    ctx.strokeStyle = 'rgba(0, 229, 255, 0.07)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let x = 0; x <= w; x += 48) {
-      ctx.moveTo(x + 0.5, 0);
-      ctx.lineTo(x + 0.5, h);
+    ctx.globalAlpha = 1;
+    // Destellos fijos cerca de la superficie y rejilla de puntos cibernética.
+    ctx.fillStyle = '#c8f6ff';
+    for (let i = 0; i < 40; i++) ctx.fillRect((i * 53 + (i % 3) * 17) % cw, (i * 29) % Math.max(1, Math.round(ch * 0.18)), 2, 1);
+    ctx.fillStyle = 'rgba(0, 229, 255, 0.18)';
+    for (let y = 12; y < ch - 20; y += 24) for (let x = 12; x < cw; x += 24) ctx.fillRect(x, y, 1, 1);
+    // Fondo marino: arena morada con perfil ondulado y algas en escalera.
+    for (let x = 0; x < cw; x++) {
+      const top = ch - 10 - Math.round(2 * Math.sin(x / 9) + 2 * Math.sin(x / 23));
+      ctx.fillStyle = '#2a0a2e';
+      ctx.fillRect(x, top, 1, ch - top);
+      ctx.fillStyle = '#7a1f6e';
+      ctx.fillRect(x, top, 1, 1);
     }
-    for (let y = 0; y <= h; y += 48) {
-      ctx.moveTo(0, y + 0.5);
-      ctx.lineTo(w, y + 0.5);
+    for (let i = 0; i < 9; i++) {
+      const x0 = Math.round(((i + 0.5) * cw) / 9 + (i % 2 ? 6 : -4));
+      const tall = 14 + ((i * 7) % 18);
+      for (let y = 0; y < tall; y++) {
+        ctx.fillStyle = y % 6 < 3 ? '#2fbf55' : '#127a30';
+        ctx.fillRect(x0 + (Math.floor(y / 4) % 2), ch - 10 - y, 2, 1);
+      }
     }
-    ctx.stroke();
-    // Fondo marino con la plataforma del cañón.
-    const sand = ctx.createLinearGradient(0, h - 46, 0, h);
-    sand.addColorStop(0, 'rgba(255, 43, 214, 0.0)');
-    sand.addColorStop(1, 'rgba(255, 43, 214, 0.22)');
-    ctx.fillStyle = sand;
-    ctx.fillRect(0, h - 46, w, 46);
-    ctx.strokeStyle = 'rgba(255, 43, 214, 0.55)';
-    ctx.beginPath();
-    ctx.moveTo(0, h - 8.5);
-    ctx.lineTo(w, h - 8.5);
-    ctx.stroke();
+    ctx.fillStyle = '#ff2bd6';
+    ctx.fillRect(0, ch - 4, cw, 1);
   }
 
   #label(multiplier, color) {
     const key = `${multiplier}|${color}`;
     let label = this.#labels.get(key);
     if (!label) {
-      label = paintLabel(fmtMult(multiplier).replace(',00', ''), this.#geo.dpr, color);
+      label = paintLabel(fmtMult(multiplier).replace(',00', ''), color);
       this.#labels.set(key, label);
     }
     return label;
@@ -997,7 +772,7 @@ export class FishGame {
       p.vy = Math.sin(angle) * v;
       p.max = life * (0.6 + randomFloat() * 0.4);
       p.life = p.max;
-      p.size = 1.5 + randomFloat() * 2.5;
+      p.size = 2 + Math.floor(randomFloat() * 2) * 2;
       p.color = color;
     }
   }
@@ -1039,7 +814,7 @@ export class FishGame {
       if (b) {
         b.x = randomFloat() * w;
         b.y = h - 10;
-        b.r = 1.5 + randomFloat() * 3.5;
+        b.r = 2 + Math.floor(randomFloat() * 3) * 2;
         b.vy = 25 + randomFloat() * 45;
         b.phase = randomFloat() * TAU;
       }
@@ -1096,56 +871,68 @@ export class FishGame {
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.setTransform(dpr, 0, 0, dpr, shakeX * dpr, shakeY * dpr);
 
-    // Burbujas.
-    ctx.strokeStyle = 'rgba(170, 240, 255, 0.35)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
+    // Burbujas cuadradas: marco de 1 píxel con un brillo en la esquina.
+    ctx.fillStyle = 'rgba(170, 240, 255, 0.45)';
     for (const b of this.#bubbles.items) {
       if (!b.active) continue;
-      ctx.moveTo(b.x + b.r, b.y);
-      ctx.arc(b.x, b.y, b.r, 0, TAU);
+      const s = b.r * 2;
+      const x = snap(b.x - b.r);
+      const y = snap(b.y - b.r);
+      ctx.fillRect(x + 2, y, s - 4, 2);
+      ctx.fillRect(x + 2, y + s - 2, s - 4, 2);
+      ctx.fillRect(x, y + 2, 2, s - 4);
+      ctx.fillRect(x + s - 2, y + 2, 2, s - 4);
+      ctx.fillRect(x + 2, y + 2, 2, 2);
     }
-    ctx.stroke();
 
-    // Criaturas: sprite cacheado con rotación por la ondulación y volteo según la dirección.
+    // Criaturas: fotograma de nado del sprite, volteado según la dirección y sin rotar (los
+    // píxeles no se tuercen). La posición se ajusta a la rejilla del lienzo.
     for (const fish of this.#fish.items) {
       if (!fish.active) continue;
       const sprite = this.#sprites.get(fish.kind.id);
       if (!sprite) continue;
       const upright = fish.kind.id === 'jelly' || fish.boss;
-      const tilt = upright ? 0 : Math.atan2(fish.vy, Math.abs(fish.vx) || 1) * 0.6;
-      const pulse = fish.kind.id === 'jelly' ? 1 + Math.sin(this.#clock / 260 + fish.phase) * 0.06 : 1;
-      const cos = Math.cos(tilt) * pulse;
-      const sin = Math.sin(tilt) * pulse;
       const flip = upright ? 1 : fish.dir;
-      ctx.setTransform(dpr * flip * cos, dpr * flip * sin, -dpr * sin, dpr * cos, dpr * (fish.x + shakeX), dpr * (fish.y + shakeY));
+      const beat = fish.boss ? 260 : fish.kind.id === 'jelly' ? 200 : 130;
+      const frame = sprite.frames[SWIM[Math.floor(this.#clock / beat + fish.phase * 4) % SWIM.length]];
+      const fx = snap(fish.x + shakeX);
+      const fy = snap(fish.y + shakeY);
+      ctx.setTransform(dpr * flip, 0, 0, dpr, dpr * fx, dpr * fy);
       const flashing = this.#clock - fish.flash < 110;
       if (flashing) ctx.globalAlpha = 0.55;
-      ctx.drawImage(sprite.canvas, -sprite.w / 2, -sprite.h / 2, sprite.w, sprite.h);
+      ctx.drawImage(frame.canvas, -snap(frame.w / 2), -snap(frame.h / 2), frame.w, frame.h);
       ctx.globalAlpha = 1;
       if (fish.mult >= 8 || fish.kind.id === 'neon') {
-        ctx.setTransform(dpr, 0, 0, dpr, dpr * (fish.x + shakeX), dpr * (fish.y + shakeY));
+        ctx.setTransform(dpr, 0, 0, dpr, dpr * fx, dpr * fy);
         fish.label ??= this.#label(fish.mult, fish.mult >= 60 ? '#ffd166' : fish.mult >= 8 ? '#ffffff' : '#b8fff0');
         const label = fish.label;
-        const offset = fish.boss ? fish.size * 0.95 : fish.size * 0.9;
-        ctx.drawImage(label.canvas, -label.w / 2, offset - label.h / 2, label.w, label.h);
+        const offset = snap(fish.boss ? fish.size * 0.95 : fish.size * 0.9);
+        ctx.drawImage(label.canvas, -snap(label.w / 2), offset - snap(label.h / 2), label.w, label.h);
       }
       if (flashing) {
-        ctx.setTransform(dpr, 0, 0, dpr, dpr * (fish.x + shakeX), dpr * (fish.y + shakeY));
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, fish.boss ? -fish.size * 0.2 : 0, fish.size * (fish.boss ? 0.65 : 0.85), 0, TAU);
-        ctx.stroke();
+        // Retícula de esquinas en lugar de un aro.
+        ctx.setTransform(dpr, 0, 0, dpr, dpr * fx, dpr * fy);
+        const half = snap(fish.size * (fish.boss ? 0.7 : 0.9));
+        const arm = snap(half * 0.4);
+        const cy = fish.boss ? -snap(fish.size * 0.2) : 0;
+        ctx.fillStyle = '#ffffff';
+        for (const sx of [-1, 1]) {
+          for (const sy of [-1, 1]) {
+            const x = sx < 0 ? -half : half - 2;
+            const y = cy + (sy < 0 ? -half : half - 2);
+            ctx.fillRect(sx < 0 ? x : x - arm + 2, y, arm, 2);
+            ctx.fillRect(x, sy < 0 ? y : y - arm + 2, 2, arm);
+          }
+        }
       }
     }
     ctx.setTransform(dpr, 0, 0, dpr, shakeX * dpr, shakeY * dpr);
 
-    // Balas (sprite con halo).
+    // Balas: cruz pixel de 5 × 5.
     const shot = this.#bulletSprite;
     if (shot) {
       for (const bullet of this.#bullets.items) {
-        if (bullet.active) ctx.drawImage(shot.canvas, bullet.x - shot.w / 2, bullet.y - shot.h / 2, shot.w, shot.h);
+        if (bullet.active) ctx.drawImage(shot.canvas, snap(bullet.x - shot.w / 2), snap(bullet.y - shot.h / 2), shot.w, shot.h);
       }
     }
 
@@ -1160,7 +947,7 @@ export class FishGame {
         color = p.color;
         ctx.fillStyle = color;
       }
-      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      ctx.fillRect(snap(p.x - p.size / 2), snap(p.y - p.size / 2), p.size, p.size);
     }
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
@@ -1194,9 +981,10 @@ export class FishGame {
     if (cannon) {
       ctx.setTransform(dpr, 0, 0, dpr, dpr * (cx + shakeX), dpr * (cy + shakeY));
       ctx.rotate(this.#angle);
-      ctx.drawImage(cannon.barrel.canvas, -cannon.barrel.w / 2 - this.#recoil * 6, -cannon.barrel.h / 2, cannon.barrel.w, cannon.barrel.h);
-      ctx.setTransform(dpr, 0, 0, dpr, dpr * (cx + shakeX), dpr * (cy + shakeY));
-      ctx.drawImage(cannon.base.canvas, -cannon.base.w / 2, -cannon.base.h / 2, cannon.base.w, cannon.base.h);
+      ctx.drawImage(cannon.barrel.canvas, -cannon.barrel.w / 2 - snap(this.#recoil * 6), -cannon.barrel.h / 2, cannon.barrel.w, cannon.barrel.h);
+      ctx.setTransform(dpr, 0, 0, dpr, dpr * snap(cx + shakeX), dpr * snap(cy + shakeY));
+      // La cúpula de la base tiene su centro a 2 celdas del borde inferior del sprite.
+      ctx.drawImage(cannon.base.canvas, -cannon.base.w / 2, -cannon.base.h + 4, cannon.base.w, cannon.base.h);
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }

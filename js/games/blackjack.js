@@ -787,7 +787,7 @@ export class BlackjackGame {
       [next[pos], next[target]] = [next[target], next[pos]];
     }
     session.record(stream, { stake: 0, payout: 0, summary: acts ? 'Dado de Montecarlo: el crupier recibe un 10' : 'Dado de Montecarlo: no actúa', params: { kind: 'dado', swap: target >= pos ? [pos, target] : null } });
-    if (acts && target >= pos) hud.toast('🎲 Dado de Montecarlo: el crupier recibe un 10', 'success', 2600);
+    if (acts && target >= pos) hud.toast('Dado de Montecarlo: el crupier recibe un 10', 'success', 2600);
     return next;
   }
 

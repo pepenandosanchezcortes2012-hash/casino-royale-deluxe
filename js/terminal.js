@@ -251,10 +251,10 @@ const HANDLERS = {
     const lines = [line(`Ranuras (${SLOT_COUNT}):`, 'accent')];
     r.equipped.forEach((id, i) => {
       const relic = relicById(id);
-      lines.push(line(`  [${i + 1}] ${relic ? `${relic.icon} ${relic.name} — ${relic.text}` : '— vacía —'}`, relic ? 'info' : 'dim'));
+      lines.push(line(`  [${i + 1}] ${relic ? `${relic.name} — ${relic.text}` : '— vacía —'}`, relic ? 'info' : 'dim'));
     });
     lines.push(line(`Colección: ${r.owned.length}/${RELICS.length}`, 'accent'));
-    for (const relic of RELICS) lines.push(line(`  ${r.owns(relic.id) ? relic.icon : '??'} ${r.owns(relic.id) ? relic.name : 'Reliquia sin descubrir'}`, r.owns(relic.id) ? 'info' : 'dim'));
+    for (const relic of RELICS) lines.push(line(`  ${r.owns(relic.id) ? relic.name : '?? Reliquia sin descubrir'}`, r.owns(relic.id) ? 'info' : 'dim'));
     const chests = r.chests;
     lines.push(line(`Cofres: ${chests.common} comunes · ${chests.legendary} legendarios · Pociones ×2: ${r.potions}${r.potionArmed ? ' (una activa)' : ''}`));
     return { lines };

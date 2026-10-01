@@ -274,7 +274,7 @@ test('Líneas: Súper Bono ×15 con 4 idénticos y ×5 si un comodín completa e
   const cherries = wins.lines.find((l) => l.index === 1);
   assert.deepEqual([cherries.count, cherries.natural, cherries.units], [4, false, 1 * WILD_FOUR]);
   assert.equal(wins.units, 755);
-  // Una fila de tres comodines paga como la corona.
+  // Una fila de tres comodines paga como el diamante.
   const wilds = findWins([['W', 'W', 'W', 'T'], ['H', 'B', 'S', 'R'], ['B', 'S', 'R', 'H'], ['S', 'R', 'H', 'B']]);
   assert.equal(wilds.lines[0].symbol, 'W');
   assert.equal(wilds.lines[0].units, 50);

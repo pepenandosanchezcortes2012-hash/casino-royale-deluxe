@@ -5,7 +5,7 @@ import { wallet, DENOMINATIONS } from '../engine/wallet.js';
 import { audio } from '../audio.js';
 import { storage } from '../storage.js';
 import { scopedKey } from '../mode.js';
-import { chipSvg, chipLabel, el } from './svg.js';
+import { chipSvg, chipLabel, el, pixelIcon } from './svg.js';
 
 const CHIP_KEY = scopedKey('crd.chip.v2');
 // Los miles siempre agrupados: 1.000 (es-ES no agrupa por defecto los números de 4 cifras).
@@ -167,11 +167,11 @@ class Hud {
     const paint = (button, on, icons) => {
       button.setAttribute('aria-pressed', String(on));
       button.classList.toggle('is-off', !on);
-      button.querySelector('.audio-icon').textContent = on ? icons[0] : icons[1];
+      button.querySelector('.audio-icon').replaceChildren(pixelIcon(on ? icons[0] : icons[1]));
       button.querySelector('.audio-state').textContent = on ? 'ON' : 'OFF';
     };
-    paint(this.#dom.music, music, ['🎵', '🎵']);
-    paint(this.#dom.sfx, sfx, ['🔊', '🔇']);
+    paint(this.#dom.music, music, ['px-music', 'px-music']);
+    paint(this.#dom.sfx, sfx, ['px-speaker', 'px-speaker-off']);
   }
 
   // ---------- Avisos y efectos ----------

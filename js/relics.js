@@ -34,16 +34,16 @@ export const RARITIES = Object.freeze({
 });
 
 export const RELICS = Object.freeze([
-  Object.freeze({ id: 'clover', name: 'Trébol de Oro', icon: '🍀', rarity: 'rare', game: 'slots', text: 'Más estrellas ⭐ en los rodillos del juego base de las slots (RTP ≈ 98 %).' }),
-  Object.freeze({ id: 'dice', name: 'Dado de Montecarlo', icon: '🎲', rarity: 'epic', game: 'blackjack', text: 'Si el crupier pide con 15 o 16 duros, un 10 % de las veces recibe la siguiente carta de valor 10 del zapato.' }),
-  Object.freeze({ id: 'shield', name: 'Escudo', icon: '🛡️', rarity: 'common', game: 'blackjack', text: 'Devuelve lo perdido en la primera mano de blackjack perdida de cada día (hasta 25 apuestas mínimas).' }),
-  Object.freeze({ id: 'midas', name: 'Corona de Midas', icon: '👑', rarity: 'legendary', game: null, text: 'Suma un 20 % a tus premios netos (hasta 10 apuestas mínimas del piso por ronda).' }),
-  Object.freeze({ id: 'magnet', name: 'Imán de Cashback', icon: '🧲', rarity: 'rare', game: null, text: 'Recupera el 10 % de cada pérdida neta (hasta 5 apuestas mínimas del piso por ronda).' }),
-  Object.freeze({ id: 'clock', name: 'Reloj de la Abundancia', icon: '⏳', rarity: 'common', game: null, text: 'Abundancia extra cada 60 s de juego activo (+50 en la escala de tu piso).' }),
-  Object.freeze({ id: 'battery', name: 'Batería Cuántica', icon: '🔋', rarity: 'epic', game: 'slots', text: 'Tras una tirada sin premio, un 5 % de las veces vuelves a girar gratis.' }),
-  Object.freeze({ id: 'sapphire', name: 'Zafiro de Plinko', icon: '💎', rarity: 'rare', game: 'plinko', text: 'Empuja las bolas hacia las cubetas de los extremos (+2,5 puntos de RTP).' }),
-  Object.freeze({ id: 'radar', name: 'Radar de Crash', icon: '📡', rarity: 'epic', game: 'crash', text: 'Alarma visual al llegar al 80 % del punto de explosión.' }),
-  Object.freeze({ id: 'pass', name: 'Pase del Padrino', icon: '🎟️', rarity: 'legendary', game: null, text: 'Duplica toda la XP que ganas.' }),
+  Object.freeze({ id: 'clover', name: 'Trébol de Oro', sprite: 'sym-T', rarity: 'rare', game: 'slots', text: 'Más estrellas ⭐ en los rodillos del juego base de las slots (RTP ≈ 98 %).' }),
+  Object.freeze({ id: 'dice', name: 'Dado de Montecarlo', sprite: 'px-dice-color', rarity: 'epic', game: 'blackjack', text: 'Si el crupier pide con 15 o 16 duros, un 10 % de las veces recibe la siguiente carta de valor 10 del zapato.' }),
+  Object.freeze({ id: 'shield', name: 'Escudo', sprite: 'px-shield', rarity: 'common', game: 'blackjack', text: 'Devuelve lo perdido en la primera mano de blackjack perdida de cada día (hasta 25 apuestas mínimas).' }),
+  Object.freeze({ id: 'midas', name: 'Corona de Midas', sprite: 'crown', rarity: 'legendary', game: null, text: 'Suma un 20 % a tus premios netos (hasta 10 apuestas mínimas del piso por ronda).' }),
+  Object.freeze({ id: 'magnet', name: 'Imán de Cashback', sprite: 'px-magnet', rarity: 'rare', game: null, text: 'Recupera el 10 % de cada pérdida neta (hasta 5 apuestas mínimas del piso por ronda).' }),
+  Object.freeze({ id: 'clock', name: 'Reloj de la Abundancia', sprite: 'px-hourglass', rarity: 'common', game: null, text: 'Abundancia extra cada 60 s de juego activo (+50 en la escala de tu piso).' }),
+  Object.freeze({ id: 'battery', name: 'Batería Cuántica', sprite: 'px-battery', rarity: 'epic', game: 'slots', text: 'Tras una tirada sin premio, un 5 % de las veces vuelves a girar gratis.' }),
+  Object.freeze({ id: 'sapphire', name: 'Zafiro de Plinko', sprite: 'sym-C', rarity: 'rare', game: 'plinko', text: 'Empuja las bolas hacia las cubetas de los extremos (+2,5 puntos de RTP).' }),
+  Object.freeze({ id: 'radar', name: 'Radar de Crash', sprite: 'px-antenna', rarity: 'epic', game: 'crash', text: 'Alarma visual al llegar al 80 % del punto de explosión.' }),
+  Object.freeze({ id: 'pass', name: 'Pase del Padrino', sprite: 'px-ticket', rarity: 'legendary', game: null, text: 'Duplica toda la XP que ganas.' }),
 ]);
 export const relicById = (id) => RELICS.find((relic) => relic.id === id) ?? null;
 

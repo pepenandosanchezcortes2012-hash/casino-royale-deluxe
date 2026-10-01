@@ -9,7 +9,7 @@ import { audio } from '../audio.js';
 import { storage } from '../storage.js';
 import { scopedKey } from '../mode.js';
 import { hud, formatChips } from '../ui/hud.js';
-import { el } from '../ui/svg.js';
+import { el, pixelIcon } from '../ui/svg.js';
 import { BetControl } from '../ui/bet-control.js';
 import { fmtMult, trauma, sleep } from '../ui/arcade.js';
 import { DIFFICULTIES, difficultyOf, towersMultiplier, towerLayout, safeChance, TOWER_LEVELS } from './towers-math.js';
@@ -206,7 +206,8 @@ export class TowersGame {
         const fell = ended && this.#last.fall?.floor === floor && this.#last.fall?.tile === tile;
         const state = fell ? 'fall' : picked ? 'safe' : trap ? 'trap' : ended ? 'spare' : 'hidden';
         button.dataset.state = state;
-        button.textContent = fell ? '💀' : picked ? '💎' : trap ? '☠' : '';
+        const icon = fell ? 'px-skull' : picked ? 'gem' : trap ? 'mine' : '';
+        if (icon) button.append(pixelIcon(icon, 'px-icon tw-icon'));
         button.disabled = !active;
         button.setAttribute('aria-label', `Piso ${floor + 1}, losa ${tile + 1}${state === 'hidden' ? '' : `: ${{ fall: 'trampa (caíste)', safe: 'segura', trap: 'trampa', spare: 'segura' }[state]}`}`);
         if (active) button.addEventListener('click', () => this.pick(tile));

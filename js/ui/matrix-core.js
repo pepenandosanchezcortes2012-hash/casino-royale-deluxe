@@ -27,6 +27,11 @@ export class RainPainter {
     this.#height = Math.max(1, Math.ceil(height));
     this.#ctx.canvas.width = this.#width;
     this.#ctx.canvas.height = this.#height;
+    // Pixel art: sin suavizado (cambiar el tamaño reinicia el contexto). Vale también en el worker.
+    this.#ctx.imageSmoothingEnabled = false;
+    this.#ctx.webkitImageSmoothingEnabled = false;
+    this.#ctx.mozImageSmoothingEnabled = false;
+    this.#ctx.msImageSmoothingEnabled = false;
     const count = Math.min(MAX_COLUMNS, Math.ceil(this.#width / CELL));
     const step = this.#width / count;
     this.#columns = Array.from({ length: count }, (_, i) => ({

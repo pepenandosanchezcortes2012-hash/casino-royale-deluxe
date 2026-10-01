@@ -1,5 +1,8 @@
-// Fábrica de gráficos vectoriales dinámicos (cartas, fichas, símbolos) con createElementNS.
+// Fábrica de gráficos SVG dinámicos (cartas, fichas, símbolos) con createElementNS, en pixel
+// art: rejillas de rectángulos con crispEdges y la fuente pixel, sin degradados ni curvas.
 // Nunca se inserta HTML como texto: solo nodos y textContent.
+
+import { PixelGrid } from './pixel-art.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -18,6 +21,20 @@ export function svgText(content, attrs) {
 
 export function useRef(id, attrs = {}) {
   return svg('use', { href: `#${id}`, ...attrs });
+}
+
+// Icono pixel art del sprite SVG (16 × 16, se pinta con el color del texto si es monocromo).
+export function pixelIcon(id, className = 'px-icon') {
+  const icon = svg('svg', { class: className, viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' });
+  icon.append(useRef(id));
+  return icon;
+}
+
+// Elemento con un icono pixel delante de su texto.
+export function withIcon(tag, className, id, text = '') {
+  const node = el(tag, className);
+  node.append(pixelIcon(id), text);
+  return node;
 }
 
 export function el(tag, className = '', text = null) {
@@ -55,26 +72,43 @@ export function chipLabel(value) {
   return value >= 1000 ? `${chipNumber.format(value / 1000)}K` : String(value);
 }
 
+// Ficha pixel de 20 × 20: canto con 8 franjas, disco interior con anillo punteado, brillo arriba
+// a la izquierda y sombra abajo a la derecha. La forma se rasteriza una vez; cada valor solo
+// cambia la paleta.
+const CHIP = { outline: 1, base: 2, edge: 3, inner: 4, dots: 5, shade: 6, shine: 7 };
+const CHIP_GRID = (() => {
+  const g = new PixelGrid(20, 20);
+  const at = (x, y) => [x + 0.5 - 10, y + 0.5 - 10];
+  g.ellipse(10, 10, 9, 9, CHIP.base);
+  g.map((x, y, c) => {
+    if (!c) return undefined;
+    const [dx, dy] = at(x, y);
+    const r = Math.hypot(dx, dy);
+    const sector = Math.floor(((Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2)) * 8);
+    if (r > 6.6) return sector % 2 ? CHIP.edge : r > 8 && dx + dy > 6 ? CHIP.shade : r > 8 && dx + dy < -7 ? CHIP.shine : CHIP.base;
+    if (r > 5.6) return (x + y) % 2 ? CHIP.dots : CHIP.inner;
+    return CHIP.inner;
+  });
+  g.outline(CHIP.outline);
+  return g;
+})();
+
 export function chipSvg(value) {
   const colors = CHIP_COLORS[value] ?? CHIP_COLORS[1];
   const label = chipLabel(value);
-  return svg('svg', { viewBox: '0 0 100 100', class: 'chip-svg', 'aria-hidden': 'true', focusable: 'false' }, [
-    svg('circle', { cx: 50, cy: 50, r: 48, fill: colors.base, stroke: 'rgba(0,0,0,.45)', 'stroke-width': 2 }),
-    svg('circle', { cx: 50, cy: 50, r: 43, fill: 'none', stroke: colors.edge, 'stroke-width': 9, 'stroke-dasharray': '11.26 11.26' }),
-    svg('circle', { cx: 50, cy: 50, r: 33, fill: colors.inner, stroke: 'rgba(255,255,255,.75)', 'stroke-width': 1.6, 'stroke-dasharray': '3 2.4' }),
-    svg('circle', { cx: 50, cy: 50, r: 28, fill: 'none', stroke: 'rgba(0,0,0,.25)', 'stroke-width': 1 }),
-    svg('circle', { cx: 50, cy: 50, r: 48, fill: 'url(#chip-shade)' }),
-    svgText(label, {
-      x: 50,
-      y: 51,
-      'text-anchor': 'middle',
-      'dominant-baseline': 'central',
-      'font-size': label.length > 3 ? 19 : label.length > 2 ? 22 : 26,
-      'font-weight': 800,
-      'font-family': 'Georgia, serif',
-      fill: colors.text,
-    }),
-  ]);
+  const palette = [null, 'rgba(0,0,0,0.55)', colors.base, colors.edge, colors.inner, 'rgba(255,255,255,0.75)', 'rgba(0,0,0,0.3)', 'rgba(255,255,255,0.35)'];
+  const node = svg('svg', { viewBox: '0 0 20 20', class: 'chip-svg', 'aria-hidden': 'true', focusable: 'false', 'shape-rendering': 'crispEdges' });
+  for (const { fill, opacity, d } of CHIP_GRID.toPaths(palette)) node.append(svg('path', { fill, 'fill-opacity': opacity, d }));
+  node.append(svgText(label, {
+    x: 10,
+    y: 10.5,
+    'text-anchor': 'middle',
+    'dominant-baseline': 'central',
+    'font-size': label.length > 3 ? 3 : 4,
+    'font-family': '"Silkscreen", monospace',
+    fill: colors.text,
+  }));
+  return node;
 }
 
 // Desglose voraz de un importe en fichas, para pintar pilas realistas.
@@ -141,12 +175,11 @@ function corner(rank, suit) {
   return svg('g', {}, [
     svgText(rank, {
       x: 34,
-      y: 64,
+      y: 66,
       'text-anchor': 'middle',
-      'font-size': rank === '10' ? 46 : 62,
-      'font-weight': 700,
-      'font-family': 'Georgia, "Times New Roman", serif',
-      'letter-spacing': rank === '10' ? -5 : 0,
+      'font-size': rank === '10' ? 32 : 48,
+      'font-family': '"Press Start 2P", monospace',
+      'letter-spacing': rank === '10' ? -4 : 0,
       fill: 'currentColor',
     }),
     pip(suit, 34, 98, 38),
@@ -156,8 +189,8 @@ function corner(rank, suit) {
 function cardFront(code) {
   const rank = cardRank(code);
   const suit = cardSuit(code);
-  const face = svg('svg', { viewBox: '0 0 250 350', class: `card-svg ${RED_SUITS.has(suit) ? 'is-red' : 'is-black'}`, 'aria-hidden': 'true' });
-  face.append(svg('rect', { x: 1.5, y: 1.5, width: 247, height: 347, rx: 16, fill: 'url(#card-paper)', stroke: '#c9c2b2', 'stroke-width': 3 }));
+  const face = svg('svg', { viewBox: '0 0 250 350', class: `card-svg ${RED_SUITS.has(suit) ? 'is-red' : 'is-black'}`, 'aria-hidden': 'true', 'shape-rendering': 'crispEdges' });
+  face.append(...paper());
   face.append(corner(rank, suit));
   const bottom = corner(rank, suit);
   bottom.setAttribute('transform', 'rotate(180 125 175)');
@@ -167,23 +200,22 @@ function cardFront(code) {
     for (const [x, y] of PIPS[rank]) face.append(pip(suit, x, y, 46, y > 175));
   } else if (rank === 'A') {
     face.append(pip(suit, 125, 175, suit === 'S' ? 120 : 96));
-    if (suit === 'S') face.append(svg('circle', { cx: 125, cy: 175, r: 78, fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-dasharray': '4 5', opacity: 0.5 }));
+    if (suit === 'S') face.append(svg('rect', { x: 55, y: 105, width: 140, height: 140, fill: 'none', stroke: 'currentColor', 'stroke-width': 4, 'stroke-dasharray': '8 8', opacity: 0.5 }));
   } else {
-    face.append(svg('rect', { x: 54, y: 62, width: 142, height: 226, rx: 10, fill: 'url(#face-bg)', stroke: '#b8912a', 'stroke-width': 4 }));
-    face.append(svg('rect', { x: 62, y: 70, width: 126, height: 210, rx: 7, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.5, opacity: 0.45 }));
+    face.append(svg('rect', { x: 54, y: 62, width: 142, height: 226, fill: '#f3e3b0', stroke: '#b8912a', 'stroke-width': 8 }));
+    face.append(svg('rect', { x: 66, y: 74, width: 118, height: 202, fill: 'none', stroke: 'currentColor', 'stroke-width': 4, 'stroke-dasharray': '8 8', opacity: 0.45 }));
     if (rank === 'K' || rank === 'Q') {
-      const size = rank === 'K' ? 70 : 54;
-      face.append(useRef('sym-C', { x: 125 - size / 2, y: 82, width: size, height: size }));
+      const size = rank === 'K' ? 80 : 64;
+      face.append(useRef('crown', { x: 125 - size / 2, y: 78, width: size, height: size }));
     } else {
       face.append(pip(suit, 125, 112, 44));
     }
     face.append(svgText(rank, {
       x: 125,
-      y: 222,
+      y: 228,
       'text-anchor': 'middle',
-      'font-size': 96,
-      'font-weight': 700,
-      'font-family': 'Georgia, "Times New Roman", serif',
+      'font-size': 64,
+      'font-family': '"Press Start 2P", monospace',
       fill: 'currentColor',
     }));
     face.append(pip(suit, 125, 258, 34));
@@ -191,12 +223,23 @@ function cardFront(code) {
   return face;
 }
 
+// Papel de la carta: marco de 2 tonos (luz arriba e izquierda, sombra abajo y derecha).
+function paper() {
+  return [
+    svg('rect', { x: 0, y: 0, width: 250, height: 350, fill: '#2b2418' }),
+    svg('rect', { x: 6, y: 6, width: 238, height: 338, fill: '#c9c2b2' }),
+    svg('rect', { x: 6, y: 6, width: 232, height: 332, fill: '#ffffff' }),
+    svg('rect', { x: 12, y: 12, width: 226, height: 326, fill: '#fbf7ee' }),
+  ];
+}
+
+// Dorso: damero pixel granate con remaches dorados y la corona en un medallón cuadrado.
 function cardBack() {
-  return svg('svg', { viewBox: '0 0 250 350', class: 'card-svg', 'aria-hidden': 'true' }, [
-    svg('rect', { x: 1.5, y: 1.5, width: 247, height: 347, rx: 16, fill: '#fbf7ee', stroke: '#c9c2b2', 'stroke-width': 3 }),
-    svg('rect', { x: 14, y: 14, width: 222, height: 322, rx: 10, fill: 'url(#card-back-pattern)', stroke: '#d4af37', 'stroke-width': 3 }),
-    svg('circle', { cx: 125, cy: 175, r: 44, fill: '#5e0715', stroke: '#d4af37', 'stroke-width': 4 }),
-    useRef('sym-C', { x: 95, y: 143, width: 60, height: 60 }),
+  return svg('svg', { viewBox: '0 0 250 350', class: 'card-svg', 'aria-hidden': 'true', 'shape-rendering': 'crispEdges' }, [
+    ...paper(),
+    svg('rect', { x: 18, y: 18, width: 214, height: 314, fill: 'url(#px-card-back)', stroke: '#d4af37', 'stroke-width': 6 }),
+    svg('rect', { x: 81, y: 131, width: 88, height: 88, fill: '#2a0308', stroke: '#d4af37', 'stroke-width': 6 }),
+    useRef('crown', { x: 93, y: 143, width: 64, height: 64 }),
   ]);
 }
 

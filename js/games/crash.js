@@ -2,7 +2,7 @@
 // explosión E sorteado al despegar con el flujo provably fair (crash-math.js). Retírate antes de
 // que explote (a mano o con retiro automático). La apuesta se cobra al despegar; el retiro se paga
 // al instante. Si la página se recarga en pleno vuelo, la ronda se resuelve como lo haría el
-// servidor: cobra el retiro automático si el cohete llegaba a él y, si no, se pierde.
+// servidor: cobra el retiro automático si el caza llegaba a él y, si no, se pierde.
 
 import { wallet } from '../engine/wallet.js';
 import { session } from '../session.js';
@@ -15,10 +15,20 @@ import { hud, formatChips } from '../ui/hud.js';
 import { BetControl } from '../ui/bet-control.js';
 import { fmtMult, outcomeTone, pushRecent, trauma, fitCanvas, cssVar } from '../ui/arcade.js';
 import { crashPoint, multiplierAt, reachChance, MIN_CASHOUT, CRASH_MAX } from './crash-math.js';
+import { randomFloat } from '../engine/rng.js';
+import { planeFrames, PALETTE } from '../ui/pixel-sprites.js';
 
 const ROUND_KEY = scopedKey('crd.crash.round.v1');
 const PREFS_KEY = scopedKey('crd.crash.prefs.v1');
 const ASPECT = 0.62;
+// Pixel art: 1 píxel del lienzo = 2 píxeles CSS; todo se alinea a esa rejilla.
+const PIXEL = 2;
+const snap = (value) => Math.round(value / PIXEL) * PIXEL;
+const LABEL_FONT = '"Silkscreen", ui-monospace, monospace';
+const TRAIL = 120;
+const DEBRIS = 48;
+const EXPLOSION_MS = 1300;
+const TILT_STEP = Math.PI / 12;
 const round2 = (value) => Math.round(value * 100) / 100;
 const trunc2 = (value) => Math.floor(value * 100) / 100;
 const pct = (value) => `${(value * 100).toFixed(2).replace('.', ',')} %`;
@@ -41,6 +51,11 @@ export class CrashGame {
   #tip = null;
   #readout = '';
   #sprites = null;
+  #cell = PIXEL;
+  #trail = Array.from({ length: TRAIL }, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, size: PIXEL }));
+  #trailNext = 0;
+  #lastDraw = 0;
+  #exploded = false;
 
   constructor(root) {
     this.#root = root;
@@ -158,6 +173,8 @@ export class CrashGame {
     this.#state = 'flying';
     this.#t = 0;
     this.#tip = null;
+    for (const p of this.#trail) p.life = 0;
+    this.#lastDraw = 0;
     this.#radarShown = false;
     this.#dom.radar.hidden = true;
     this.#dom.stage.classList.remove('is-crashed', 'is-radar', 'is-cashed');
@@ -216,7 +233,7 @@ export class CrashGame {
       session.report({ game: 'crash', stake: round.bet, returned: 0, tags: [] });
       this.#dom.message.textContent = round.point <= 1 ? '¡Explota al despegar! (×1,00)' : `¡BOOM! Explota en ${fmtMult(round.point)}`;
     }
-    // Chispas en la punta de la curva (donde estaba el cohete).
+    // Chispas en la punta de la curva (donde estaba el caza).
     const rect = this.#dom.canvas.getBoundingClientRect();
     const scale = this.#size ? rect.width / this.#size.width : 1;
     const tip = this.#tip ?? { x: (rect.width * 0.8) / scale, y: (rect.height * 0.3) / scale };
@@ -266,7 +283,7 @@ export class CrashGame {
     this.#draw(now);
     this.#paintReadout();
     if (flying) this.#renderFlight();
-    const crashAnim = this.#state === 'crashed' && now - this.#crashAt < 900;
+    const crashAnim = this.#state === 'crashed' && now - this.#crashAt < EXPLOSION_MS;
     this.#raf = this.#visible && (flying || crashAnim) ? requestAnimationFrame(this.#frame) : 0;
   };
 
@@ -291,26 +308,94 @@ export class CrashGame {
   // ---------- Dibujo ----------
 
   #layout() {
-    const { ctx, width, height, dpr } = fitCanvas(this.#dom.canvas, ASPECT);
+    // Lienzo a media resolución: cada píxel del lienzo son 2 × 2 píxeles CSS y el navegador lo
+    // amplía sin suavizado (pixelated). Se dibuja en coordenadas CSS.
+    const { ctx, width, height } = fitCanvas(this.#dom.canvas, ASPECT, PIXEL);
     this.#ctx = ctx;
     this.#size = { width, height, accent: cssVar('--cy-accent', '#00ff66'), ink: cssVar('--cy-ink', '#d8ffe8'), danger: cssVar('--cy-danger', '#ff3b5c') };
-    this.#sprites ??= { rocket: this.#emoji('🚀', dpr), boom: this.#emoji('💥', dpr) };
+    // El caza se dibuja a 1 o 2 píxeles de lienzo por celda según el ancho de la mesa.
+    this.#cell = width >= 560 ? 2 * PIXEL : PIXEL;
+    this.#sprites ??= planeFrames().map(({ grid, palette }) => grid.toCanvas(palette));
     this.#draw(performance.now());
   }
 
-  // Los emojis se rasterizan una sola vez en un lienzo aparte: dibujarlos con fillText en cada
-  // fotograma es caro (fuente de color y fallback de glifos).
-  #emoji(glyph, dpr, size = 28) {
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.ceil(size * 1.4 * dpr);
-    canvas.height = canvas.width;
-    const ctx = canvas.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.font = `${size}px system-ui, "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(glyph, (size * 1.4) / 2, (size * 1.4) / 2);
-    return { canvas, size: size * 1.4 };
+  // Estela: cuadrados que nacen en la tobera como fuego y se apagan en humo.
+  #emitTrail(x, y, angle) {
+    const tail = this.#cell * 26;
+    const bx = x - Math.cos(angle) * tail;
+    const by = y - Math.sin(angle) * tail;
+    for (let n = 0; n < 2; n++) {
+      const i = this.#trailNext;
+      this.#trailNext = (i + 1) % TRAIL;
+      const p = this.#trail[i];
+      p.x = bx + (randomFloat() - 0.5) * 6;
+      p.y = by + (randomFloat() - 0.5) * 6;
+      p.vx = -Math.cos(angle) * (40 + randomFloat() * 50);
+      p.vy = -Math.sin(angle) * (40 + randomFloat() * 50) - 10;
+      p.life = p.max = 0.5 + randomFloat() * 0.5;
+      p.size = (randomFloat() < 0.4 ? 3 : 2) * PIXEL;
+    }
+  }
+
+  // Explosión: metralla de bloques que sale disparada de la punta.
+  #explode(x, y) {
+    for (let n = 0; n < DEBRIS; n++) {
+      const i = this.#trailNext;
+      this.#trailNext = (i + 1) % TRAIL;
+      const p = this.#trail[i];
+      const a = randomFloat() * Math.PI * 2;
+      const v = 60 + randomFloat() * 220;
+      p.x = x;
+      p.y = y;
+      p.vx = Math.cos(a) * v;
+      p.vy = Math.sin(a) * v;
+      p.life = p.max = 0.6 + randomFloat() * 0.7;
+      p.size = (2 + Math.floor(randomFloat() * 3)) * PIXEL;
+    }
+  }
+
+  #stepTrail(dt) {
+    for (const p of this.#trail) {
+      if (p.life <= 0) continue;
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= 0.96;
+      p.vy = p.vy * 0.96 - 18 * dt;
+    }
+  }
+
+  #drawTrail(ctx) {
+    const fire = PALETTE.fire;
+    const smoke = PALETTE.smoke;
+    for (const p of this.#trail) {
+      if (p.life <= 0) continue;
+      const k = 1 - p.life / p.max;
+      const color = k < 0.55 ? fire[Math.min(fire.length - 1, Math.floor((k / 0.55) * fire.length))] : smoke[Math.min(smoke.length - 1, Math.floor(((k - 0.55) / 0.45) * smoke.length))];
+      ctx.fillStyle = color;
+      ctx.fillRect(snap(p.x), snap(p.y), p.size, p.size);
+    }
+  }
+
+  // Bola de fuego pixel que se expande en anillos de bloques (blanco → amarillo → rojo → humo).
+  #drawBlast(ctx, x, y, age) {
+    const radius = 8 + age * 90;
+    const block = 3 * PIXEL;
+    const bands = [...PALETTE.fire, ...PALETTE.smoke];
+    const cx = snap(x);
+    const cy = snap(y);
+    for (let j = -radius; j <= radius; j += block) {
+      for (let i = -radius; i <= radius; i += block) {
+        const d = Math.hypot(i + block / 2, j + block / 2);
+        if (d > radius) continue;
+        // El centro se apaga primero: el fuego se queda en el borde del anillo.
+        const k = d / radius;
+        if (k < age * 0.9) continue;
+        const band = Math.min(bands.length - 1, Math.floor((1 - k) * 3 + age * bands.length * 0.8));
+        ctx.fillStyle = bands[band];
+        ctx.fillRect(cx + i, cy + j, block, block);
+      }
+    }
   }
 
   #draw(now) {
@@ -318,7 +403,7 @@ export class CrashGame {
     const size = this.#size;
     if (!ctx || !size) return;
     const { width, height, accent, ink, danger } = size;
-    const pad = { left: 44, right: 18, top: 18, bottom: 30 };
+    const pad = { left: 64, right: 20, top: 18, bottom: 34 };
     ctx.clearRect(0, 0, width, height);
     const t = this.#state === 'idle' ? 0 : this.#t;
     const current = this.#state === 'idle' ? 1 : Math.min(multiplierAt(t), this.#round?.point ?? 1);
@@ -327,96 +412,97 @@ export class CrashGame {
     const X = (seconds) => pad.left + (seconds / tMax) * (width - pad.left - pad.right);
     const Y = (m) => height - pad.bottom - ((m - 1) / (mMax - 1)) * (height - pad.top - pad.bottom);
 
-    // Rejilla y ejes.
-    ctx.strokeStyle = ink;
-    ctx.globalAlpha = 0.12;
-    ctx.lineWidth = 1;
-    ctx.font = '11px ui-monospace, Consolas, monospace';
+    // Rejilla de puntos y ejes con la fuente pixel (16 px CSS = 8 px de lienzo).
+    ctx.font = `16px ${LABEL_FONT}`;
     ctx.fillStyle = ink;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     const stepM = mMax <= 3 ? 0.5 : mMax <= 10 ? 1 : mMax <= 50 ? 5 : mMax <= 200 ? 25 : 100;
     for (let m = 1; m <= mMax; m += stepM) {
-      ctx.globalAlpha = 0.12;
-      ctx.beginPath();
-      ctx.moveTo(pad.left, Y(m));
-      ctx.lineTo(width - pad.right, Y(m));
-      ctx.stroke();
-      ctx.globalAlpha = 0.55;
-      ctx.fillText(`${String(m).replace('.', ',')}×`, pad.left - 6, Y(m));
+      const y = snap(Y(m));
+      ctx.globalAlpha = 0.16;
+      for (let x = pad.left; x < width - pad.right; x += 8) ctx.fillRect(x, y, 4, PIXEL);
+      ctx.globalAlpha = 0.6;
+      ctx.fillText(`${String(m).replace('.', ',')}×`, pad.left - 8, y);
     }
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     const stepT = tMax <= 12 ? 2 : tMax <= 40 ? 5 : tMax <= 120 ? 20 : 60;
     for (let s = 0; s <= tMax; s += stepT) {
-      ctx.globalAlpha = 0.55;
-      ctx.fillText(`${s}s`, X(s), height - pad.bottom + 8);
+      ctx.globalAlpha = 0.6;
+      ctx.fillText(`${s}s`, snap(X(s)), height - pad.bottom + 10);
     }
+    ctx.globalAlpha = 0.4;
+    ctx.fillRect(pad.left, snap(Y(1)) + PIXEL, width - pad.left - pad.right, PIXEL);
     ctx.globalAlpha = 1;
     if (this.#state === 'idle') return;
 
-    // Curva y relleno.
+    // Curva escalonada: columnas de bloques con un relleno tramado debajo (sin degradados).
     const crashed = this.#state === 'crashed';
     const color = crashed && this.#round?.cashed === null ? danger : accent;
-    const steps = 64;
-    ctx.beginPath();
-    ctx.moveTo(X(0), Y(1));
-    for (let i = 1; i <= steps; i++) {
-      const s = (t * i) / steps;
-      ctx.lineTo(X(s), Y(Math.min(multiplierAt(s), current)));
+    const x0 = snap(X(0));
+    const x1 = snap(X(t));
+    const base = snap(Y(1));
+    const step = 2 * PIXEL;
+    ctx.fillStyle = color;
+    for (let x = x0, col = 0; x <= x1; x += step, col++) {
+      const s = ((x - pad.left) / (width - pad.left - pad.right)) * tMax;
+      const y = snap(Y(Math.min(multiplierAt(Math.min(s, t)), current)));
+      ctx.globalAlpha = col % 2 ? 0.1 : 0.2;
+      ctx.fillRect(x, y, step, base - y);
+      ctx.globalAlpha = 1;
+      ctx.fillRect(x, y - PIXEL, step, 2 * PIXEL);
     }
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = color;
-    ctx.stroke();
-    ctx.lineTo(X(t), Y(1));
-    ctx.closePath();
-    const fill = ctx.createLinearGradient(0, Y(current), 0, Y(1));
-    fill.addColorStop(0, color);
-    fill.addColorStop(1, 'transparent');
-    ctx.globalAlpha = 0.18;
-    ctx.fillStyle = fill;
-    ctx.fill();
-    ctx.globalAlpha = 1;
 
     // Marca del retiro.
     const cashed = this.#round?.cashed;
     if (cashed) {
-      const cx = X(this.#secondsAt(cashed));
-      const cy = Y(cashed);
+      const cx = snap(X(this.#secondsAt(cashed)));
+      const cy = snap(Y(cashed));
+      ctx.fillStyle = '#000';
+      ctx.fillRect(cx - 6, cy - 6, 12, 12);
       ctx.fillStyle = accent;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.font = '700 12px ui-monospace, Consolas, monospace';
+      ctx.fillRect(cx - 4, cy - 4, 8, 8);
+      ctx.font = `16px ${LABEL_FONT}`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'bottom';
-      ctx.fillText(`RETIRO ${fmtMult(cashed)}`, cx + 8, cy - 6);
+      ctx.fillStyle = '#000';
+      ctx.fillText(`RETIRO ${fmtMult(cashed)}`, cx + 10 + PIXEL, cy - 6 + PIXEL);
+      ctx.fillStyle = accent;
+      ctx.fillText(`RETIRO ${fmtMult(cashed)}`, cx + 10, cy - 6);
     }
 
-    // Cohete (o explosión) en la punta, orientado según la pendiente de la curva.
+    // Caza en la punta (inclinado según la pendiente, en pasos de 15°) o la explosión.
     const tipX = X(t);
     const tipY = Y(current);
     this.#tip = { x: tipX, y: tipY };
+    const dt = this.#lastDraw ? Math.min(0.05, (now - this.#lastDraw) / 1000) : 0;
+    this.#lastDraw = now;
+    this.#stepTrail(dt);
     if (crashed) {
-      const age = Math.min(1, (now - this.#crashAt) / 900);
-      ctx.globalAlpha = 1 - age;
-      ctx.fillStyle = danger;
-      ctx.beginPath();
-      ctx.arc(tipX, tipY, 10 + age * 46, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-      const boom = this.#sprites.boom;
-      ctx.drawImage(boom.canvas, tipX - boom.size / 2, tipY - boom.size / 2, boom.size, boom.size);
-    } else {
-      const ahead = Math.min(multiplierAt(t + 0.3), mMax);
-      const angle = Math.atan2(Y(ahead) - tipY, X(t + 0.3) - tipX);
-      const rocket = this.#sprites.rocket;
-      ctx.save();
-      ctx.translate(tipX, tipY);
-      ctx.rotate(angle + Math.PI / 4);
-      ctx.drawImage(rocket.canvas, -rocket.size / 2, -rocket.size / 2, rocket.size, rocket.size);
-      ctx.restore();
+      if (!this.#exploded) {
+        this.#exploded = true;
+        this.#explode(tipX, tipY);
+      }
+      this.#drawTrail(ctx);
+      const age = Math.min(1, (now - this.#crashAt) / EXPLOSION_MS);
+      if (age < 1) this.#drawBlast(ctx, tipX, tipY, age);
+      return;
     }
+    this.#exploded = false;
+    const ahead = Math.min(multiplierAt(t + 0.3), mMax);
+    const slope = Math.atan2(Y(ahead) - tipY, X(t + 0.3) - tipX);
+    const angle = Math.round(slope / TILT_STEP) * TILT_STEP;
+    if (this.#state === 'flying') this.#emitTrail(tipX, tipY, angle);
+    this.#drawTrail(ctx);
+    const frame = this.#sprites[Math.floor(now / 90) % this.#sprites.length];
+    const w = frame.width * this.#cell;
+    const h = frame.height * this.#cell;
+    ctx.save();
+    ctx.translate(snap(tipX), snap(tipY));
+    ctx.rotate(angle);
+    ctx.drawImage(frame, -w + 4 * this.#cell, -h / 2, w, h);
+    ctx.restore();
   }
 
   // ---------- Render ----------
@@ -435,7 +521,7 @@ export class CrashGame {
       d.action.disabled = true;
       d.action.classList.remove('is-cashout');
       d.action.textContent = `Cobrado en ${fmtMult(round.cashed)}`;
-      d.status.textContent = 'Retirado · el cohete sigue';
+      d.status.textContent = 'Retirado · el caza sigue';
     } else {
       d.action.classList.remove('is-cashout');
       d.action.disabled = !wallet.canAfford(this.#bet.value);

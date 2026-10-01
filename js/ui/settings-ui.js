@@ -4,6 +4,7 @@
 
 import { audio } from '../audio.js';
 import { settings } from '../settings.js';
+import { pixelIcon } from './svg.js';
 
 const percent = (value) => `${Math.round(value * 100)} %`;
 
@@ -87,7 +88,7 @@ class SettingsUi {
     const level = Math.round(audio.volume * 100);
     d.mute.setAttribute('aria-pressed', String(muted));
     d.mute.classList.toggle('is-muted', muted);
-    d.mute.querySelector('.mute-icon').textContent = muted || level === 0 ? '🔇' : level < 40 ? '🔈' : '🔊';
+    d.mute.querySelector('.mute-icon').replaceChildren(pixelIcon(muted || level === 0 ? 'px-speaker-off' : level < 40 ? 'px-speaker-low' : 'px-speaker'));
     d.mute.setAttribute('aria-label', muted ? 'Activar el sonido' : 'Silenciar todo');
     for (const range of [d.volume, d.panelVolume]) {
       if (document.activeElement !== range) range.value = String(level);

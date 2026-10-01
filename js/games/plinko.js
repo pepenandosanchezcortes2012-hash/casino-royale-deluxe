@@ -12,13 +12,17 @@ import { storage } from '../storage.js';
 import { scopedKey } from '../mode.js';
 import { settings } from '../settings.js';
 import { hud, formatChips } from '../ui/hud.js';
-import { el } from '../ui/svg.js';
+import { el, pixelIcon } from '../ui/svg.js';
+import { PixelGrid, pixelContext } from '../ui/pixel-art.js';
 import { fmtMult, outcomeTone, pushRecent, fitCanvas, cssVar } from '../ui/arcade.js';
 import { RISKS, riskOf, plinkoPath, plinkoRtp, PLINKO_ROWS, RESTITUTION, GRAVITY, BURST, BURST_DELAY_MS } from './plinko-math.js';
 
 const PREFS_KEY = scopedKey('crd.plinko.prefs.v1');
 const MAX_BALLS = 30;
 const ASPECT = 0.86;
+// Pixel art: 1 píxel del lienzo = 2 píxeles CSS; clavijas, cubetas y bola se alinean a esa rejilla.
+const PIXEL = 2;
+const snap = (value) => Math.round(value / PIXEL) * PIXEL;
 // Fracción de la velocidad vertical que devuelve el rebote contra una clavija (además de e).
 const BOUNCE = 0.5;
 const PEG_FLASH_MS = 280;
@@ -155,14 +159,14 @@ export class PlinkoGame {
     d.drop.textContent = `Soltar bola · ${formatChips(this.#bet)}`;
     d.flying.textContent = String(flying);
     const sapphire = relics.active('sapphire');
-    d.rtp.textContent = `${pct(plinkoRtp(this.#risk, { sapphire }))}${sapphire ? ' 💎' : ''}`;
+    d.rtp.replaceChildren(pct(plinkoRtp(this.#risk, { sapphire })), ...(sapphire ? [' ', pixelIcon('sym-C')] : []));
   }
 
   // ---------- Geometría ----------
 
   #layout() {
     const canvas = this.#dom.canvas;
-    const { ctx, width, height, dpr } = fitCanvas(canvas, ASPECT);
+    const { ctx, width, height, dpr } = fitCanvas(canvas, ASPECT, PIXEL);
     this.#ctx = ctx;
     const s = width / 11;
     const top = s * 0.85;
@@ -203,26 +207,24 @@ export class PlinkoGame {
     const board = document.createElement('canvas');
     board.width = Math.round(g.width * dpr);
     board.height = Math.round(g.height * dpr);
-    const ctx = board.getContext('2d');
+    const ctx = pixelContext(board);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const ink = cssVar('--cy-ink', '#d8ffe8');
     const accent = cssVar('--cy-accent', '#00ff66');
-    ctx.fillStyle = accent;
-    ctx.globalAlpha = 0.9;
-    for (const x of [g.cx - g.s * 0.62, g.cx + g.s * 0.62]) {
-      ctx.beginPath();
-      ctx.arc(x, g.top, g.pegR * 1.35, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.fillStyle = ink;
+    // Clavijas cuadradas con sombra dura de un píxel.
+    const peg = (x, y, r, color) => {
+      const side = snap(r * 2);
+      const px = snap(x - side / 2);
+      const py = snap(y - side / 2);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(px + PIXEL, py + PIXEL, side, side);
+      ctx.fillStyle = color;
+      ctx.fillRect(px, py, side, side);
+    };
+    for (const x of [g.cx - g.s * 0.62, g.cx + g.s * 0.62]) peg(x, g.top, g.pegR * 1.4, accent);
     for (let row = 1; row <= PLINKO_ROWS; row++) {
-      for (let j = 0; j <= row + 1; j++) {
-        ctx.beginPath();
-        ctx.arc(this.#pegX(row, j), this.#pegY(row), g.pegR, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      for (let j = 0; j <= row + 1; j++) peg(this.#pegX(row, j), this.#pegY(row), g.pegR, ink);
     }
-    ctx.globalAlpha = 1;
     riskOf(this.#risk).multipliers.forEach((multiplier, i) => this.#paintBucket(ctx, i, multiplier, 0, 0.86));
     this.#board = board;
   }
@@ -233,38 +235,38 @@ export class PlinkoGame {
     const x = g.cx + (i - PLINKO_ROWS / 2) * g.s;
     const w = g.s * 0.9;
     const [fill, ink] = bucketColor(multiplier);
+    const top = snap(g.bucketTop + press);
+    const left = snap(x - w / 2);
+    const width = snap(w);
+    const height = snap(g.bucketH);
     ctx.globalAlpha = alpha;
     ctx.fillStyle = fill;
-    ctx.beginPath();
-    ctx.roundRect(x - w / 2, g.bucketTop + press, w, g.bucketH, Math.min(8, g.s * 0.14));
-    ctx.fill();
+    ctx.fillRect(left, top, width, height);
+    // Bisel pixel: luz arriba e izquierda, sombra abajo y derecha.
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.fillRect(left, top, width, PIXEL);
+    ctx.fillRect(left, top, PIXEL, height);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.fillRect(left, top + height - PIXEL, width, PIXEL);
+    ctx.fillRect(left + width - PIXEL, top, PIXEL, height);
     ctx.globalAlpha = 1;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `800 ${Math.max(10, Math.min(15, g.s * 0.3))}px ui-monospace, Consolas, monospace`;
+    ctx.font = `${g.s >= 44 ? 16 : 8}px "Silkscreen", ui-monospace, monospace`;
     ctx.fillStyle = ink;
-    ctx.fillText(multiplier === 0 ? '×0' : `×${String(multiplier).replace('.', ',')}`, x, g.bucketTop + press + g.bucketH / 2);
+    ctx.fillText(multiplier === 0 ? '×0' : `×${String(multiplier).replace('.', ',')}`, snap(x), top + snap(g.bucketH / 2));
   }
 
-  // Bola pintada una vez (degradado incluido) y estampada con drawImage.
+  // Bola pixel: disco rasterizado en la rejilla del lienzo con brillo, sombra y contorno.
   #paintBall(dpr) {
-    const r = this.#geo.ballR;
-    const size = Math.ceil(r * 2 * dpr) + 2;
-    const sprite = document.createElement('canvas');
-    sprite.width = size;
-    sprite.height = size;
-    const ctx = sprite.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const c = size / dpr / 2;
-    const gradient = ctx.createRadialGradient(c - r * 0.35, c - r * 0.35, r * 0.1, c, c, r);
-    gradient.addColorStop(0, '#ffffff');
-    gradient.addColorStop(0.45, this.#accent);
-    gradient.addColorStop(1, '#00220f');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(c, c, r, 0, Math.PI * 2);
-    ctx.fill();
-    this.#ballSprite = { canvas: sprite, size: size / dpr };
+    const cells = Math.max(5, Math.round(this.#geo.ballR * 2 * dpr));
+    const grid = new PixelGrid(cells + 2, cells + 2);
+    const c = (cells + 2) / 2;
+    grid.ellipse(c, c, cells / 2, cells / 2, 1);
+    grid.bevel(1, 2, 3).outline(4);
+    grid.rect(Math.floor(c - cells / 4), Math.floor(c - cells / 4), 1, 1, 5);
+    const canvas = grid.toCanvas([null, this.#accent, '#ffffff', '#00220f', '#000000', '#ffffff']);
+    this.#ballSprite = { canvas, size: (cells + 2) / dpr };
   }
 
   // ---------- Bolas ----------
@@ -432,9 +434,8 @@ export class PlinkoGame {
       const [row, j] = key.split(':').map(Number);
       ctx.globalAlpha = 1 - age / PEG_FLASH_MS;
       ctx.fillStyle = accent;
-      ctx.beginPath();
-      ctx.arc(this.#pegX(row, j), this.#pegY(row), g.pegR * 2.6, 0, Math.PI * 2);
-      ctx.fill();
+      const side = snap(g.pegR * 4);
+      ctx.fillRect(snap(this.#pegX(row, j) - side / 2), snap(this.#pegY(row) - side / 2), side, side);
     }
     ctx.globalAlpha = 1;
 
@@ -444,12 +445,12 @@ export class PlinkoGame {
       const age = now - this.#bucketFlash[i];
       if (age >= BUCKET_FLASH_MS) return;
       const w = g.s * 0.92;
-      ctx.clearRect(g.cx + (i - PLINKO_ROWS / 2) * g.s - w / 2, g.bucketTop - 1, w, g.bucketH + g.bucketH * 0.25);
+      ctx.clearRect(snap(g.cx + (i - PLINKO_ROWS / 2) * g.s - w / 2) - PIXEL, snap(g.bucketTop) - PIXEL, snap(w) + 2 * PIXEL, snap(g.bucketH * 1.25) + 2 * PIXEL);
       this.#paintBucket(ctx, i, multiplier, (1 - age / BUCKET_FLASH_MS) * g.bucketH * 0.22, 1);
     });
 
     const sprite = this.#ballSprite;
-    for (const ball of this.#balls) ctx.drawImage(sprite.canvas, ball.x - sprite.size / 2, ball.y - sprite.size / 2, sprite.size, sprite.size);
+    for (const ball of this.#balls) ctx.drawImage(sprite.canvas, snap(ball.x - sprite.size / 2), snap(ball.y - sprite.size / 2), sprite.size, sprite.size);
   }
 
   onShow() {

@@ -7,7 +7,7 @@ import { relics, relicById, RARITIES, SLOT_COUNT } from '../relics.js';
 import { settings } from '../settings.js';
 import { audio } from '../audio.js';
 import { formatChips } from './hud.js';
-import { el, svg, useRef } from './svg.js';
+import { el, svg, useRef, pixelIcon } from './svg.js';
 
 function duration(ms) {
   const minutes = Math.max(0, Math.round(ms / 60000));
@@ -84,7 +84,8 @@ class CyberHud {
       });
       return button;
     });
-    const potion = el('span', 'potion-badge', '🧪×2');
+    const potion = el('span', 'potion-badge');
+    potion.append(pixelIcon('px-potion'), '×2');
     potion.hidden = true;
     potion.title = 'Poción ×2 activa: tu próximo premio neto se duplica';
     this.#dom.relics.replaceChildren(...buttons, potion);
@@ -96,7 +97,9 @@ class CyberHud {
     const buttons = [...this.#dom.relics.querySelectorAll('.relic-slot')];
     buttons.forEach((button, i) => {
       const relic = relicById(equipped[i]);
-      button.replaceChildren(el('span', 'relic-slot-icon', relic ? relic.icon : '+'));
+      const icon = el('span', 'relic-slot-icon', relic ? null : '+');
+      if (relic) icon.append(pixelIcon(relic.sprite));
+      button.replaceChildren(icon);
       button.classList.toggle('is-empty', !relic);
       button.dataset.rarity = relic?.rarity ?? '';
       const label = relic ? `Ranura ${i + 1}: ${relic.name} (${RARITIES[relic.rarity].name}). ${relic.text}` : `Ranura ${i + 1} vacía: abre la bóveda`;
