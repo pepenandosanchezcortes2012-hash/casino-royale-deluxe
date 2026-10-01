@@ -4,7 +4,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { runCommand, parseCommand, complete, RTP_TABLE, COMMANDS } from '../js/terminal.js';
+import { runCommand, parseCommand, complete, RTP_TABLE, COMMANDS, PROMPT } from '../js/terminal.js';
+import { Climb } from '../js/climb/climb.js';
 import { createStorage, BACKUP_FORMAT, SCHEMA_KEY, MIGRATIONS } from '../js/storage.js';
 import { verifyBet, inspect, GAME_NAMES } from '../js/verify.js';
 import { ProvablyFair, FairStream, hmacHex, sha256Hex } from '../js/provably_fair.js';
@@ -31,15 +32,28 @@ function fakeBackend() {
   };
 }
 
-function context() {
+function context({ balance = 1234, clock = { t: Date.UTC(2026, 8, 30, 12) } } = {}) {
   const store = createStorage(null);
   const fair = new ProvablyFair({ store });
+  const wallet = {
+    balance,
+    inPlay: 0,
+    grant(amount) {
+      this.balance += amount;
+      return amount;
+    },
+    reset() {},
+  };
+  const climb = new Climb({ wallet, store, rand: () => 0, now: () => clock.t });
+  climb.begin();
   return {
+    climb,
+    clock,
     fair,
-    relics: new Relics({ store, enabled: true }),
+    relics: new Relics({ store }),
     progression: new Progression({ store }),
-    settings: new Settings({ store, enabled: true }),
-    wallet: { balance: 12345, inPlay: 0 },
+    settings: new Settings({ store }),
+    wallet,
     verify: () => ({ ok: false, hidden: true, error: 'semilla oculta' }),
   };
 }
@@ -52,7 +66,10 @@ test('Terminal: análisis, alias en castellano y autocompletado', () => {
   assert.equal(parseCommand('').name, '');
   assert.deepEqual(complete('re'), ['relics']);
   assert.ok(complete('t').includes('turbo') && complete('t').includes('theme'));
-  for (const name of ['help', 'seeds', 'rtp', 'relics', 'matrix', 'turbo']) assert.ok(COMMANDS.includes(name), name);
+  for (const name of ['help', 'seeds', 'rtp', 'relics', 'matrix', 'turbo', 'floor', 'goal', 'contracts', 'alms']) assert.ok(COMMANDS.includes(name), name);
+  assert.equal(parseCommand('piso 2').name, 'floor');
+  assert.equal(parseCommand('limosna').name, 'alms');
+  assert.equal(PROMPT, 'root@syndicate:~$');
 });
 
 test('Terminal: help, seeds, rtp, relics y órdenes desconocidas', () => {
@@ -63,11 +80,34 @@ test('Terminal: help, seeds, rtp, relics y órdenes desconocidas', () => {
   assert.match(seeds, /nonce\s+0/);
   const rtp = text(runCommand('rtp', ctx));
   for (const name of Object.values(GAME_NAMES)) assert.match(rtp, new RegExp(name));
-  assert.equal(RTP_TABLE.length, 10);
+  assert.equal(RTP_TABLE.length, 11);
+  assert.match(rtp, /Cyber-Fish Hunter\s+96,00 %/);
   assert.match(text(runCommand('relics', ctx)), /Colección: 0\/10/);
-  assert.match(text(runCommand('balance', ctx)), /12\.345/);
+  assert.match(text(runCommand('balance', ctx)), /Saldo: 1\.234 créditos/);
   assert.match(text(runCommand('xyz', ctx)), /orden no encontrada/);
   assert.equal(runCommand('sudo rm -rf /', ctx).lines[0].tone, 'error');
+});
+
+test('Terminal: floor, goal, contracts y alms con la escalada', () => {
+  const ctx = context({ balance: 12_000 });
+  ctx.climb.checkEnd();
+  const floors = text(runCommand('floor', ctx));
+  assert.match(floors, /Piso actual: 1/);
+  assert.match(floors, /tarjeta a los 100\.000 créditos/);
+  assert.equal(runCommand('floor 3', ctx).lines[0].tone, 'warn', 'sin tarjeta no se sube');
+  assert.equal(runCommand('floor 2', ctx).lines[0].tone, 'ok');
+  assert.equal(ctx.climb.floor.level, 2);
+  assert.equal(runCommand('floor 9', ctx).lines[0].tone, 'warn');
+  assert.equal(ctx.wallet.balance, 13_000, 'la tarjeta del Piso 2 paga su logro (+1.000)');
+  assert.match(text(runCommand('goal', ctx)), /Meta: 10\.000\.000 créditos · tienes 13\.000/);
+  assert.match(text(runCommand('contracts', ctx)), /Encargos del Sindicato · La Bahía Arcade/);
+  assert.equal(runCommand('alms', ctx).lines[0].tone, 'warn', 'con saldo no hay limosna');
+  ctx.wallet.balance = 0;
+  assert.equal(runCommand('alms', ctx).lines[0].tone, 'ok');
+  assert.equal(ctx.wallet.balance, 10);
+  ctx.wallet.balance = 0;
+  assert.match(text(runCommand('alms', ctx)), /hasta dentro de 5:00/);
+  assert.match(text(runCommand('whoami', ctx)), /piso 2/);
 });
 
 test('Terminal: matrix, turbo, crt y theme cambian los ajustes; clear, exit, export e import son acciones', () => {
@@ -182,6 +222,10 @@ test('Verificador: HMAC y resultados idénticos a las funciones de cada juego', 
 
   const roulette = verifyBet({ game: 'roulette', serverSeed, clientSeed, nonce });
   assert.match(roulette.outcome, new RegExp(`Sale el ${fresh().int(37)} `));
+
+  const fish = verifyBet({ game: 'fish', serverSeed, clientSeed, nonce, params: { species: 'shark', multiplier: 60 } });
+  assert.equal(fish.ok, true);
+  assert.match(fish.outcome, fresh().float() < 0.016 ? /capturada/ : /escapa/);
 
   for (const game of ['towers', 'video_poker', 'slots', 'blackjack']) {
     const result = verifyBet({ game, serverSeed, clientSeed, nonce, params: game === 'video_poker' ? { holds: [true, false, true, false, false], coins: 5 } : {} });

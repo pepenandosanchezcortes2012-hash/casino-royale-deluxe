@@ -1,15 +1,17 @@
-// Preferencias de la interfaz del Cripto-Casino: modo turbo, tema de color, lluvia Matrix y
-// scanlines CRT. Se guardan juntas y avisan de cada cambio (evento `change`).
+// Preferencias de la interfaz: modo turbo, tema de color, lluvia Matrix y scanlines CRT. Se
+// guardan juntas y avisan de cada cambio (evento `change`). El tema «auto» sigue al piso en el que
+// estás (Matrix en el Subsuelo, Neón en la Bahía, Sangre en el Salón VIP y Oro en el Olimpo).
 // El turbo solo acorta animaciones: nunca cambia una probabilidad ni un pago.
 
 import { storage as defaultStore } from './storage.js';
-import { isFree } from './mode.js';
 
-export const SETTINGS_KEY = 'crd.settings.v1';
+export const SETTINGS_KEY = 'crd.climb.settings.v1';
+export const AUTO_THEME = 'auto';
 // El turbo divide por dos las duraciones de las animaciones (la ruleta, al 40 %).
 export const TURBO_SPEED = 0.5;
 
 export const THEMES = Object.freeze([
+  Object.freeze({ id: AUTO_THEME, name: 'Automático (según el piso)', swatch: Object.freeze(['#00ff66', '#f5c542']) }),
   Object.freeze({ id: 'matrix', name: 'Matrix Green', swatch: Object.freeze(['#00ff66', '#021a0b']) }),
   Object.freeze({ id: 'neon', name: 'Cyberpunk Neon', swatch: Object.freeze(['#ff2bd6', '#00e5ff']) }),
   Object.freeze({ id: 'onyx', name: 'Onyx', swatch: Object.freeze(['#e9edf2', '#101114']) }),
@@ -18,7 +20,7 @@ export const THEMES = Object.freeze([
 ]);
 export const themeById = (id) => THEMES.find((theme) => theme.id === id) ?? null;
 
-const DEFAULTS = Object.freeze({ turbo: false, theme: 'matrix', matrix: true, scanlines: true });
+const DEFAULTS = Object.freeze({ turbo: false, theme: AUTO_THEME, matrix: true, scanlines: true });
 
 function sanitize(raw) {
   const state = { ...DEFAULTS };
@@ -31,13 +33,10 @@ function sanitize(raw) {
 export class Settings extends EventTarget {
   #store;
   #s;
-  #enabled;
 
-  // `enabled`: el turbo solo existe en el Cripto-Casino (la leyenda conserva su ritmo narrativo).
-  constructor({ store = defaultStore, enabled = isFree } = {}) {
+  constructor({ store = defaultStore } = {}) {
     super();
     this.#store = store;
-    this.#enabled = enabled;
     this.#s = sanitize(store.read(SETTINGS_KEY, null));
   }
 
@@ -54,7 +53,7 @@ export class Settings extends EventTarget {
   }
 
   get turbo() {
-    return this.#enabled && this.#s.turbo;
+    return this.#s.turbo;
   }
 
   // Factor por el que se multiplican las duraciones de las animaciones.
@@ -73,6 +72,11 @@ export class Settings extends EventTarget {
 
   get theme() {
     return this.#s.theme;
+  }
+
+  // Tema que se pinta: el elegido o, en automático, el del piso.
+  resolveTheme(floorTheme) {
+    return this.#s.theme === AUTO_THEME ? floorTheme : this.#s.theme;
   }
 
   setTheme(id) {

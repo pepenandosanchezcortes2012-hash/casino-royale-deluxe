@@ -1,8 +1,8 @@
-// HUD del Cripto-Casino: nivel, XP y rango VIP, misiones del día, ranuras de reliquias,
-// interruptor turbo, acceso a la terminal y mensajes flotantes sobre el saldo. También pinta el
-// diálogo «Carrera y misiones» (nivel, escalera de rangos y las 10 misiones diarias).
+// HUD de la carrera: nivel, XP y rango VIP, misiones del día, ranuras de reliquias, interruptor
+// turbo, acceso a la terminal y mensajes flotantes sobre el saldo. También pinta el diálogo
+// «Carrera y misiones» (nivel, escalera de rangos y las 10 misiones diarias de tu piso).
 
-import { progression, VIP_RANKS, MISSIONS, MISSION_BONUS } from '../progression.js';
+import { progression, VIP_RANKS } from '../progression.js';
 import { relics, relicById, RARITIES, SLOT_COUNT } from '../relics.js';
 import { settings } from '../settings.js';
 import { audio } from '../audio.js';
@@ -26,8 +26,9 @@ class CyberHud {
   #handlers = {};
   #level = 0;
 
-  init({ onTerminal, onVault }) {
-    this.#handlers = { onTerminal, onVault };
+  // `minStake()` = apuesta mínima que cuenta para las misiones (la de tu piso más alto).
+  init({ onTerminal, onVault, minStake = () => 0 }) {
+    this.#handlers = { onTerminal, onVault, minStake };
     const $ = (id) => document.getElementById(id);
     this.#dom = {
       career: $('btn-career'),
@@ -85,7 +86,7 @@ class CyberHud {
     });
     const potion = el('span', 'potion-badge', '🧪×2');
     potion.hidden = true;
-    potion.title = 'Poción ×2 activa: tu próximo premio se duplica';
+    potion.title = 'Poción ×2 activa: tu próximo premio neto se duplica';
     this.#dom.relics.replaceChildren(...buttons, potion);
     this.#renderSlots();
   }
@@ -124,8 +125,10 @@ class CyberHud {
     d.rank.textContent = p.rank.name;
     d.career.dataset.rank = p.rank.id;
     d.fill.style.transform = `scaleX(${p.ratio})`;
-    d.missions.textContent = `${progression.missionsDone}/${MISSIONS.length}`;
-    d.career.setAttribute('aria-label', `Nivel ${p.level}, rango ${p.rank.name}, ${progression.missionsDone} de ${MISSIONS.length} misiones: abrir carrera y misiones`);
+    const done = progression.missionsDone;
+    const total = progression.missionsTotal;
+    d.missions.textContent = `${done}/${total}`;
+    d.career.setAttribute('aria-label', `Nivel ${p.level}, rango ${p.rank.name}, ${done} de ${total} misiones: abrir carrera y misiones`);
     this.#renderTurbo();
     if (d.dialog.open) this.#renderCareer();
   }
@@ -167,7 +170,7 @@ class CyberHud {
     fact('Rondas', formatChips(stats.rounds));
     fact('Apostado', formatChips(Math.round(stats.wagered)));
     fact('Mejor multiplicador', stats.best > 0 ? `×${stats.best.toFixed(2).replace('.', ',')}` : '—');
-    fact('XP por ronda', 'apuesta × 0,25 + premio × 0,5');
+    fact('XP por ronda', '(apuesta × 0,25 + premio × 0,5) ÷ escala de tu piso');
     d.levelCard.dataset.rank = p.rank.id;
     d.levelCard.replaceChildren(rankGem(p.rank.id, 'rank-gem rank-gem-lg'), info, facts);
 
@@ -176,28 +179,40 @@ class CyberHud {
       const reached = p.level >= rank.level;
       item.classList.toggle('is-done', reached && rank.id !== p.rank.id);
       item.classList.toggle('is-current', rank.id === p.rank.id);
-      const perk = i === 0 ? 'Rango inicial · abundancia 50 fichas/min' : `Cofre legendario al llegar · abundancia ${50 + rank.abundance} fichas/min`;
+      const scale = progression.scale;
+      const perk = i === 0 ? `Rango inicial · abundancia ${formatChips(50 * scale)} créditos/min` : `Cofre legendario al llegar · abundancia ${formatChips((50 + rank.abundance) * scale)} créditos/min`;
       item.append(rankGem(rank.id), el('span', 'rank-row-name', rank.name), el('span', 'rank-row-req', `Nivel ${rank.level}`), el('span', 'rank-row-perk', perk));
       return item;
     }));
 
     const missions = progression.missions();
-    d.reset.textContent = `· se renuevan en ${duration(progression.missionsResetAt - Date.now())} · las 10: cofre común y +${formatChips(MISSION_BONUS.chips)}`;
+    const bonus = progression.missionBonus;
+    d.reset.textContent = `· se renuevan en ${duration(progression.missionsResetAt - Date.now())} · todas: cofre común y +${formatChips(bonus.chips)} · cuentan las apuestas desde ${formatChips(this.#minStake())}`;
     d.missionList.replaceChildren(...missions.map((mission) => {
       const item = el('li', `mission${mission.done ? ' is-done' : ''}`);
       const track = el('span', 'mission-track');
       const fillBar = el('span', 'mission-fill');
       fillBar.style.transform = `scaleX(${Math.min(1, mission.progress / mission.goal)})`;
+      const shown = (value) => formatChips(Math.floor(mission.amount ? value * mission.scale : value));
       track.append(fillBar);
       item.append(
         el('span', 'mission-check', mission.done ? '✔' : '◯'),
         el('span', 'mission-text', mission.text),
-        el('span', 'mission-progress', `${formatChips(Math.floor(mission.progress))}/${formatChips(mission.goal)}`),
+        el('span', 'mission-progress', `${shown(mission.progress)}/${shown(mission.goal)}`),
         track,
-        el('span', 'mission-reward', `+${formatChips(mission.chips)} fichas · +${mission.xp} XP`),
+        el('span', 'mission-reward', `+${formatChips(mission.chips)} créditos · +${mission.xp} XP`),
       );
       return item;
     }));
+  }
+
+  #minStake() {
+    return this.#handlers.minStake?.() ?? 0;
+  }
+
+  // Repinta el nivel y las misiones (al cambiar de piso cambian sus importes).
+  refresh() {
+    if (this.#dom) this.#render();
   }
 
   // ---------- Mensajes flotantes ----------

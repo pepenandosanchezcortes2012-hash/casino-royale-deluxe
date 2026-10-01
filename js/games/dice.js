@@ -3,7 +3,7 @@
 // «Mayor que»; el multiplicador es 98 / P, así que el RTP es del 98 % con cualquier ajuste.
 
 import { wallet } from '../engine/wallet.js';
-import { session, FREE_LIMITS, FREE_MIN_BET } from '../session.js';
+import { session } from '../session.js';
 import { audio } from '../audio.js';
 import { storage } from '../storage.js';
 import { scopedKey } from '../mode.js';
@@ -46,7 +46,7 @@ export class DiceGame {
       message: $('dc-message'),
       rules: $('dc-rules'),
     };
-    this.#bet = new BetControl($('dc-bet'), { game: 'dice', min: FREE_MIN_BET, max: FREE_LIMITS.dice.maxBet, value: 100 });
+    this.#bet = new BetControl($('dc-bet'), { game: 'dice', limits: session.limits('dice') });
     const prefs = storage.read(PREFS_KEY, null) ?? {};
     this.#chance = clampChance(prefs.chance ?? 49);
     this.#direction = prefs.direction === 'over' ? 'over' : 'under';
@@ -56,7 +56,7 @@ export class DiceGame {
     d.slider.max = String(100 - MIN_CHANCE);
     d.rules.textContent = 'La tirada sale de floor(r · 10 000) / 100 con r el primer número verificable: 10 000 resultados equiprobables de 0,00 a 99,99. «Menor que P» gana con tirada < P; «Mayor que» gana con tirada ≥ 100 − P. Multiplicador 98 / P: RTP del 98 %.';
     this.#bind();
-    session.register('dice', { hasPendingPlay: () => this.#busy });
+    session.register('dice', { hasPendingPlay: () => this.#busy, onZone: () => this.#bet.setLimits(session.limits('dice')) });
     this.#render();
   }
 
@@ -78,7 +78,7 @@ export class DiceGame {
     });
     d.button.addEventListener('click', () => this.roll());
     this.#bet.addEventListener('change', () => this.#render());
-    wallet.addEventListener('change', () => this.#render());
+    wallet.addEventListener('update', () => this.#render());
     globalThis.addEventListener('resize', () => this.#placeMarker(), { passive: true });
   }
 
@@ -137,7 +137,7 @@ export class DiceGame {
       audio.lose();
       d.message.textContent = `${fixed2.format(result.roll)}: no cumple ${condition}. Pierdes ${formatChips(bet)}`;
     }
-    session.report({ game: 'dice', stake: bet, returned: payout, tags: [`dice-${result.direction}`] });
+    session.report({ game: 'dice', stake: bet, returned: payout, chance: result.chance, tags: [`dice-${result.direction}`] });
     this.#busy = false;
     this.#render();
   }

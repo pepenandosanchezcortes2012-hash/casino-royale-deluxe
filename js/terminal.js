@@ -1,7 +1,8 @@
-// Intérprete de la terminal hacker del Cripto-Casino (sin DOM).
+// Intérprete de la terminal hacker de la torre del Sindicato (sin DOM).
 // runCommand(línea, contexto) devuelve las líneas que se imprimen y, si procede, una acción para
 // la interfaz (limpiar, cerrar, exportar o importar la partida). El contexto trae las piezas
-// vivas del juego (semillas, reliquias, progresión, ajustes, monedero) para poder probarlo aislado.
+// vivas del juego (escalada, semillas, reliquias, progresión, ajustes, monedero) para poder
+// probarlo aislado.
 
 import { RISKS, plinkoRtp } from './games/plinko-math.js';
 import { SLOT_MATH } from './games/slots-engine.js';
@@ -10,35 +11,47 @@ import { MINES_EDGE } from './games/mines-math.js';
 import { TOWER_EDGE } from './games/towers-math.js';
 import { CRASH_EDGE } from './games/crash-math.js';
 import { WHEEL_SLICES, WHEEL_TOTAL_WEIGHT } from './games/wheel-math.js';
+import { FISH_RTP } from './games/fish-math.js';
+import { FLOORS, GOAL, rangeText } from './climb/floors.js';
 import { SIDE_BET_HOUSE_EDGE } from './games/blackjack-rules.js';
 import { RELICS, relicById, SLOT_COUNT } from './relics.js';
 import { THEMES } from './settings.js';
 import { GAME_NAMES } from './verify.js';
 
-export const PROMPT = 'root@cyber-ultra:~$';
+export const PROMPT = 'root@syndicate:~$';
 
 const pct = (value, digits = 2) => `${(value * 100).toFixed(digits).replace('.', ',')} %`;
-const chips = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2 });
+const chips = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2, useGrouping: 'always' });
 const short = (hex, n = 16) => `${hex.slice(0, n)}…`;
 
 const wheelValue = WHEEL_SLICES.reduce((sum, slice) => sum + (slice.type === 'chips' ? slice.amount * slice.weight : 0), 0) / WHEEL_TOTAL_WEIGHT;
 
-// Retorno teórico publicado de cada juego del Cripto-Casino.
+const mmss = (ms) => {
+  const total = Math.ceil(ms / 1000);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+};
+
+// Retorno teórico publicado de cada juego de la torre.
 export const RTP_TABLE = Object.freeze([
   Object.freeze({ game: 'blackjack', rtp: 0.996, note: 'estrategia básica · 6 barajas S17 3:2 · PP ' + pct(1 - SIDE_BET_HOUSE_EDGE.perfectPairs) + ' · 21+3 ' + pct(1 - SIDE_BET_HOUSE_EDGE.twentyOnePlusThree) }),
   Object.freeze({ game: 'roulette', rtp: 36 / 37, note: 'un solo cero · racetrack incluido' }),
   Object.freeze({ game: 'slots', rtp: SLOT_MATH.rtp, note: `medido con ${chips.format(SLOT_MATH.spins)} tiradas · Trébol de Oro ${pct(SLOT_MATH.cloverRtp)}` }),
-  Object.freeze({ game: 'plinko', rtp: plinkoRtp('medium'), note: Object.values(RISKS).map((risk) => `${risk.name} ${pct(plinkoRtp(risk.id))}`).join(' · ') + ' · Zafiro +8 puntos' }),
+  Object.freeze({ game: 'plinko', rtp: plinkoRtp('medium'), note: Object.values(RISKS).map((risk) => `${risk.name} ${pct(plinkoRtp(risk.id))}`).join(' · ') + ' · Zafiro +2,5 puntos' }),
   Object.freeze({ game: 'crash', rtp: CRASH_EDGE, note: 'P(E ≥ x) = 0,97 / x para cualquier retiro' }),
   Object.freeze({ game: 'mines', rtp: MINES_EDGE, note: 'multiplicador 0,97 · C(25,k) / C(25−m,k)' }),
   Object.freeze({ game: 'dice', rtp: DICE_NUMERATOR / 100, note: 'multiplicador 98 / P' }),
   Object.freeze({ game: 'towers', rtp: TOWER_EDGE, note: 'multiplicador 0,97 / p^n' }),
   Object.freeze({ game: 'video_poker', rtp: 0.9954, note: 'Jacks or Better 9/6 · estrategia óptima con 5 monedas' }),
-  Object.freeze({ game: 'wheel', rtp: null, note: `gratis cada 24 h · valor medio ≈ ${chips.format(Math.round(wheelValue))} fichas + pociones y cofres` }),
+  Object.freeze({ game: 'fish', rtp: FISH_RTP, note: 'captura con p = 0,96 / multiplicador por impacto, apuntes a la criatura que apuntes' }),
+  Object.freeze({ game: 'wheel', rtp: null, note: `gratis cada 24 h · valor medio ≈ ${chips.format(Math.round(wheelValue))} créditos + pociones y cofres legendarios` }),
 ]);
 
 const HELP = Object.freeze([
   ['help', 'esta ayuda'],
+  ['floor [1-4]', 'pisos y tarjetas de acceso; con un número, viaja a ese piso'],
+  ['goal', 'progreso hacia los 10.000.000 y récord'],
+  ['contracts', 'encargos del Sindicato en tu piso'],
+  ['alms', 'limosna: +10 créditos con el saldo a cero, una cada 5 minutos'],
   ['seeds', 'semilla comprometida (hash), semilla del cliente y nonce'],
   ['rotate', 'revela la semilla del servidor actual y compromete otra'],
   ['clientseed <texto>', 'cambia tu semilla del cliente (revela la actual)'],
@@ -48,7 +61,7 @@ const HELP = Object.freeze([
   ['relics', 'reliquias equipadas, colección, cofres y pociones'],
   ['missions', 'misiones diarias'],
   ['level', 'nivel, XP y rango VIP'],
-  ['balance', 'saldo de fichas'],
+  ['balance', 'saldo de créditos'],
   ['matrix on|off', 'lluvia de código de fondo'],
   ['turbo on|off', 'animaciones al doble de velocidad'],
   ['crt on|off', 'scanlines de monitor CRT'],
@@ -65,6 +78,7 @@ export const COMMANDS = Object.freeze(HELP.map(([usage]) => usage.split(' ')[0])
 const ALIASES = Object.freeze({
   ayuda: 'help', '?': 'help', semillas: 'seeds', rotar: 'rotate', semilla: 'clientseed', verificar: 'verify',
   historial: 'history', reliquias: 'relics', misiones: 'missions', nivel: 'level', saldo: 'balance',
+  piso: 'floor', pisos: 'floor', meta: 'goal', encargos: 'contracts', limosna: 'alms', rescate: 'alms',
   tema: 'theme', exportar: 'export', importar: 'import', limpiar: 'clear', cls: 'clear', salir: 'exit', scanlines: 'crt',
 });
 
@@ -91,6 +105,71 @@ export function complete(prefix) {
 }
 
 const HANDLERS = {
+  floor(args, ctx) {
+    const c = ctx.climb;
+    if (!args.length) {
+      return {
+        lines: [
+          line(`Piso actual: ${c.floor.level} · ${c.floor.name}`, 'accent'),
+          ...FLOORS.map((f) => {
+            const here = f.id === c.floor.id;
+            const open = f.level <= c.unlockedLevel;
+            const mark = here ? '>' : open ? '+' : 'x';
+            const access = open ? '' : ` · tarjeta a los ${chips.format(f.unlockAt)} créditos`;
+            return line(`  ${mark} ${f.level}. ${f.name} · apuestas ${rangeText(f, chips.format)}${access}`, here ? 'ok' : open ? 'info' : 'dim');
+          }),
+          line('Viaja con `floor <número>` (sin apuestas en juego).', 'dim'),
+        ],
+      };
+    }
+    const level = Number(args[0]);
+    const target = FLOORS[level - 1];
+    if (!Number.isInteger(level) || !target) return { lines: [line('Uso: floor <1-4>', 'warn')] };
+    const result = (ctx.travel ?? ((id) => c.travel(id)))(target.id);
+    if (result.ok) return { lines: [line(`Ascensor del Sindicato → ${target.name}.`, 'ok')] };
+    const reasons = {
+      here: 'Ya estás en ese piso.',
+      locked: `Necesitas la tarjeta de acceso: reúne ${chips.format(result.need ?? target.unlockAt)} créditos.`,
+      pending: 'Termina las apuestas en juego antes de tomar el ascensor.',
+      status: 'La escalada todavía no ha empezado.',
+    };
+    return { lines: [line(reasons[result.reason] ?? 'No se puede viajar ahora.', 'warn')] };
+  },
+
+  goal(_, ctx) {
+    const c = ctx.climb;
+    const balance = ctx.wallet.balance;
+    const next = c.nextFloor;
+    return {
+      lines: [
+        line(`Meta: ${chips.format(GOAL)} créditos · tienes ${chips.format(balance)} (${pct(Math.min(1, balance / GOAL), 4)})`, 'accent'),
+        line(`Avance de la torre: ${pct(c.progress, 1)} · récord de esta escalada: ${chips.format(c.record)}`),
+        line(next ? `Siguiente tarjeta: ${next.name} a los ${chips.format(next.unlockAt)} créditos` : 'Tienes las 4 tarjetas de acceso.', 'dim'),
+      ],
+    };
+  },
+
+  contracts(_, ctx) {
+    const list = ctx.climb.contracts;
+    return {
+      lines: [
+        line(`Encargos del Sindicato · ${ctx.climb.floor.name}`, 'accent'),
+        ...list.map((c) => line(`  [${c.progress}/${c.goal}] ${c.text} → +${chips.format(c.reward)} créditos`)),
+      ],
+    };
+  },
+
+  alms(_, ctx) {
+    const c = ctx.climb;
+    const status = c.rescueStatus();
+    if (status.available) {
+      const amount = (ctx.takeRescue ?? (() => c.takeRescue()))();
+      return { lines: [line(`El Sindicato te da una limosna de ${chips.format(amount)} créditos. La próxima, dentro de 5 minutos.`, 'ok')] };
+    }
+    if (!status.broke) return { lines: [line('La limosna solo se concede con el saldo a cero y sin apuestas en juego.', 'warn')] };
+    return { lines: [line(`El Sindicato no da otra limosna hasta dentro de ${mmss(status.wait)}.`, 'warn')] };
+  },
+
   help() {
     return { lines: [line('Comandos disponibles:', 'accent'), ...HELP.map(([usage, text]) => line(`  ${usage.padEnd(20)} ${text}`))] };
   },
@@ -187,7 +266,7 @@ const HANDLERS = {
     return {
       lines: [
         line(`Misiones diarias: ${done}/${list.length}`, 'accent'),
-        ...list.map((m) => line(`  ${m.done ? '[x]' : '[ ]'} ${m.text} (${chips.format(m.progress)}/${chips.format(m.goal)}) → +${chips.format(m.chips)} fichas · +${m.xp} XP`, m.done ? 'ok' : 'info')),
+        ...list.map((m) => line(`  ${m.done ? '[x]' : '[ ]'} ${m.text} (${chips.format(m.amount ? Math.round(m.progress * m.scale) : m.progress)}/${chips.format(m.amount ? Math.round(m.goal * m.scale) : m.goal)}) → +${chips.format(m.chips)} créditos · +${m.xp} XP`, m.done ? 'ok' : 'info')),
       ],
     };
   },
@@ -204,7 +283,7 @@ const HANDLERS = {
   },
 
   balance(_, ctx) {
-    return { lines: [line(`Saldo: ${chips.format(ctx.wallet.balance)} fichas · en juego: ${chips.format(ctx.wallet.inPlay)}`, 'accent')] };
+    return { lines: [line(`Saldo: ${chips.format(ctx.wallet.balance)} créditos · en juego: ${chips.format(ctx.wallet.inPlay)}`, 'accent')] };
   },
 
   matrix(args, ctx) {
@@ -254,7 +333,7 @@ const HANDLERS = {
 
   whoami(_, ctx) {
     const p = ctx.progression.progress();
-    return { lines: [line(`jugador@cyber-ultra · nivel ${p.level} · ${p.rank.name}`)] };
+    return { lines: [line(`jugador@syndicate · ${ctx.climb.title.name} · piso ${ctx.climb.floor.level} · nivel ${p.level} · ${p.rank.name}`)] };
   },
 
   sudo() {

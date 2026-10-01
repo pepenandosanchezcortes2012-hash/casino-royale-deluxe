@@ -1,14 +1,15 @@
-// Progresión global: XP por ronda, curva de niveles 1–50, 6 rangos VIP, recompensas y las 10
-// misiones diarias acumulativas.
+// Carrera: XP por ronda en la escala del piso, curva de niveles 1–50, 6 rangos VIP, recompensas
+// escaladas y las 10 misiones diarias que dependen del piso desbloqueado.
 // Ejecutar con: npm test
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  Progression, PROGRESS_KEY, MAX_LEVEL, LEVEL_XP, VIP_RANKS, MISSIONS, MISSION_BONUS,
-  xpToNext, levelFor, rankFor, roundXp, levelReward, localDay,
+  Progression, PROGRESS_KEY, MAX_LEVEL, LEVEL_XP, VIP_RANKS, MISSIONS, MISSION_BONUS, DAILY_MISSIONS,
+  xpToNext, levelFor, rankFor, roundXp, levelReward, localDay, dailyMissions, missionById,
 } from '../js/progression.js';
+import { FLOORS } from '../js/climb/floors.js';
 import { EventBus } from '../js/event_bus.js';
 
 function memoryStore() {
@@ -22,13 +23,16 @@ function memoryStore() {
 }
 
 const DAY = new Date(2026, 8, 30, 12, 0, 0).getTime();
-const round = (game, stake, returned, extra = {}) => ({ game, stake, returned, tags: [], mode: 'free', ...extra });
+const round = (game, stake, returned, extra = {}) => ({ game, stake, returned, tags: [], mode: 'climb', ...extra });
 
-test('XP por ronda = apuesta × 0,25 + premio × 0,5 (× 2 con el Pase del Padrino)', () => {
+test('XP por ronda = (apuesta × 0,25 + premio × 0,5) ÷ escala del piso (× 2 con el Pase)', () => {
   assert.equal(roundXp({ stake: 100, returned: 0 }), 25);
   assert.equal(roundXp({ stake: 100, returned: 200 }), 125);
   assert.equal(roundXp({ stake: 100, returned: 200 }, 2), 250);
   assert.equal(roundXp({ stake: -5, returned: -1 }), 0, 'nunca resta XP');
+  // La misma apuesta relativa da la misma XP en todos los pisos.
+  assert.equal(roundXp({ stake: 10, returned: 0 }, 1, 0.1), 25);
+  assert.equal(roundXp({ stake: 10_000, returned: 0 }, 1, 100), 25);
 });
 
 test('Curva de 50 niveles creciente y 6 rangos VIP por nivel', () => {
@@ -72,55 +76,77 @@ test('Recompensas de nivel: fichas, cofre común cada 5 niveles y legendario en 
   assert.ok(store.map.has(PROGRESS_KEY));
 });
 
-test('Misiones: 10 diarias, acumulativas, pagan fichas + XP y se renuevan a medianoche', () => {
-  assert.equal(MISSIONS.length, 10);
+test('Misiones del día según el piso desbloqueado: 4 generales y 6 de sus mesas', () => {
+  const f1 = dailyMissions(FLOORS[0].games);
+  assert.equal(f1.length, DAILY_MISSIONS);
+  assert.deepEqual(f1.slice(0, 4), ['rounds', 'wager', 'wins', 'big']);
+  assert.ok(f1.every((id) => !missionById(id).games || missionById(id).games.some((g) => FLOORS[0].games.includes(g))), 'solo mesas del Subsuelo');
+  const f2 = dailyMissions(FLOORS[1].games);
+  assert.deepEqual(f2.slice(4, 7), ['fish', 'plinko', 'avalanche'], 'primero las mesas del piso recién abierto');
+  const f4 = dailyMissions(FLOORS[3].games);
+  assert.deepEqual(f4.slice(4, 6), ['blackjack', 'wheel']);
+  assert.equal(new Set(f4).size, DAILY_MISSIONS);
+  assert.ok(MISSIONS.length > DAILY_MISSIONS);
+});
+
+test('Misiones: apuesta mínima del piso, importes en su escala, recompensas escaladas y renovación', () => {
   const store = memoryStore();
   let now = DAY;
-  const p = new Progression({ store, now: () => now });
+  const floor = { scale: 0.1, minBet: 1, games: FLOORS[0].games };
+  const p = new Progression({ store, now: () => now, scale: () => floor.scale, minStake: () => floor.minBet, games: () => floor.games });
   const done = [];
-  p.addEventListener('mission', (event) => done.push(event.detail.mission.id));
-  for (let i = 0; i < 5; i++) p.addRound(round('blackjack', 100, 200));
-  assert.ok(done.includes('blackjack'), 'ganar 5 manos de blackjack');
-  const bj = p.missions().find((m) => m.id === 'blackjack');
-  assert.equal(bj.progress, 5);
-  assert.equal(bj.done, true);
-  // Las rondas del Modo Historia dan XP pero no cuentan para las misiones del Cripto-Casino.
+  p.addEventListener('mission', (event) => done.push(event.detail.mission));
+  const list = p.missions();
+  assert.deepEqual(list.map((m) => m.id), dailyMissions(FLOORS[0].games));
+  assert.equal(list.find((m) => m.id === 'dice').chips, 30, '300 créditos × escala 0,1');
+  assert.match(list.find((m) => m.id === 'wager').text, /Apuesta 500 créditos/);
+  for (let i = 0; i < 10; i++) p.addRound(round('dice', 5, 9.8, { chance: 50 }));
+  const dice = done.find((m) => m.id === 'dice');
+  assert.ok(dice, 'ganar 10 tiradas de dados');
+  assert.equal(dice.chips, 30);
+  // El importe apostado se mide en la escala del piso: 10 × 5 créditos = 500 unidades.
+  assert.equal(p.missions().find((m) => m.id === 'wager').progress, 500);
+  // Con la tarjeta del Piso 2 la escala sube y las rondas por debajo de 50 ya no cuentan.
+  Object.assign(floor, { scale: 1, minBet: 50, games: FLOORS[1].games });
   const before = p.missions().find((m) => m.id === 'rounds').progress;
-  p.addRound({ ...round('roulette', 10, 0), mode: 'story' });
-  assert.equal(p.missions().find((m) => m.id === 'rounds').progress, before);
-  // Casillas seguras de Minas y Torres, premio ×10 y retiro de Crash a ×2.
+  p.addRound(round('dice', 10, 0, { chance: 50 }));
+  assert.equal(p.missions().find((m) => m.id === 'rounds').progress, before, 'apuesta por debajo de la mínima del piso');
   p.addRound(round('mines', 50, 100, { safe: 7 }));
   p.addRound(round('towers', 50, 100, { safe: 5 }));
-  assert.ok(done.includes('safe'));
-  p.addRound(round('crash', 10, 20));
-  p.addRound(round('dice', 10, 150));
-  assert.ok(done.includes('big'));
-  // Al día siguiente todo vuelve a empezar.
+  const safe = done.find((m) => m.id === 'safe');
+  assert.ok(safe);
+  assert.equal(safe.chips, 300, 'recompensa en la escala del piso desbloqueado');
+  assert.equal(p.missions().map((m) => m.id).join(), dailyMissions(FLOORS[0].games).join(), 'el tablero del día no cambia');
+  // Al día siguiente: misiones nuevas con las mesas de la Bahía.
   now += 24 * 3600 * 1000;
+  assert.deepEqual(p.missions().map((m) => m.id), dailyMissions(FLOORS[1].games));
   assert.equal(p.missions().every((m) => m.progress === 0 && !m.done), true);
   assert.equal(p.missionsDone, 0);
   assert.notEqual(localDay(now), localDay(DAY));
+  // La rueda (sin apuesta) cuenta para su misión.
+  Object.assign(floor, { scale: 100, minBet: 10_000, games: FLOORS[3].games });
+  now += 24 * 3600 * 1000;
+  p.addRound(round('wheel', 0, 20_000, { tags: ['wheel'] }));
+  assert.equal(p.missions().find((m) => m.id === 'wheel').done, true);
 });
 
-test('Completar las 10 misiones da el bonus (cofre común y fichas) una sola vez', () => {
-  const p = new Progression({ store: memoryStore(), now: () => DAY });
+test('Completar las 10 misiones da el bonus (cofre común y créditos de tu piso) una sola vez', () => {
+  const p = new Progression({ store: memoryStore(), now: () => DAY, scale: () => 1, minStake: () => 50, games: () => FLOORS[0].games });
   const rewards = [];
   p.addEventListener('reward', (event) => rewards.push(event.detail));
-  const tags = ['cascade2'];
-  for (let i = 0; i < 40; i++) {
-    p.addRound(round('blackjack', 125, 250));
-    p.addRound(round('roulette', 10, 20));
-    p.addRound(round('slots', 10, 20, { tags }));
-    p.addRound(round('plinko', 10, 20));
-    p.addRound(round('crash', 10, 25));
-    p.addRound(round('mines', 10, 20, { safe: 1 }));
+  for (let i = 0; i < 50; i++) p.addRound(round('dice', 100, 400, { chance: 24 }));
+  p.addRound(round('dice', 100, 1000, { chance: 9 }));
+  for (let i = 0; i < 3; i++) {
+    p.addRound(round('mines', 100, 300, { safe: 4 }));
+    p.addRound(round('towers', 100, 250, { safe: 5 }));
   }
-  p.addRound(round('dice', 10, 200));
   assert.equal(p.missionsDone, 10);
-  const bonus = rewards.filter((r) => r.chest === MISSION_BONUS.chest && r.chips === MISSION_BONUS.chips);
-  assert.equal(bonus.length, 1);
-  p.addRound(round('dice', 10, 200));
-  assert.equal(rewards.filter((r) => r.chips === MISSION_BONUS.chips && r.chest === MISSION_BONUS.chest).length, 1);
+  assert.equal(p.missionsTotal, 10);
+  const isBonus = (r) => r.chest === MISSION_BONUS.chest && r.chips === MISSION_BONUS.chips;
+  assert.equal(rewards.filter(isBonus).length, 1);
+  p.addRound(round('dice', 100, 400, { chance: 24 }));
+  assert.equal(rewards.filter(isBonus).length, 1);
+  assert.deepEqual(p.missionBonus, { chest: 'common', chips: 1000 });
 });
 
 test('Bus: cada round:end suma XP con el multiplicador y los cofres salen por reward:chest', () => {

@@ -1,7 +1,8 @@
-// Rueda de la Fortuna diaria: una tirada gratis cada 24 horas con 10 gajos (fichas de 200 a
-// 3.000, bote de 10.000, pociones ×2 y cofres). El gajo sale del flujo provably fair según los
-// pesos publicados (wheel-math.js). El premio se guarda al girar y se entrega al parar la rueda:
-// si la página se recarga a mitad del giro, se entrega al volver.
+// Rueda de la Fortuna Legendaria (Penthouse Cripto-Olympus): una tirada gratis cada 24 horas con
+// 10 gajos (de 20.000 a 300.000 créditos, bote de 1.000.000, pociones ×2 y cofres legendarios).
+// El gajo sale del flujo provably fair según los pesos publicados (wheel-math.js). El premio se
+// guarda al girar y se entrega al parar la rueda: si la página se recarga a mitad del giro, se
+// entrega al volver.
 
 import { wallet } from '../engine/wallet.js';
 import { session } from '../session.js';
@@ -80,7 +81,7 @@ export class WheelGame {
     const body = el('tbody');
     const groups = new Map();
     for (const slice of WHEEL_SLICES) {
-      const key = slice.type === 'chips' ? `${slice.label} fichas` : slice.label;
+      const key = slice.type === 'chips' ? `${formatChips(slice.amount)} créditos` : slice.label;
       groups.set(key, (groups.get(key) ?? 0) + slice.weight);
     }
     for (const [label, weight] of groups) {
@@ -98,12 +99,12 @@ export class WheelGame {
   }
 
   async spin() {
-    if (this.#spinning || this.cooldown > 0 || this.#state.pending) return;
+    if (this.#spinning || this.cooldown > 0 || this.#state.pending || !session.available('wheel')) return;
     this.#spinning = true;
     const stream = session.stream('wheel');
     const { index, slice } = spinWheel(stream);
     const payout = slice.type === 'chips' ? slice.amount : 0;
-    session.record(stream, { stake: 0, payout, summary: `Gajo ${index + 1}: ${slice.type === 'chips' ? `${slice.label} fichas` : slice.label}`, params: {} });
+    session.record(stream, { stake: 0, payout, summary: `Gajo ${index + 1}: ${slice.type === 'chips' ? `${formatChips(slice.amount)} créditos` : slice.label}`, params: {} });
     this.#state = { lastSpin: Date.now(), pending: { index, meta: stream.meta } };
     this.#save();
     this.#renderButton();
@@ -151,22 +152,22 @@ export class WheelGame {
     let text;
     if (slice.type === 'chips') {
       wallet.grant(slice.amount, 'wheel');
-      text = `+${formatChips(slice.amount)} fichas`;
+      text = `+${formatChips(slice.amount)} créditos`;
     } else if (slice.type === 'potion') {
-      relics.addPotion(slice.amount, 'Rueda diaria');
+      relics.addPotion(slice.amount, 'Rueda Legendaria');
       text = 'una Poción ×2';
     } else {
-      relics.addChest('common', 'Rueda diaria');
-      text = 'un Cofre común';
+      relics.addChest('legendary', 'Rueda Legendaria');
+      text = 'un Cofre legendario';
     }
     session.report({ game: 'wheel', stake: 0, returned: slice.type === 'chips' ? slice.amount : 0, tags: ['wheel', slice.id] });
     this.#dom.message.textContent = `${recovered ? 'Premio pendiente entregado' : '¡Premio!'}: ${text}${slice.jackpot ? ' · ¡BOTE!' : ''}`;
     if (!recovered) {
-      audio.win(slice.jackpot ? 3 : slice.amount >= 1500 ? 2 : 1);
+      audio.win(slice.jackpot ? 3 : slice.amount >= 150_000 ? 2 : 1);
       const rect = this.#dom.canvas.getBoundingClientRect();
       hud.celebrate(slice.jackpot ? 3 : 2, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
     } else {
-      hud.toast(`Rueda diaria: ${text}`, 'success', 4200);
+      hud.toast(`Rueda Legendaria: ${text}`, 'success', 4200);
     }
   }
 
@@ -235,7 +236,7 @@ export class WheelGame {
     ctx.font = `900 ${Math.max(10, R * 0.07)}px ui-monospace, Consolas, monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('CYBER', c, c);
+    ctx.fillText('OLIMPO', c, c);
   }
 
   // ---------- Render ----------

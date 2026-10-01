@@ -18,7 +18,7 @@ import { scopedKey } from '../mode.js';
 import {
   ROWS, COLS, LINE_COUNT, SUPER_BONUS, WILD_FOUR, CASCADE_MULTIPLIERS, WILD_MULTIPLIER, MAX_WILD_MULTIPLIER,
   STICKY_SPINS, BET_STEPS, FREE_SPINS, BONUS_BUY_COST, MAX_WIN, SYMBOLS, SLOT_MATH, SYMBOL_BY_ID, LINES,
-  LINE_NAMES, WILD, CLOVER_BOOST, createDraw, playSpin,
+  LINE_NAMES, WILD, createDraw, playSpin,
 } from './slots-engine.js';
 
 export * from './slots-engine.js';
@@ -144,7 +144,7 @@ export class SlotsGame {
       storage.write(SAVE_KEY, { bet: state.bet, grid: state.grid, fs: state.fs, sticky: state.sticky, respin: state.respin });
       this.#render(state);
     });
-    wallet.addEventListener('change', () => this.#renderControls(this.state));
+    wallet.addEventListener('update', () => this.#renderControls(this.state));
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) this.stopAuto('Auto-spin detenido: la pestaña pasó a segundo plano');
     });
@@ -157,7 +157,7 @@ export class SlotsGame {
     this.#fitBet();
   }
 
-  // Apuestas y funciones que permite la zona (Modo Historia) o el Cripto-Casino.
+  // Apuestas y funciones que permite el piso actual.
   #limits() {
     return session.limits('slots');
   }
@@ -233,7 +233,7 @@ export class SlotsGame {
     rule(`Bonus Buy: ${FREE_SPINS} giros gratis por ${BONUS_BUY_COST} × apuesta · RTP de la compra ${pct(SLOT_MATH.bonusBuyRtp)}.`);
     rule(`Premio máximo: ${formatChips(MAX_WIN)} × apuesta por giro o por ronda de giros gratis.`);
     rule(`RTP ${pct(SLOT_MATH.rtp)} (líneas del juego base ${pct(SLOT_MATH.lines)} + giros gratis ${pct(SLOT_MATH.freeSpins)}), medido con ${formatChips(SLOT_MATH.spins / 1e6)} millones de tiradas del motor real. Giros gratis 1 de cada ${SLOT_MATH.triggerEvery} tiradas.`);
-    if (session.mode === 'free') rule(`Cripto-Casino: el Trébol de Oro da +${Math.round((CLOVER_BOOST - 1) * 100)} % de comodines y estrellas (RTP ${pct(SLOT_MATH.cloverRtp)}); la Batería Cuántica, un ${Math.round(BATTERY_CHANCE * 100)} % de giro gratis tras una tirada sin premio, decidido con el siguiente número verificable del giro.`);
+    rule(`Reliquias: el Trébol de Oro duplica los pesos del juego base y da un punto más a la estrella (+2,8 % de estrellas, RTP ${pct(SLOT_MATH.cloverRtp)}); la Batería Cuántica da un ${Math.round(BATTERY_CHANCE * 100)} % de giro gratis tras una tirada sin premio, decidido con el siguiente número verificable del giro.`);
     this.#dom.paytable.replaceChildren(table, rules);
   }
 
@@ -530,7 +530,7 @@ export class SlotsGame {
     const s = this.state;
     if (!this.#idle() || s.fs || s.respin || this.#auto) return;
     if (!this.#limits().bonusBuy) {
-      hud.toast('La compra de bono se abre en el Salón de Neón', 'warn');
+      hud.toast('La compra de bono no está disponible en este piso', 'warn');
       return;
     }
     const price = BONUS_BUY_COST * s.bet;
@@ -799,7 +799,7 @@ export class SlotsGame {
     d.auto.textContent = auto ? 'Detener auto' : 'Auto-spin';
     d.auto.setAttribute('aria-pressed', String(Boolean(auto)));
     d.auto.disabled = !auto && (!idle || free || respin || !wallet.canAfford(s.bet));
-    d.buyPrice.textContent = bonusBuy ? formatChips(price) : 'Salón de Neón';
+    d.buyPrice.textContent = bonusBuy ? formatChips(price) : '—';
     d.buy.classList.toggle('is-locked', !bonusBuy);
     d.buy.disabled = !bonusBuy || !idle || Boolean(s.fs) || respin || Boolean(auto) || !wallet.canAfford(price);
   }

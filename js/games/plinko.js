@@ -5,7 +5,7 @@
 // clavija que marca el camino. Varias bolas pueden estar en el aire a la vez (ráfaga ×5).
 
 import { wallet } from '../engine/wallet.js';
-import { session, FREE_LIMITS } from '../session.js';
+import { session } from '../session.js';
 import { relics } from '../relics.js';
 import { audio } from '../audio.js';
 import { storage } from '../storage.js';
@@ -68,20 +68,33 @@ export class PlinkoGame {
       rules: $('pk-rules'),
     };
     const prefs = storage.read(PREFS_KEY, null) ?? {};
-    const bets = FREE_LIMITS.plinko.bets;
     this.#risk = RISKS[prefs.risk] ? prefs.risk : 'low';
-    this.#bet = bets.includes(prefs.bet) ? prefs.bet : bets[2];
+    this.#bet = prefs.bet;
+    this.#fitBet();
     this.#buildBets();
     this.#bind();
-    session.register('plinko', { hasPendingPlay: () => this.#balls.length > 0 });
-    this.#dom.rules.textContent = `9 filas de clavijas (la primera es la puerta de entrada) y 9 cubetas. Cada fila la decide un número verificable; el rebote amortiguado tiene un sesgo publicado hacia el centro que fija el RTP: ${Object.values(RISKS).map((risk) => `${risk.name} ${pct(plinkoRtp(risk.id))}`).join(', ')}. El Zafiro de Plinko suma 8 puntos. Ráfaga: ${BURST} bolas con ${BURST_DELAY_MS} ms entre ellas.`;
+    session.register('plinko', {
+      hasPendingPlay: () => this.#balls.length > 0,
+      onZone: () => {
+        this.#fitBet();
+        this.#buildBets();
+        this.#renderControls();
+      },
+    });
+    this.#dom.rules.textContent = `9 filas de clavijas (la primera es la puerta de entrada) y 9 cubetas. Cada fila la decide un número verificable; el rebote amortiguado tiene un sesgo publicado hacia el centro que fija el RTP: ${Object.values(RISKS).map((risk) => `${risk.name} ${pct(plinkoRtp(risk.id))}`).join(', ')}. El Zafiro de Plinko suma 2,5 puntos. Ráfaga: ${BURST} bolas con ${BURST_DELAY_MS} ms entre ellas.`;
     this.#renderControls();
   }
 
   // ---------- Controles ----------
 
+  // Importes por bola del piso actual.
+  #fitBet() {
+    const bets = session.limits('plinko').bets;
+    if (!bets.includes(this.#bet)) this.#bet = bets[0];
+  }
+
   #buildBets() {
-    const buttons = FREE_LIMITS.plinko.bets.map((value) => {
+    const buttons = session.limits('plinko').bets.map((value) => {
       const button = el('button', 'seg', formatChips(value));
       button.type = 'button';
       button.dataset.bet = String(value);
@@ -109,7 +122,7 @@ export class PlinkoGame {
     });
     d.drop.addEventListener('click', () => this.drop());
     d.burst.addEventListener('click', () => this.burst());
-    wallet.addEventListener('change', () => this.#renderControls());
+    wallet.addEventListener('update', () => this.#renderControls());
     relics.addEventListener('change', () => this.#renderControls());
     globalThis.addEventListener('resize', () => {
       if (!this.#visible) return;

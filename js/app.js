@@ -1,30 +1,28 @@
-// Inicializador maestro de Casino Royale Deluxe · Cyber-Ultra.
-// Máquina de estados de la aplicación: arranque → menú principal | Modo Historia | Cripto-Casino
-// → salida (cambiar de modo recarga la página para que cada modo arranque con su monedero y sus
-// datos). Aquí viven también el router de pestañas (enlaces #juego), el temporizador de la
-// abundancia (fichas extra cada minuto con la pestaña visible) y el modo turbo.
+// Inicializador maestro de Casino Royale Deluxe · The Syndicate Climb & Cyber-Fish Casino.
+// Una sola partida: la escalada de 10 créditos a 10.000.000 por los 4 pisos del Sindicato. Aquí
+// se conectan la escalada, la carrera (niveles y misiones), las reliquias, las 11 mesas, el
+// router de pestañas (enlaces #juego, mesas bloqueadas según el piso), el temporizador de la
+// abundancia (créditos por minuto de juego activo) y las preferencias de la interfaz.
 
-import { MODE, chooseMode, leaveMode, scopedKey } from './mode.js';
 import { storage } from './storage.js';
+import { scopedKey } from './mode.js';
 import { audio } from './audio.js';
 import { bus } from './event_bus.js';
 import { settings } from './settings.js';
 import { ParticleSystem } from './particles.js';
 import { wallet } from './engine/wallet.js';
-import { session, RESCUE_AMOUNT } from './session.js';
+import { session } from './session.js';
 import { progression } from './progression.js';
 import { relics, CHESTS } from './relics.js';
-import { campaign } from './story/campaign.js';
+import { climb } from './climb/climb.js';
+import { GAME_ORDER } from './climb/floors.js';
 import { hud, formatChips } from './ui/hud.js';
-import { storyUi } from './ui/story-ui.js';
-import { vipUi } from './ui/vip-ui.js';
-import { mainMenu } from './ui/menu.js';
+import { climbUi } from './ui/climb-ui.js';
 import { cyberHud } from './ui/cyber-hud.js';
 import { telemetry } from './ui/telemetry.js';
 import { terminalUi } from './ui/terminal-ui.js';
 import { vaultUi } from './ui/vault-ui.js';
 import { MatrixRain } from './ui/matrix.js';
-import { el } from './ui/svg.js';
 import { BlackjackGame } from './games/blackjack.js';
 import { RouletteGame } from './games/roulette.js';
 import { SlotsGame } from './games/slots.js';
@@ -35,17 +33,12 @@ import { DiceGame } from './games/dice.js';
 import { TowersGame } from './games/towers.js';
 import { VideoPokerGame } from './games/video_poker.js';
 import { WheelGame } from './games/wheel.js';
+import { FishGame } from './games/fish.js';
 
-export const APP_STATES = Object.freeze({ BOOT: 'boot', MENU: 'menu', STORY: 'story', FREE: 'free', LEAVING: 'leaving' });
-const TRANSITIONS = Object.freeze({
-  boot: Object.freeze(['menu', 'story', 'free']),
-  menu: Object.freeze(['leaving']),
-  story: Object.freeze(['leaving']),
-  free: Object.freeze(['leaving']),
-  leaving: Object.freeze([]),
-});
+export const APP_STATES = Object.freeze({ BOOT: 'boot', CLIMB: 'climb' });
 
-// Abundancia: fichas gratis por cada minuto de juego con la pestaña visible.
+// Abundancia: créditos gratis por cada minuto con la pestaña visible y al menos una ronda con la
+// apuesta mínima de tu piso más alto (× la escala de ese piso).
 export const ABUNDANCE_MS = 60_000;
 export const ABUNDANCE_BASE = 50;
 
@@ -53,13 +46,20 @@ const root = document.documentElement;
 
 // ---------- Router de pestañas ----------
 
+// Las mesas de pisos superiores al actual aparecen bloqueadas (con el piso en que se abren).
 function setupTabs(games) {
   const key = scopedKey('crd.tab.v1');
-  const tabs = [...document.querySelectorAll('[role="tab"]')].filter((tab) => tab.dataset.game in games);
+  const tabs = GAME_ORDER.map((game) => document.getElementById(`tab-${game}`)).filter((tab) => tab && tab.dataset.game in games);
   let active = null;
+  const locked = (name) => climbUi.gameLocked(name);
+  const firstOpen = () => tabs.find((tab) => !locked(tab.dataset.game))?.dataset.game ?? 'mines';
 
-  const activate = (name, { focus = false } = {}) => {
+  const activate = (name, { focus = false, quiet = false } = {}) => {
     if (!(name in games) || name === active) return;
+    if (locked(name)) {
+      if (!quiet) hud.toast(climbUi.lockedMessage(name), 'warn', 3600);
+      return;
+    }
     if (active) games[active].onHide();
     for (const tab of tabs) {
       const selected = tab.dataset.game === name;
@@ -77,27 +77,54 @@ function setupTabs(games) {
     games[name].onShow();
   };
 
+  // Candados según el piso; si la mesa activa deja de estar disponible, se abre otra.
+  const refresh = () => {
+    for (const tab of tabs) {
+      const isLocked = locked(tab.dataset.game);
+      tab.classList.toggle('is-locked', isLocked);
+      tab.setAttribute('aria-disabled', String(isLocked));
+      tab.title = isLocked ? climbUi.lockedMessage(tab.dataset.game) : '';
+    }
+    if (!active || locked(active)) {
+      if (active) {
+        games[active].onHide();
+        active = null;
+      }
+      activate(firstOpen(), { quiet: true });
+    }
+  };
+
   tabs.forEach((tab, index) => {
     tab.addEventListener('click', () => {
       audio.click();
       activate(tab.dataset.game);
     });
     tab.addEventListener('keydown', (event) => {
-      const moves = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: tabs.length - 1 };
+      const moves = { ArrowRight: 1, ArrowLeft: -1 };
       if (!(event.key in moves)) return;
       event.preventDefault();
-      const next = tabs[(moves[event.key] + tabs.length) % tabs.length];
-      activate(next.dataset.game, { focus: true });
+      // Las flechas recorren solo las mesas abiertas del piso.
+      for (let step = 1; step <= tabs.length; step++) {
+        const next = tabs[(index + moves[event.key] * step + tabs.length * 2) % tabs.length];
+        if (!locked(next.dataset.game)) {
+          activate(next.dataset.game, { focus: true });
+          break;
+        }
+      }
     });
   });
 
-  // Enlaces directos: index.html#plinko abre esa mesa.
+  // Enlaces directos: index.html#plinko abre esa mesa (si el piso la tiene).
   window.addEventListener('hashchange', () => activate(decodeURIComponent(location.hash.slice(1))));
   const fromHash = decodeURIComponent(location.hash.slice(1));
-  const saved = storage.read(key, 'blackjack');
-  activate(fromHash in games ? fromHash : saved in games ? saved : 'blackjack');
+  const saved = storage.read(key, 'mines');
+  const pick = [fromHash, saved].find((name) => name in games && !locked(name)) ?? firstOpen();
+  for (const tab of tabs) document.getElementById(tab.getAttribute('aria-controls')).hidden = true;
+  refresh();
+  activate(pick, { quiet: true });
   return {
     activate,
+    refresh,
     get active() {
       return active;
     },
@@ -117,18 +144,29 @@ function setupAudioUnlock() {
 
 // ---------- Abundancia ----------
 
-// Temporizador pausable: solo cuenta el tiempo con la pestaña visible y reparte ABUNDANCE_BASE
-// fichas (más el extra del rango VIP y del Reloj de la Abundancia) cada ABUNDANCE_MS.
+// Temporizador pausable: solo cuenta el tiempo con la pestaña visible y reparte cada ABUNDANCE_MS
+// (ABUNDANCE_BASE + extra del rango VIP + Reloj de la Abundancia) × escala del piso desbloqueado,
+// siempre que en ese minuto hayas jugado al menos una ronda con la apuesta mínima de ese piso.
 class AbundanceTimer {
   #remaining = ABUNDANCE_MS;
   #startedAt = 0;
   #timer = 0;
   #bar = null;
+  #active = false;
 
   start(bar) {
     this.#bar = bar;
     document.addEventListener('visibilitychange', () => (document.hidden ? this.#pause() : this.#resume()));
+    bus.on('round:end', (round) => {
+      if (round.stake > 0 && round.stake + 1e-9 >= climb.unlockedFloor.minBet) this.#mark(true);
+    });
+    this.#mark(false);
     this.#resume();
+  }
+
+  #mark(active) {
+    this.#active = active;
+    this.#bar?.closest('.abundance-track')?.classList.toggle('is-idle', !active);
   }
 
   #progress() {
@@ -164,11 +202,15 @@ class AbundanceTimer {
 
   #tick() {
     this.#remaining = ABUNDANCE_MS;
-    const amount = ABUNDANCE_BASE + progression.rank.abundance + relics.abundanceBonus();
-    wallet.grant(amount, 'abundance');
-    cyberHud.floatBalance(`+${formatChips(amount)} ⏳`);
-    audio.abundance();
-    bus.emit('abundance', { amount });
+    if (this.#active && climb.playable) {
+      const scale = climb.unlockedFloor.scale;
+      const amount = Math.round((ABUNDANCE_BASE + progression.rank.abundance + relics.abundanceBonus()) * scale * 100) / 100;
+      wallet.grant(amount, 'abundance');
+      cyberHud.floatBalance(`+${formatChips(amount)} ⏳`);
+      audio.abundance();
+      bus.emit('abundance', { amount });
+    }
+    this.#mark(false);
     this.#resume();
   }
 }
@@ -179,6 +221,8 @@ class App {
   #state = APP_STATES.BOOT;
   #games = {};
   #tabs = null;
+  #fx = null;
+  #matrix = null;
 
   get state() {
     return this.#state;
@@ -188,165 +232,79 @@ class App {
     return this.#tabs;
   }
 
-  #go(next) {
-    if (!TRANSITIONS[this.#state].includes(next)) throw new Error(`Transición ilegal ${this.#state} → ${next}`);
-    this.#state = next;
-    root.dataset.app = next;
-    bus.emit('app:state', { state: next });
-  }
-
-  // Deja en el documento solo lo que pertenece al modo (data-only="story free menu").
-  #prune(mode) {
-    for (const node of document.querySelectorAll('[data-only]')) {
-      if (!node.dataset.only.split(/\s+/).includes(mode)) node.remove();
-    }
-  }
-
   start() {
-    const mode = MODE ?? APP_STATES.MENU;
-    this.#prune(mode);
-    root.dataset.mode = mode;
-    if (mode === APP_STATES.MENU) this.#bootMenu();
-    else if (mode === APP_STATES.STORY) this.#bootStory();
-    else this.#bootFree();
-    this.#go(mode);
-    requestAnimationFrame(() => root.classList.add('is-ready'));
-  }
-
-  // Cambia de modo (o vuelve al menú con null) y recarga.
-  switchMode(mode) {
-    if (this.#state === APP_STATES.LEAVING) return;
-    if (this.#state === APP_STATES.FREE && session.blocksExit()) {
-      hud.toast('Retírate o espera a que termine la ronda de Crash antes de salir', 'warn');
-      return;
-    }
-    if (mode) chooseMode(mode);
-    else leaveMode();
-    // El enlace #mesa pertenece al modo que se deja.
-    history.replaceState(null, '', location.pathname + location.search);
-    this.#go(APP_STATES.LEAVING);
-    audio.click();
-    location.reload();
-  }
-
-  #common() {
-    const fx = new ParticleSystem(document.getElementById('fx-canvas'));
-    hud.init({ fx });
-    setupAudioUnlock();
-    document.getElementById('btn-menu').addEventListener('click', () => this.switchMode(null));
-    return fx;
-  }
-
-  // ---------- Menú principal ----------
-
-  #bootMenu() {
-    root.dataset.theme = settings.theme;
-    root.classList.toggle('has-crt', settings.scanlines);
-    document.querySelector('.skip-link')?.setAttribute('href', '#main-menu');
-    new MatrixRain(document.getElementById('matrix-canvas'), { settings }).start();
-    mainMenu.init({ onChoose: (mode) => this.switchMode(mode) });
-  }
-
-  // ---------- Modo Historia ----------
-
-  #bootStory() {
-    // La campaña se crea antes que las mesas: una leyenda nueva reinicia el monedero y las mesas
-    // todavía no deben estar escuchando sus cambios (le preguntarían por la campaña a medio crear).
-    void campaign.status;
-    this.#common();
-    this.#games = {
-      blackjack: new BlackjackGame(document.getElementById('panel-blackjack')),
-      roulette: new RouletteGame(document.getElementById('panel-roulette')),
-      slots: new SlotsGame(document.getElementById('panel-slots')),
-    };
-    this.#tabs = setupTabs(this.#games);
-    storyUi.init({ games: this.#games });
-    vipUi.init();
-    this.#fuseStory();
-  }
-
-  // La leyenda alimenta la carrera global: sus rondas suman XP (niveles y rangos VIP) y cada
-  // logro deja un cofre de reliquias para el Cripto-Casino.
-  #fuseStory() {
-    progression.attach(bus, { xpMultiplier: () => 1 });
-    relics.attach(bus);
-    campaign.addEventListener('achievement', (event) => {
-      const { achievement } = event.detail;
-      if (relics.claimStoryReward(achievement.id)) hud.toast(`Cofre de reliquias para el Cripto-Casino por «${achievement.name}»`, 'success', 4200);
-    });
-    campaign.addEventListener('status', (event) => {
-      if (event.detail.status !== 'victory') return;
-      const legend = campaign.state?.legend ?? 1;
-      if (relics.claimStoryReward(`freedom-${legend}`, 'legendary')) hud.toast('¡Libertad! Un cofre legendario te espera en el Cripto-Casino', 'success', 5200);
-    });
-    progression.addEventListener('levelup', (event) => {
-      hud.toast(`Nivel global ${event.detail.level}: recompensas guardadas para el Cripto-Casino`, 'info', 3600);
-    });
-    const global = document.getElementById('dossier-global');
-    const render = () => {
-      const p = progression.progress();
-      const chests = relics.chests;
-      global?.replaceChildren(
-        el('h3', 'modal-subtitle', 'Carrera global · Cripto-Casino'),
-        el('p', 'dossier-global-text', `Nivel ${p.level} · rango ${p.rank.name}. Tus rondas de la leyenda suman XP y cada logro te da un cofre de reliquias para el Cripto-Casino.`),
-        el('p', 'dossier-global-meta', `Cofres esperando: ${chests.common} comunes · ${chests.legendary} legendarios · Fichas guardadas: ${formatChips(progression.pendingChips)}`),
-      );
-    };
-    progression.addEventListener('change', render);
-    relics.addEventListener('change', render);
-    render();
-  }
-
-  // ---------- Cripto-Casino ----------
-
-  #bootFree() {
-    root.removeAttribute('data-zone');
+    // La escalada se crea antes que las mesas: una escalada nueva reinicia el monedero y las
+    // mesas todavía no deben estar escuchando sus cambios.
+    void climb.status;
+    wallet.setGuard((game) => session.available(game));
     this.#applySettings();
     settings.addEventListener('change', () => this.#applySettings());
-    document.getElementById('hud-balance-label').textContent = 'Fichas';
-    const fx = this.#common();
-    // Las chispas toman el color de acento del tema.
-    const tint = () => fx.setTint(getComputedStyle(root).getPropertyValue('--cy-accent').trim() || '#00ff66');
-    tint();
-    settings.addEventListener('change', (event) => {
-      if (event.detail.key === 'theme') tint();
-    });
+    this.#fx = new ParticleSystem(document.getElementById('fx-canvas'));
+    hud.init({ fx: this.#fx });
+    setupAudioUnlock();
 
-    progression.attach(bus, { xpMultiplier: () => relics.xpMultiplier() });
-    relics.attach(bus, { wallet });
+    progression.attach(bus, {
+      xpMultiplier: () => relics.xpMultiplier(),
+      scale: () => climb.unlockedFloor.scale,
+      minStake: () => climb.unlockedFloor.minBet,
+      games: () => climb.unlockedFloor.games,
+    });
+    relics.attach(bus, { wallet, scale: () => climb.unlockedFloor.scale, minBet: () => climb.floor.minBet });
     this.#rewards();
-    session.enableRescue();
 
     this.#games = {
-      blackjack: new BlackjackGame(document.getElementById('panel-blackjack')),
-      roulette: new RouletteGame(document.getElementById('panel-roulette')),
-      slots: new SlotsGame(document.getElementById('panel-slots')),
-      plinko: new PlinkoGame(document.getElementById('panel-plinko')),
-      crash: new CrashGame(document.getElementById('panel-crash')),
       mines: new MinesGame(document.getElementById('panel-mines')),
       dice: new DiceGame(document.getElementById('panel-dice')),
       towers: new TowersGame(document.getElementById('panel-towers')),
+      fish: new FishGame(document.getElementById('panel-fish')),
+      plinko: new PlinkoGame(document.getElementById('panel-plinko')),
+      slots: new SlotsGame(document.getElementById('panel-slots')),
+      crash: new CrashGame(document.getElementById('panel-crash')),
+      roulette: new RouletteGame(document.getElementById('panel-roulette')),
       video_poker: new VideoPokerGame(document.getElementById('panel-video_poker')),
+      blackjack: new BlackjackGame(document.getElementById('panel-blackjack')),
       wheel: new WheelGame(document.getElementById('panel-wheel')),
     };
-    this.#tabs = setupTabs(this.#games);
 
-    new MatrixRain(document.getElementById('matrix-canvas'), { settings }).start();
-    cyberHud.init({ onTerminal: () => terminalUi.toggle(), onVault: () => vaultUi.open() });
+    this.#matrix = new MatrixRain(document.getElementById('matrix-canvas'), { settings });
+    this.#matrix.start();
+    climbUi.init({ games: this.#games, onApply: () => this.#onFloor() });
+    this.#tabs = setupTabs(this.#games);
+    cyberHud.init({ onTerminal: () => terminalUi.toggle(), onVault: () => vaultUi.open(), minStake: () => climb.unlockedFloor.minBet });
     telemetry.init();
     vaultUi.init();
-    terminalUi.init({ telemetry });
+    terminalUi.init({ telemetry, travel: (id) => climbUi.travel(id), takeRescue: () => climbUi.takeRescue() });
     new AbundanceTimer().start(document.getElementById('hud-abundance'));
     this.#shortcuts();
+    this.#state = APP_STATES.CLIMB;
+    root.dataset.app = APP_STATES.CLIMB;
+    bus.emit('app:state', { state: APP_STATES.CLIMB });
+    requestAnimationFrame(() => root.classList.add('is-ready'));
   }
 
+  // Tema (automático: el del piso), turbo y scanlines.
   #applySettings() {
-    root.dataset.theme = settings.theme;
+    const before = root.dataset.theme;
+    root.dataset.theme = settings.resolveTheme(climb.floor.theme);
     root.classList.toggle('is-turbo', settings.turbo);
     root.classList.toggle('has-crt', settings.scanlines);
+    if (before !== root.dataset.theme) this.#tint();
   }
 
-  // Recompensas de progresión y reliquias: fichas al monedero y avisos en pantalla.
+  // Las chispas y la lluvia Matrix toman el color de acento del tema.
+  #tint() {
+    this.#fx?.setTint(getComputedStyle(root).getPropertyValue('--cy-accent').trim() || '#00ff66');
+    this.#matrix?.refresh();
+  }
+
+  // Nuevo piso visible: tema, candados de las pestañas y textos de la carrera.
+  #onFloor() {
+    this.#applySettings();
+    this.#tabs?.refresh();
+    cyberHud.refresh();
+  }
+
+  // Recompensas de la carrera y de las reliquias: créditos al monedero y avisos en pantalla.
   #rewards() {
     const collect = () => {
       const amount = progression.collectChips();
@@ -354,16 +312,12 @@ class App {
       return amount;
     };
     const waiting = collect();
-    if (waiting > 0) setTimeout(() => hud.toast(`Recompensas acumuladas: +${formatChips(waiting)} fichas`, 'success', 4200), 600);
+    if (waiting > 0) setTimeout(() => hud.toast(`Recompensas acumuladas: +${formatChips(waiting)} créditos`, 'success', 4200), 600);
     bus.on('reward:chips', () => collect());
-    bus.on('rescue', ({ amount }) => {
-      hud.toast(`Fondo de rescate: el casino te presta +${formatChips(amount ?? RESCUE_AMOUNT)} fichas`, 'success', 4200);
-      audio.win(1);
-    });
     progression.addEventListener('levelup', (event) => {
       const { level, chips, chest } = event.detail;
       const extra = chest ? ` y un ${CHESTS[chest].name.toLowerCase()}` : '';
-      hud.toast(`¡Nivel ${level}! +${formatChips(chips)} fichas${extra}`, 'success', 4200);
+      hud.toast(`¡Nivel ${level}! +${formatChips(chips)} créditos${extra}`, 'success', 4200);
       audio.levelUp();
       hud.celebrate(2);
     });
@@ -373,17 +327,27 @@ class App {
     });
     progression.addEventListener('mission', (event) => {
       const { mission, done, total } = event.detail;
-      hud.toast(`Misión completada (${done}/${total}): ${mission.text} · +${formatChips(mission.chips)} fichas`, 'success', 4200);
+      hud.toast(`Misión completada (${done}/${total}): ${mission.text} · +${formatChips(mission.chips)} créditos`, 'success', 4200);
       audio.win(1);
     });
-    progression.addEventListener('missions-complete', () => hud.toast('¡Las 10 misiones del día! Cofre común y +1.000 fichas', 'success', 5200));
+    progression.addEventListener('missions-complete', (event) => hud.toast(`¡Todas las misiones del día! Cofre común y +${formatChips(event.detail.chips)} créditos`, 'success', 5200));
     relics.addEventListener('bonus', (event) => {
-      for (const bonus of event.detail.bonuses) hud.toast(`${bonus.name}: +${formatChips(bonus.amount)} fichas`, 'success', 2600);
+      for (const bonus of event.detail.bonuses) hud.toast(`${bonus.name}: +${formatChips(bonus.amount)} créditos`, 'success', 2600);
       audio.shimmer();
     });
     relics.addEventListener('chest', (event) => {
       const { tier, reason } = event.detail;
       hud.toast(`${CHESTS[tier].name} a la bóveda${reason ? ` · ${reason}` : ''}`, 'info', 3600);
+    });
+    // Hitos de la escalada: un cofre por cada tarjeta de acceso (una sola vez) y otro legendario
+    // por cada victoria.
+    const FLOOR_CHESTS = { 2: 'common', 3: 'legendary', 4: 'legendary' };
+    climb.addEventListener('unlock', (event) => {
+      const { level, name } = event.detail.floor;
+      if (FLOOR_CHESTS[level]) relics.claimReward(`floor-${level}`, FLOOR_CHESTS[level], `Tarjeta de ${name}`);
+    });
+    climb.addEventListener('status', (event) => {
+      if (event.detail.status === 'victory') relics.claimReward(`victory-${climb.state.run}`, 'legendary', 'Dueño del Sindicato');
     });
   }
 

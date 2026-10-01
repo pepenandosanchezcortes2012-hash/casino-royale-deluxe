@@ -1,8 +1,9 @@
-// Terminal hacker del Cripto-Casino: fondo negro, fósforo verde/cian y scanlines opcionales.
+// Terminal hacker de la torre del Sindicato: fondo negro, fósforo verde/cian y scanlines opcionales.
 // Se abre con la tecla ~ o con el botón >_ del HUD. Historial con ↑/↓, autocompletado con Tab y
 // copia de seguridad (exportar/importar) de toda la partida en JSON.
 
 import { runCommand, complete, PROMPT } from '../terminal.js';
+import { climb } from '../climb/climb.js';
 import { fair } from '../provably_fair.js';
 import { relics } from '../relics.js';
 import { progression } from '../progression.js';
@@ -15,7 +16,7 @@ import { el } from './svg.js';
 const MAX_LINES = 400;
 const HISTORY_LIMIT = 50;
 const BANNER = Object.freeze([
-  ['CYBER-ULTRA OS · terminal de auditoría del Cripto-Casino', 'accent'],
+  ['SYNDICATE OS · terminal de auditoría de la torre del Sindicato', 'accent'],
   ['Canal cifrado · semillas provably fair · HMAC-SHA256', 'dim'],
   ['Escribe `help` para ver los comandos. Esc o `exit` para salir.', 'dim'],
 ]);
@@ -27,9 +28,12 @@ class TerminalUi {
   #cursor = -1;
   #greeted = false;
   #lastTick = 0;
+  #actions = {};
 
-  init({ telemetry }) {
+  // `travel(id)` y `takeRescue()` pasan por la interfaz de la escalada (transiciones y avisos).
+  init({ telemetry, travel = null, takeRescue = null }) {
     this.#telemetry = telemetry;
+    this.#actions = { travel, takeRescue };
     const $ = (id) => document.getElementById(id);
     this.#dom = {
       dialog: $('terminal'),
@@ -55,11 +59,14 @@ class TerminalUi {
 
   get #context() {
     return {
+      climb,
       fair,
       relics,
       progression,
       settings,
       wallet,
+      travel: this.#actions.travel ?? undefined,
+      takeRescue: this.#actions.takeRescue ?? undefined,
       verify: (nonce) => this.#telemetry.verifyNonce(nonce),
     };
   }
@@ -155,7 +162,7 @@ class TerminalUi {
     const url = URL.createObjectURL(blob);
     const link = el('a');
     link.href = url;
-    link.download = `cyber-ultra-copia-${backup.exportedAt.slice(0, 10)}.json`;
+    link.download = `syndicate-climb-copia-${backup.exportedAt.slice(0, 10)}.json`;
     document.body.append(link);
     link.click();
     link.remove();
@@ -167,7 +174,7 @@ class TerminalUi {
     const file = this.#dom.file.files?.[0];
     if (!file) return;
     if (file.size > 2_000_000) {
-      this.#print('El archivo es demasiado grande para ser una copia de Cyber-Ultra.', 'error');
+      this.#print('El archivo es demasiado grande para ser una copia de la partida.', 'error');
       return;
     }
     const text = await file.text();
@@ -176,7 +183,7 @@ class TerminalUi {
       this.#print(`Importación rechazada: ${result.error}. No se ha cambiado nada.`, 'error');
       return;
     }
-    this.#print(`Copia restaurada: ${result.keys} claves. Reiniciando el casino…`, 'ok');
+    this.#print(`Copia restaurada: ${result.keys} claves. Reiniciando la torre…`, 'ok');
     setTimeout(() => location.reload(), 1200);
   }
 }

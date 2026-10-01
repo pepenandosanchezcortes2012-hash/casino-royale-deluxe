@@ -36,14 +36,23 @@ const CHIP_COLORS = {
   25: { base: '#1c8a3f', inner: '#23a24b', text: '#ffffff', edge: '#ffffff' },
   50: { base: '#d9661a', inner: '#ef7a2a', text: '#ffffff', edge: '#ffffff' },
   100: { base: '#15171b', inner: '#2a2d33', text: '#f7e08a', edge: '#ffffff' },
+  250: { base: '#b0145e', inner: '#c91f70', text: '#ffffff', edge: '#ffd6e8' },
   500: { base: '#6a2ea3', inner: '#7d3cbd', text: '#ffffff', edge: '#ffffff' },
   1000: { base: '#c99a16', inner: '#e3b52c', text: '#3a2600', edge: '#ffffff' },
+  2500: { base: '#2f6b1c', inner: '#3d8526', text: '#fff6c2', edge: '#f7e08a' },
   5000: { base: '#0e7c86', inner: '#14939e', text: '#ffffff', edge: '#f7e08a' },
   10000: { base: '#c6ccd4', inner: '#e3e7ec', text: '#1b1f24', edge: '#b3261e' },
+  25000: { base: '#5c0a14', inner: '#7a1020', text: '#ffd166', edge: '#ffd166' },
+  100000: { base: '#0b1a3a', inner: '#13285a', text: '#9fe8ff', edge: '#9fe8ff' },
+  500000: { base: '#3b0a57', inner: '#521177', text: '#f5c542', edge: '#f5c542' },
+  1000000: { base: '#e3b52c', inner: '#fff1a8', text: '#5c0a14', edge: '#5c0a14' },
 };
 
+const chipNumber = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 });
+
 export function chipLabel(value) {
-  return value >= 1000 ? `${value / 1000}K` : String(value);
+  if (value >= 1_000_000) return `${chipNumber.format(value / 1_000_000)}M`;
+  return value >= 1000 ? `${chipNumber.format(value / 1000)}K` : String(value);
 }
 
 export function chipSvg(value) {
@@ -60,7 +69,7 @@ export function chipSvg(value) {
       y: 51,
       'text-anchor': 'middle',
       'dominant-baseline': 'central',
-      'font-size': label.length > 2 ? 22 : 26,
+      'font-size': label.length > 3 ? 19 : label.length > 2 ? 22 : 26,
       'font-weight': 800,
       'font-family': 'Georgia, serif',
       fill: colors.text,
@@ -69,7 +78,7 @@ export function chipSvg(value) {
 }
 
 // Desglose voraz de un importe en fichas, para pintar pilas realistas.
-export function breakdown(amount, denominations = [10000, 5000, 1000, 500, 100, 25, 10, 5, 1]) {
+export function breakdown(amount, denominations = [1_000_000, 500_000, 100_000, 25_000, 10_000, 5000, 2500, 1000, 500, 250, 100, 50, 25, 10, 5, 1]) {
   const chips = [];
   let rest = amount;
   for (const value of denominations) {

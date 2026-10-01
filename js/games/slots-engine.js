@@ -23,13 +23,14 @@ export const CASCADE_MULTIPLIERS = Object.freeze([1, 2, 3, 5]);
 export const WILD_MULTIPLIER = 2;
 export const MAX_WILD_MULTIPLIER = 8;
 export const STICKY_SPINS = Object.freeze([2, 3]);
-// Todas las apuestas posibles; cada zona o modo habilita un subconjunto.
-export const BET_STEPS = Object.freeze([1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000]);
+// Todas las apuestas posibles; cada piso habilita un subconjunto.
+export const BET_STEPS = Object.freeze([1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000]);
 export const FREE_SPINS = 8;
 export const BONUS_BUY_COST = 80;
 export const MAX_WIN = 5000;
-// Reliquia Trébol de Oro: +15 % de peso para comodines y estrellas.
-export const CLOVER_BOOST = 1.15;
+// Reliquia Trébol de Oro: en el juego base los pesos se duplican y la estrella gana 1 punto
+// (+2,8 % de estrellas: más giros gratis sin que la mesa llegue a pagar más de lo que cobra).
+export const CLOVER = Object.freeze({ factor: 2, extra: Object.freeze({ X: 1 }) });
 const MAX_CASCADES = 60;
 
 export const WILD = 'W';
@@ -58,7 +59,7 @@ export const SLOT_MATH = Object.freeze({
   netWinRate: 0.1524,
   triggerEvery: 268,
   twoCascades: 0.0846,
-  cloverRtp: 1.2475,
+  cloverRtp: 0.9811,
   spins: 3_000_000,
   bonusRounds: 300_000,
 });
@@ -82,9 +83,10 @@ const DORMANT = '-';
 // verificable de la jugada; inyectable en pruebas y simulaciones.
 // `table` (solo para calibrar) sustituye los pesos: { base: [...], free: [...] } en el orden de SYMBOLS.
 export function createDraw(mode = 'base', rand = randomInt, { clover = false, table = null } = {}) {
+  const boosted = clover && mode !== 'free';
   const weights = SYMBOLS.map((symbol, i) => {
     const weight = table ? table[mode][i] : mode === 'free' ? symbol.free : symbol.base;
-    return clover && (symbol.wild || symbol.scatter) ? Math.round(weight * CLOVER_BOOST) : weight;
+    return boosted ? weight * CLOVER.factor + (CLOVER.extra[symbol.id] ?? 0) : weight;
   });
   const total = weights.reduce((sum, weight) => sum + weight, 0);
   return () => {

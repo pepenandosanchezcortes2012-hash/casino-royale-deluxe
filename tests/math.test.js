@@ -80,9 +80,11 @@ test('Store bloquea transiciones ilegales y congela el estado', () => {
   });
 });
 
-test('Economía hardcore: se empieza con 1 crédito y fichas de 1 a 10.000', () => {
-  assert.equal(STARTING_BALANCE, 1);
-  assert.deepEqual(DENOMINATIONS, [1, 5, 10, 25, 100, 500, 1000, 5000, 10000]);
+test('Escalada: se empieza con 10 créditos y la torre tiene fichas de 1 a 1.000.000', () => {
+  assert.equal(STARTING_BALANCE, 10);
+  assert.equal(DENOMINATIONS[0], 1);
+  assert.equal(DENOMINATIONS.at(-1), 1_000_000);
+  assert.ok(DENOMINATIONS.every((value, i) => i === 0 || value > DENOMINATIONS[i - 1]), 'ordenadas');
 });
 
 // ---------- Blackjack ----------
@@ -305,18 +307,35 @@ test('Comodín pegajoso: se bloquea 2 giros, multiplica ×2 una vez por giro y l
   assert.deepEqual(third.sticky, [], 'agotado el contador se libera');
 });
 
-test('Estrellas: 3 o más conceden 8 giros gratis; el Trébol de Oro sube comodines y estrellas un 15 %', () => {
+test('Estrellas: 3 o más conceden 8 giros gratis; el Trébol de Oro suma +2,8 % de estrellas en el juego base', () => {
   const spin = playSpin({ bet: 10, rand: scripted(['X', 'X', 'X', 'R', ...FILLER]) });
   assert.equal(spin.scatters.length, 3);
   assert.equal(spin.freeSpins, 8);
-  const count = (clover) => {
-    const draw = createDraw('base', seeded(11), { clover });
-    let wilds = 0;
-    for (let i = 0; i < 200000; i++) if (draw() === 'W') wilds++;
-    return wilds;
+  // Pesos exactos: se recorre una vez cada valor posible de rand(total).
+  const weights = (mode, clover) => {
+    let total = 0;
+    createDraw(mode, (n) => {
+      total = n;
+      return 0;
+    }, { clover })();
+    let k = 0;
+    const draw = createDraw(mode, () => k++, { clover });
+    const counts = {};
+    while (k < total) {
+      const id = draw();
+      counts[id] = (counts[id] ?? 0) + 1;
+    }
+    return { counts, total };
   };
-  const ratio = count(true) / count(false);
-  assert.ok(ratio > 1.1 && ratio < 1.35, `trébol ×${ratio.toFixed(2)}`);
+  const base = weights('base', false);
+  const clover = weights('base', true);
+  assert.equal(clover.total, base.total * 2 + 1);
+  assert.equal(clover.counts.X, base.counts.X * 2 + 1, 'una estrella más sobre los pesos duplicados');
+  const share = (w) => w.counts.X / w.total;
+  assert.ok(share(clover) / share(base) > 1.02 && share(clover) / share(base) < 1.03);
+  assert.equal(clover.counts.W / clover.total, base.counts.W / base.total * (base.total * 2) / clover.total, 'los comodines no ganan peso');
+  assert.deepEqual(weights('free', true), weights('free', false), 'los giros gratis no cambian');
+  assert.ok(SLOT_MATH.cloverRtp < 1, 'el Trébol nunca hace la mesa rentable');
 });
 
 test('Giro determinista con RNG inyectado y tope de premio', () => {

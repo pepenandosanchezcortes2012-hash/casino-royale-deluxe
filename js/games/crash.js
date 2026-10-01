@@ -5,7 +5,7 @@
 // servidor: cobra el retiro automático si el cohete llegaba a él y, si no, se pierde.
 
 import { wallet } from '../engine/wallet.js';
-import { session, FREE_LIMITS, FREE_MIN_BET } from '../session.js';
+import { session } from '../session.js';
 import { relics, RADAR_THRESHOLD } from '../relics.js';
 import { audio } from '../audio.js';
 import { storage } from '../storage.js';
@@ -58,12 +58,13 @@ export class CrashGame {
       message: $('cr-message'),
       rules: $('cr-rules'),
     };
-    this.#bet = new BetControl($('cr-bet'), { game: 'crash', min: FREE_MIN_BET, max: FREE_LIMITS.crash.maxBet, value: 100 });
+    this.#bet = new BetControl($('cr-bet'), { game: 'crash', limits: session.limits('crash') });
     const prefs = storage.read(PREFS_KEY, null) ?? {};
     if (Number(prefs.auto) >= MIN_CASHOUT) this.#dom.auto.value = String(prefs.auto);
     this.#dom.rules.textContent = `M(t) = 1 + 0,06 · t^1,35. El punto de explosión es E = 0,97 / (1 − r) con r el primer número verificable de la ronda (truncado; por debajo de ×1,01 explota al despegar, un 3,96 % de las veces). P(llegar a x) = 0,97 / x: RTP del 97 % te retires cuando te retires. Si recargas en pleno vuelo solo cuenta el retiro automático.`;
     this.#bind();
     session.register('crash', {
+      onZone: () => this.#bet.setLimits(session.limits('crash')),
       hasPendingPlay: () => this.#state === 'flying',
       blocksExit: () => this.#state === 'flying' && this.#round?.cashed === null && !this.#round?.auto,
     });
@@ -85,7 +86,7 @@ export class CrashGame {
       this.#renderAutoHint();
     });
     this.#bet.addEventListener('change', () => this.#render());
-    wallet.addEventListener('change', () => this.#render());
+    wallet.addEventListener('update', () => this.#render());
     globalThis.addEventListener('resize', () => {
       if (this.#visible) this.#layout();
     }, { passive: true });

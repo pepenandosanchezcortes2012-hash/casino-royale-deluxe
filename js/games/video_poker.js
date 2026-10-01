@@ -4,7 +4,8 @@
 // moneda y 800 con la apuesta máxima de 5 monedas. La mano a medias sobrevive a una recarga.
 
 import { wallet } from '../engine/wallet.js';
-import { session, FREE_LIMITS } from '../session.js';
+import { session } from '../session.js';
+import { FLOORS } from '../climb/floors.js';
 import { audio } from '../audio.js';
 import { storage } from '../storage.js';
 import { scopedKey } from '../mode.js';
@@ -19,10 +20,12 @@ const DEAL_STEP_MS = 110;
 const FLIP_MS = 560;
 const round2 = (value) => Math.round(value * 100) / 100;
 const DECK = new Set(newDeck());
+// Valores de moneda de todos los pisos (una mano a medias se reanuda con el suyo).
+const ALL_COINS = new Set(FLOORS.flatMap((floor) => floor.lists.video_poker ?? []));
 
 function validRound(raw) {
   if (!raw || typeof raw !== 'object' || !(Number(raw.stake) > 0)) return false;
-  if (!FREE_LIMITS.video_poker.coins.includes(raw.coinValue) || !Number.isInteger(raw.coins) || raw.coins < 1 || raw.coins > MAX_COINS) return false;
+  if (!ALL_COINS.has(raw.coinValue) || !Number.isInteger(raw.coins) || raw.coins < 1 || raw.coins > MAX_COINS) return false;
   if (!Array.isArray(raw.deck) || raw.deck.length !== 52 || new Set(raw.deck).size !== 52 || !raw.deck.every((card) => DECK.has(card))) return false;
   if (!Array.isArray(raw.holds) || raw.holds.length !== 5) return false;
   return Boolean(raw.meta && Number.isInteger(raw.meta.nonce));
@@ -55,13 +58,21 @@ export class VideoPokerGame {
       rules: $('vp-rules'),
     };
     const prefs = storage.read(PREFS_KEY, null) ?? {};
-    const values = FREE_LIMITS.video_poker.coins;
-    this.#coinValue = values.includes(prefs.coinValue) ? prefs.coinValue : values[0];
+    this.#coinValue = prefs.coinValue;
+    this.#fitCoin();
     this.#coins = Number.isInteger(prefs.coins) && prefs.coins >= 1 && prefs.coins <= MAX_COINS ? prefs.coins : MAX_COINS;
     this.#buildControls();
     this.#buildHand();
     this.#dom.rules.textContent = 'Jacks or Better 9/6: Full 9 y Color 6 por moneda. Pagos «por 1» (incluyen la apuesta). Con estrategia óptima y 5 monedas el retorno es del 99,54 %; con menos monedas la Escalera Real paga 250 en vez de 800. Toca una carta o su botón para retenerla.';
-    session.register('video_poker', { hasPendingPlay: () => this.#round !== null || this.#busy });
+    session.register('video_poker', {
+      hasPendingPlay: () => this.#round !== null || this.#busy,
+      onZone: () => {
+        this.#fitCoin();
+        this.#buildCoinValues();
+        this.#renderPaytable();
+        this.#render();
+      },
+    });
     this.#recover();
     this.#renderPaytable();
     this.#render();
@@ -69,9 +80,18 @@ export class VideoPokerGame {
 
   // ---------- Construcción ----------
 
-  #buildControls() {
-    const d = this.#dom;
-    d.coinValues.replaceChildren(...FREE_LIMITS.video_poker.coins.map((value) => {
+  // Valores de moneda del piso actual.
+  #coinList() {
+    return session.limits('video_poker').coins;
+  }
+
+  #fitCoin() {
+    const values = this.#coinList();
+    if (!values.includes(this.#coinValue)) this.#coinValue = values[0];
+  }
+
+  #buildCoinValues() {
+    this.#dom.coinValues.replaceChildren(...this.#coinList().map((value) => {
       const button = el('button', 'seg', formatChips(value));
       button.type = 'button';
       button.dataset.value = String(value);
@@ -80,10 +100,16 @@ export class VideoPokerGame {
         audio.click();
         this.#coinValue = value;
         this.#savePrefs();
+        this.#renderPaytable();
         this.#render();
       });
       return button;
     }));
+  }
+
+  #buildControls() {
+    const d = this.#dom;
+    this.#buildCoinValues();
     d.coins.replaceChildren(...Array.from({ length: MAX_COINS }, (_, i) => {
       const coins = i + 1;
       const button = el('button', 'seg', String(coins));
@@ -108,7 +134,7 @@ export class VideoPokerGame {
       this.deal();
     });
     d.deal.addEventListener('click', () => (this.#round ? this.draw() : this.deal()));
-    wallet.addEventListener('change', () => this.#render());
+    wallet.addEventListener('update', () => this.#render());
   }
 
   #buildHand() {

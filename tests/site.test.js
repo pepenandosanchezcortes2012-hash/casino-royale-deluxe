@@ -1,4 +1,4 @@
-// Pruebas del sitio estático: precarga de módulos, CSP, estructura por modos, identificadores
+// Pruebas del sitio estático: precarga de módulos, CSP, estructura de la escalada, identificadores
 // del DOM y animaciones baratas.
 // Ejecutar con: npm test
 
@@ -6,6 +6,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { posix } from 'node:path';
+
+import { GAME_ORDER, gameFloor } from '../js/climb/floors.js';
 
 const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
@@ -47,12 +49,16 @@ test('Sonido: sin síntesis de voz ni locuciones en ningún módulo', () => {
   assert.match(html, /id="btn-sfx"[^>]*aria-pressed/);
 });
 
-test('Estructura: menú principal, Modo Historia y Cripto-Casino con sus 10 mesas', () => {
-  assert.match(html, /id="main-menu"[^>]*data-only="menu"/);
-  assert.match(html, /class="game-shell" data-only="story free"/);
-  const tabs = [...html.matchAll(/role="tab"[^>]*data-game="([a-z_]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(tabs, ['blackjack', 'roulette', 'slots', 'plinko', 'crash', 'mines', 'dice', 'towers', 'video_poker', 'wheel']);
-  for (const game of tabs) assert.match(html, new RegExp(`id="panel-${game}"`), `falta el panel de ${game}`);
+test('Estructura: una sola escalada con las 11 mesas ordenadas por piso', () => {
+  assert.equal(/data-only=|id="main-menu"/.test(html), false, 'sin menú ni partes por modo');
+  assert.match(html, /<div class="game-shell">/);
+  const tabs = [...html.matchAll(/role="tab"[^>]*data-game="([a-z_]+)" data-floor="(\d)"/g)].map((m) => [m[1], Number(m[2])]);
+  assert.deepEqual(tabs.map(([game]) => game), GAME_ORDER);
+  for (const [game, floor] of tabs) {
+    assert.equal(gameFloor(game).level, floor, `${game} se abre en el piso ${floor}`);
+    assert.match(html, new RegExp(`id="panel-${game}"`), `falta el panel de ${game}`);
+  }
+  for (const id of ['floor-selector', 'goal-track', 'btn-rescue', 'side-tab-syndicate', 'side-tab-telemetry', 'unlock-dialog', 'epilogue', 'throne-form', 'fs-canvas']) assert.match(html, new RegExp(`id="${id}"`), id);
   for (const file of CSS_FILES) assert.ok(existsSync(new URL(file, root)), `falta ${file}`);
   for (const file of ['css/themes.css', 'css/hacker_terminal.css', 'css/animations.css']) assert.ok(CSS_FILES.includes(file), file);
   for (const theme of ['matrix', 'neon', 'onyx', 'gold', 'blood']) assert.match(read('css/themes.css'), new RegExp(`data-theme="${theme}"`));

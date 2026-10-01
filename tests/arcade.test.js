@@ -100,7 +100,9 @@ test('Plinko: los multiplicadores pedidos dan exactamente el RTP anunciado', () 
   for (const risk of Object.values(RISKS)) {
     assert.equal(risk.multipliers.length, 9);
     assert.ok(Math.abs(plinkoRtp(risk.id) - risk.rtp) < 1e-6, `${risk.id}: ${plinkoRtp(risk.id)}`);
-    assert.ok(Math.abs(plinkoRtp(risk.id, { sapphire: true }) - (risk.rtp + 0.08)) < 1e-6, `${risk.id} con Zafiro`);
+    // El Zafiro suma 2,5 puntos y nunca llega al 100 %.
+    assert.ok(Math.abs(plinkoRtp(risk.id, { sapphire: true }) - (risk.rtp + 0.025)) < 1e-6, `${risk.id} con Zafiro`);
+    assert.ok(plinkoRtp(risk.id, { sapphire: true }) < 1);
     const dist = bucketDistribution(risk.id);
     assert.ok(Math.abs(dist.reduce((a, b) => a + b, 0) - 1) < 1e-12);
     for (let i = 0; i < 4; i++) assert.ok(Math.abs(dist[i] - dist[8 - i]) < 1e-12, 'simétrica');
@@ -153,11 +155,11 @@ test('Video Póker: clasificación exacta de las 2 598 960 manos posibles', () =
   assert.deepEqual([drawn[1], drawn[3], drawn[4]], deal.deck.slice(5, 8));
 });
 
-test('Rueda diaria: 10 gajos, bote del 1 % y enfriamiento de 24 h', () => {
+test('Rueda Legendaria: 10 gajos, bote de 1.000.000 al 1 % y enfriamiento de 24 h', () => {
   assert.equal(WHEEL_SLICES.length, 10);
   assert.equal(WHEEL_TOTAL_WEIGHT, 100);
-  assert.equal(WHEEL_SLICES.find((slice) => slice.jackpot).amount, 10000);
-  assert.deepEqual([...new Set(WHEEL_SLICES.filter((s) => s.type === 'chips').map((s) => s.amount))].sort((a, b) => a - b), [200, 400, 800, 1500, 3000, 10000]);
+  assert.equal(WHEEL_SLICES.find((slice) => slice.jackpot).amount, 1_000_000);
+  assert.deepEqual([...new Set(WHEEL_SLICES.filter((s) => s.type === 'chips').map((s) => s.amount))].sort((a, b) => a - b), [20_000, 40_000, 80_000, 150_000, 300_000, 1_000_000]);
   const s = stream(5);
   const counts = new Array(10).fill(0);
   for (let i = 0; i < 50_000; i++) counts[spinWheel(s).index]++;

@@ -1,28 +1,7 @@
-// Modo de juego activo, elegido en el menú principal y guardado entre visitas:
-//   'story' → Modo Historia «El Último Crédito» (1 crédito, zonas, encargos, finales).
-//   'free'  → Cripto-Casino (modo libre con fichas, progresión, reliquias y 10 juegos).
-//   null    → todavía no se ha elegido: se muestra el menú principal.
-// Cambiar de modo recarga la página para que cada módulo arranque con su monedero y sus datos.
+// Espacio de nombres de la partida. «The Syndicate Climb» es el único modo de juego y guarda sus
+// datos con el prefijo crd.climb. (las versiones anteriores usaban crd. y crd.cyber.; sus datos
+// se quedan donde estaban y no interfieren con la escalada).
 
-import { storage } from './storage.js';
+export const MODE = 'climb';
 
-export const MODE_KEY = 'crd.mode.v1';
-export const MODES = Object.freeze(['story', 'free']);
-
-const saved = storage.read(MODE_KEY, null);
-export const MODE = MODES.includes(saved) ? saved : null;
-export const isFree = MODE === 'free';
-export const isStory = MODE === 'story';
-
-// Claves de guardado de cada modo: las mesas del Cripto-Casino no pisan la partida de la historia.
-export const scopedKey = (key) => (isFree ? key.replace(/^crd\./, 'crd.cyber.') : key);
-
-export function chooseMode(mode) {
-  if (!MODES.includes(mode)) return false;
-  storage.write(MODE_KEY, mode);
-  return true;
-}
-
-export function leaveMode() {
-  storage.remove(MODE_KEY);
-}
+export const scopedKey = (key) => (key.startsWith('crd.climb.') ? key : key.replace(/^crd\./, 'crd.climb.'));

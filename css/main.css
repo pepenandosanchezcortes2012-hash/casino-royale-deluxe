@@ -426,15 +426,14 @@ code {
   text-align: center;
 }
 
-/* ---------- Arranque por modos ----------
-   Hasta que app.js elige el modo (menú, historia o Cripto-Casino) solo se ve la pantalla de
-   carga; después, app.js retira del documento lo que no pertenece al modo (data-only). */
+/* ---------- Arranque ----------
+   Hasta que app.js termina de montar la torre (html[data-app]) solo se ve la pantalla de carga. */
 
-html:not([data-mode]) body > :not(.boot-screen):not(.sprite):not(noscript) {
+html:not([data-app]) body > :not(.boot-screen):not(.sprite):not(noscript) {
   display: none !important;
 }
 
-html[data-mode] .boot-screen {
+html[data-app] .boot-screen {
   display: none;
 }
 

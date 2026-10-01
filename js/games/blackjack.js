@@ -169,7 +169,7 @@ export class BlackjackGame {
     // Se guarda también el estado inicial: un zapato recién barajado no se vuelve a barajar
     // (ni gasta otro nonce verificable) solo por recargar la página.
     storage.write(SAVE_KEY, this.state);
-    wallet.addEventListener('change', () => this.#renderControls(this.state));
+    wallet.addEventListener('update', () => this.#renderControls(this.state));
 
     this.#bind();
     session.register('blackjack', {
@@ -181,7 +181,7 @@ export class BlackjackGame {
     this.#resume();
   }
 
-  // Límites de la zona actual: asientos, apuestas laterales, mínimo y máximos.
+  // Límites del piso actual: asientos, apuestas laterales, mínimo y máximos.
   #limits() {
     return session.limits('blackjack');
   }
@@ -318,11 +318,11 @@ export class BlackjackGame {
     if (!this.#canBet() || !session.playable) return;
     const limits = this.#limits();
     if (seat >= limits.seats) {
-      hud.toast('Asiento reservado: la mesa multimano se abre en el Salón de Neón', 'warn');
+      hud.toast('Asiento reservado en este piso', 'warn');
       return;
     }
     if (spot !== 'main' && !limits.sideBets) {
-      hud.toast('Perfect Pairs y 21+3 se abren en el Salón de Neón', 'warn');
+      hud.toast('Perfect Pairs y 21+3 no están disponibles en este piso', 'warn');
       return;
     }
     const seats = this.#bettingSeats();
@@ -981,7 +981,7 @@ export class BlackjackGame {
         item.button.classList.toggle('is-locked', spotLocked);
         item.button.disabled = !betting || spotLocked;
         const current = amount > 0 ? `, apuesta ${formatChips(amount)}` : '';
-        const lockNote = spotLocked ? ', se desbloquea en el Salón de Neón' : '';
+        const lockNote = spotLocked ? ', no disponible en este piso' : '';
         item.button.setAttribute('aria-label', `Asiento ${i + 1}, ${SPOT_NAMES[spot]}${current}${lockNote}`);
       }
       this.#renderSides(view, s.sides?.[i] ?? null);

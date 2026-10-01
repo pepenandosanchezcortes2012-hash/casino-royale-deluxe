@@ -1,5 +1,5 @@
 // Bóveda de Reliquias: 4 ranuras equipables, colección de 10 reliquias, cofres (abrir con
-// animación de gacha o comprar con fichas) y pociones ×2.
+// animación de gacha o comprar con créditos, al precio de tu piso más alto) y pociones ×2.
 
 import { relics, RELICS, RARITIES, CHESTS, SLOT_COUNT, relicById } from '../relics.js';
 import { wallet } from '../engine/wallet.js';
@@ -40,7 +40,7 @@ class VaultUi {
     relics.addEventListener('change', () => {
       if (d.dialog.open) this.#render();
     });
-    wallet.addEventListener('change', () => {
+    wallet.addEventListener('update', () => {
       if (d.dialog.open) this.#renderStore();
     });
   }
@@ -122,12 +122,13 @@ class VaultUi {
       open.type = 'button';
       open.disabled = owned <= 0 || this.#opening;
       open.addEventListener('click', () => this.openChest(chest.id));
-      const buy = el('button', 'btn', `Comprar · ${formatChips(chest.price)}`);
+      const price = relics.priceOf(chest.id);
+      const buy = el('button', 'btn', `Comprar · ${formatChips(price)}`);
       buy.type = 'button';
-      buy.disabled = !wallet.canAfford(chest.price);
+      buy.disabled = !wallet.canAfford(price);
       buy.addEventListener('click', () => {
         if (relics.buyChest(chest.id, wallet)) audio.chip();
-        else hud.toast('No tienes fichas suficientes para ese cofre', 'warn');
+        else hud.toast('No tienes créditos suficientes para ese cofre', 'warn');
       });
       const odds = Object.entries(chest.weights).filter(([, w]) => w > 0).map(([rarity, w]) => `${RARITIES[rarity].name} ${w} %`).join(' · ');
       box.append(
@@ -146,12 +147,12 @@ class VaultUi {
     arm.addEventListener('click', () => {
       if (relics.armPotion()) {
         audio.shimmer();
-        hud.toast('Poción ×2 activa: tu próximo premio se duplica', 'success');
+        hud.toast('Poción ×2 activa: tu próximo premio neto se duplica', 'success');
       }
     });
     potion.append(
       el('strong', 'vault-chest-name', '🧪 Poción ×2'),
-      el('span', 'vault-chest-odds', 'Duplica el siguiente premio que cobres (cualquier juego salvo la rueda).'),
+      el('span', 'vault-chest-odds', 'Duplica el premio neto de tu próxima ronda ganadora (hasta 25 apuestas mínimas del piso; no vale en la rueda).'),
       el('span', 'vault-chest-owned', `Pociones: ${relics.potions}${relics.potionArmed ? ' · una activa' : ''}`),
       arm,
     );
@@ -189,7 +190,7 @@ class VaultUi {
       audio.relicReveal(result.relic.rarity);
     } else {
       wallet.grant(result.chips, 'chest');
-      reveal.push(el('p', 'chest-chips', `+${formatChips(result.chips)} fichas`), el('p', 'chest-note', 'Ya tienes toda la colección: el cofre paga en fichas.'));
+      reveal.push(el('p', 'chest-chips', `+${formatChips(result.chips)} créditos`), el('p', 'chest-note', 'Ya tienes toda la colección: el cofre paga en créditos.'));
       d.chestTitle.textContent = 'Colección completa';
       audio.win(2);
     }

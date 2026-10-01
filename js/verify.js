@@ -13,6 +13,8 @@ import { dealHand, drawCards, evaluateHand, payPerCoin } from './games/video_pok
 import { spinWheel } from './games/wheel-math.js';
 import { playSpin, SYMBOLS } from './games/slots-engine.js';
 import { buildShoe } from './games/blackjack-rules.js';
+import { DADO_CHANCE, BATTERY_CHANCE } from './relics.js';
+import { speciesById, validMultiplier, playShot, FISH_RTP } from './games/fish-math.js';
 
 export const GAME_NAMES = Object.freeze({
   blackjack: 'Blackjack',
@@ -24,15 +26,16 @@ export const GAME_NAMES = Object.freeze({
   dice: 'Dados',
   towers: 'Torres',
   video_poker: 'Video Póker',
-  wheel: 'Rueda diaria',
+  wheel: 'Rueda Legendaria',
+  fish: 'Cyber-Fish Hunter',
 });
 
 // Probabilidad de los usos de reliquias que se deciden con el flujo de la jugada.
-export const RELIC_ROLLS = Object.freeze({ dado: 0.25, battery: 0.25 });
+export const RELIC_ROLLS = Object.freeze({ dado: DADO_CHANCE, battery: BATTERY_CHANCE });
 
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 const COLOR = (n) => (n === 0 ? 'verde' : RED.has(n) ? 'rojo' : 'negro');
-const decimals = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 4 });
+const decimals = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 4, useGrouping: 'always' });
 const fixed2 = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const num = (value) => decimals.format(value);
 const mult = (value) => `×${fixed2.format(value)}`;
@@ -97,7 +100,29 @@ const VERIFIERS = {
 
   wheel(stream) {
     const { index, slice } = spinWheel(stream);
-    return { rows: [['Gajo', `${index + 1} de 10`], ['Premio', slice.type === 'chips' ? `${slice.label} fichas` : slice.label]], outcome: `Gajo ${index + 1}: ${slice.label}` };
+    return { rows: [['Gajo', `${index + 1} de 10`], ['Premio', slice.type === 'chips' ? `${decimals.format(slice.amount)} créditos` : slice.label]], outcome: `Gajo ${index + 1}: ${slice.label}` };
+  },
+
+  fish(stream, params) {
+    const kind = speciesById(params.species);
+    const multiplier = Number(params.multiplier);
+    const roll = stream.float();
+    if (!kind || !validMultiplier(kind.id, multiplier)) {
+      return {
+        rows: [['Número de la bala', num(roll)], ['Impacto', 'Indica en los parámetros la criatura y su multiplicador, p. ej. {"species":"jelly","multiplier":8}']],
+        outcome: `Número de la bala: ${num(roll)}`,
+      };
+    }
+    const shot = playShot({ float: () => roll }, multiplier);
+    return {
+      rows: [
+        ['Criatura', `${kind.name} ×${num(multiplier)}`],
+        ['Probabilidad de captura', `${num(FISH_RTP)} / ${num(multiplier)} = ${num(shot.chance)}`],
+        ['Número de la bala', num(roll)],
+        ['Resultado', shot.captured ? `${num(roll)} < ${num(shot.chance)} → capturada (paga ×${num(multiplier)})` : `${num(roll)} ≥ ${num(shot.chance)} → escapa`],
+      ],
+      outcome: shot.captured ? `${kind.name} capturada: ×${num(multiplier)}` : `${kind.name} escapa`,
+    };
   },
 
   video_poker(stream, params) {
@@ -125,7 +150,7 @@ const VERIFIERS = {
     if (spin.freeSpins) rows.push(['Estrellas', `${spin.scatters.length} → ${spin.freeSpins} giros gratis`]);
     if (params.battery && spin.total === 0) {
       const roll = stream.float();
-      rows.push(['Batería Cuántica', `${num(roll)} ${roll < RELIC_ROLLS.battery ? '< 0,25 → giro gratis' : '≥ 0,25 → sin giro'}`]);
+      rows.push(['Batería Cuántica', `${num(roll)} ${roll < RELIC_ROLLS.battery ? `< ${num(RELIC_ROLLS.battery)} → giro gratis` : `≥ ${num(RELIC_ROLLS.battery)} → sin giro`}`]);
     }
     rows.push(['Leyenda', Object.entries(SYMBOL_NAMES).map(([id, name]) => `${id}=${name}`).join(', ')]);
     return { rows, outcome: `Premio ${mult(spin.total)} la apuesta con ${spin.steps.length} avalancha${spin.steps.length === 1 ? '' : 's'}` };
@@ -135,7 +160,7 @@ const VERIFIERS = {
     if (params.kind === 'dado') {
       const roll = stream.float();
       const acts = roll < RELIC_ROLLS.dado;
-      return { rows: [['Dado de Montecarlo', `${num(roll)} ${acts ? '< 0,25 → el crupier recibe un 10' : '≥ 0,25 → carta normal'}`]], outcome: acts ? 'El dado cambia la carta del crupier' : 'El dado no actúa' };
+      return { rows: [['Dado de Montecarlo', `${num(roll)} ${acts ? `< ${num(RELIC_ROLLS.dado)} → el crupier recibe un 10` : `≥ ${num(RELIC_ROLLS.dado)} → carta normal`}`]], outcome: acts ? 'El dado cambia la carta del crupier' : 'El dado no actúa' };
     }
     const shoe = stream.shuffle(buildShoe());
     const from = Number.isInteger(params.from) ? params.from : 0;

@@ -5,7 +5,7 @@
 // centro: en cada fila, si la bola está desplazada, vuelve hacia el centro con probabilidad q
 // (en el centro, 50/50). q se ha calculado para que el RTP sea exactamente el anunciado.
 // El Zafiro de Plinko (reliquia) empuja hacia las canastas laterales: otro q publicado que
-// suma 8 puntos de RTP.
+// suma 2,5 puntos de RTP (sin llegar nunca al 100 %).
 
 export const PLINKO_ROWS = 8;
 export const PLINKO_PEG_ROWS = PLINKO_ROWS + 1;
@@ -15,9 +15,9 @@ export const BURST = 5;
 export const BURST_DELAY_MS = 150;
 
 export const RISKS = Object.freeze({
-  low: Object.freeze({ id: 'low', name: 'Bajo', multipliers: Object.freeze([5, 2, 1.2, 1, 0.5, 1, 1.2, 2, 5]), rtp: 0.972, bias: 0.51508892, sapphireBias: 0.47519508 }),
-  medium: Object.freeze({ id: 'medium', name: 'Medio', multipliers: Object.freeze([10, 4, 1.5, 0.5, 0.2, 0.5, 1.5, 4, 10]), rtp: 0.968, bias: 0.49182957, sapphireBias: 0.47586205 }),
-  high: Object.freeze({ id: 'high', name: 'Alto', multipliers: Object.freeze([35, 12, 2, 0.2, 0, 0.2, 2, 12, 35]), rtp: 0.965, bias: 0.55456342, sapphireBias: 0.54563216 }),
+  low: Object.freeze({ id: 'low', name: 'Bajo', multipliers: Object.freeze([5, 2, 1.2, 1, 0.5, 1, 1.2, 2, 5]), rtp: 0.972, bias: 0.51508892, sapphireBias: 0.50193254 }),
+  medium: Object.freeze({ id: 'medium', name: 'Medio', multipliers: Object.freeze([10, 4, 1.5, 0.5, 0.2, 0.5, 1.5, 4, 10]), rtp: 0.968, bias: 0.49182957, sapphireBias: 0.48668906 }),
+  high: Object.freeze({ id: 'high', name: 'Alto', multipliers: Object.freeze([35, 12, 2, 0.2, 0, 0.2, 2, 12, 35]), rtp: 0.965, bias: 0.55456342, sapphireBias: 0.55170603 }),
 });
 
 export const riskOf = (id) => RISKS[id] ?? RISKS.low;

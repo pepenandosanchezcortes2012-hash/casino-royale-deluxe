@@ -8,11 +8,16 @@
 // Al rotar la semilla se revela la anterior y cualquiera puede recalcular todas sus jugadas.
 // SHA-256 y HMAC están escritos en JavaScript puro para ser síncronos (las pruebas los comparan
 // con node:crypto).
+// Las semillas y el nonce se guardan al instante (un nonce nunca se reutiliza); el historial de
+// las últimas 60 jugadas, con un pequeño retardo: el disparo continuo de Cyber-Fish genera
+// varias jugadas por segundo y no hace falta reescribirlo entero en cada una.
 
 import { storage as defaultStore } from './storage.js';
 
-export const FAIR_KEY = 'crd.fair.v1';
+export const FAIR_KEY = 'crd.climb.fair.v1';
+export const FAIR_HISTORY_KEY = 'crd.climb.fair.history.v1';
 const HISTORY_LIMIT = 60;
+const HISTORY_SAVE_MS = 400;
 const REVEALED_LIMIT = 12;
 const CLIENT_SEED_MAX = 64;
 
@@ -204,6 +209,8 @@ const freshSeed = () => {
   return { serverSeed, serverSeedHash: sha256Hex(serverSeed) };
 };
 
+const validHistory = (list) => (Array.isArray(list) ? list.filter((h) => h && Number.isInteger(h.nonce) && typeof h.game === 'string').slice(-HISTORY_LIMIT) : []);
+
 function sanitize(raw) {
   const seed = freshSeed();
   const state = { ...seed, clientSeed: randomHex(8), nonce: 0, revealed: [], history: [] };
@@ -220,9 +227,7 @@ function sanitize(raw) {
       .filter((r) => r && hex64.test(r.serverSeed) && hex64.test(r.serverSeedHash) && isValidClientSeed(r.clientSeed) && Number.isInteger(r.nonces))
       .slice(-REVEALED_LIMIT);
   }
-  if (Array.isArray(raw.history)) {
-    state.history = raw.history.filter((h) => h && Number.isInteger(h.nonce) && typeof h.game === 'string').slice(-HISTORY_LIMIT);
-  }
+  state.history = validHistory(raw.history);
   return state;
 }
 
@@ -230,17 +235,46 @@ export class ProvablyFair extends EventTarget {
   #store;
   #now;
   #s;
+  #historyTimer = null;
 
   constructor({ store = defaultStore, now = () => Date.now() } = {}) {
     super();
     this.#store = store;
     this.#now = now;
     this.#s = sanitize(store.read(FAIR_KEY, null));
+    const history = validHistory(store.read(FAIR_HISTORY_KEY, null));
+    if (history.length) this.#s.history = history;
     this.#save();
+    this.#saveHistory();
+    // Al cerrar u ocultar la página se guarda lo que quedara pendiente del historial.
+    globalThis.addEventListener?.('pagehide', () => this.flush());
+    globalThis.document?.addEventListener?.('visibilitychange', () => {
+      if (globalThis.document.hidden) this.flush();
+    });
   }
 
+  // Semillas, nonce y semillas reveladas (sin el historial).
   #save() {
-    this.#store.write(FAIR_KEY, this.#s);
+    const { history, ...seeds } = this.#s;
+    this.#store.write(FAIR_KEY, seeds);
+  }
+
+  #saveHistory() {
+    this.#historyTimer = null;
+    this.#store.write(FAIR_HISTORY_KEY, this.#s.history);
+  }
+
+  #scheduleHistory() {
+    if (this.#historyTimer !== null) return;
+    this.#historyTimer = setTimeout(() => this.#saveHistory(), HISTORY_SAVE_MS);
+    this.#historyTimer?.unref?.();
+  }
+
+  // Guarda ya el historial pendiente.
+  flush() {
+    if (this.#historyTimer === null) return;
+    clearTimeout(this.#historyTimer);
+    this.#saveHistory();
   }
 
   #emit(type, detail = {}) {
@@ -290,7 +324,7 @@ export class ProvablyFair extends EventTarget {
     };
     this.#s.history.push(entry);
     if (this.#s.history.length > HISTORY_LIMIT) this.#s.history.splice(0, this.#s.history.length - HISTORY_LIMIT);
-    this.#save();
+    this.#scheduleHistory();
     this.#emit('bet', { entry });
     return entry;
   }
@@ -331,8 +365,7 @@ export const seedMatchesHash = (serverSeed, serverSeedHash) => sha256Hex(serverS
 // Flujo reconstruido para verificar una jugada con una semilla ya revelada.
 export const streamFor = ({ serverSeed, clientSeed, nonce }) => new FairStream({ serverSeed, clientSeed, nonce });
 
-// Instancia perezosa: las semillas solo se crean (y se guardan) al usarse, es decir, en el
-// Cripto-Casino. La leyenda del Modo Historia usa crypto.getRandomValues() directamente.
+// Instancia perezosa: las semillas se crean (y se guardan) la primera vez que se usan.
 let instance = null;
 const current = () => (instance ??= new ProvablyFair());
 export const fair = new Proxy({}, {

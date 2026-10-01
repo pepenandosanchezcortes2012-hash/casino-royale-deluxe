@@ -1,12 +1,12 @@
 {
   "name": "casino-royale-deluxe",
-  "version": "4.0.0",
-  "description": "Casino Royale Deluxe · Cyber-Ultra: el RPG narrativo «El Último Crédito» (Modo Historia) y un Cripto-Casino libre con 10 juegos provably fair, reliquias, misiones, niveles y terminal hacker. 100 % estático.",
+  "version": "5.0.0",
+  "description": "Casino Royale Deluxe · The Syndicate Climb & Cyber-Fish Casino: la escalada de 10 créditos a 10.000.000 por los 4 pisos del Sindicato, con 11 juegos provably fair (incluido Cyber-Fish Hunter), encargos, misiones, niveles, reliquias y terminal hacker. 100 % estático.",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "simulate": "node tools/simulate-economy.mjs",
+    "simulate": "node tools/simulate-climb.mjs",
     "slots": "node tools/measure-slots.mjs",
     "preload": "node tools/update-preloads.mjs",
     "start": "python -m http.server 8080"

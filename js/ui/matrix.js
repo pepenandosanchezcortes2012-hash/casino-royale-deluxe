@@ -1,4 +1,4 @@
-// Lluvia de código estilo Matrix para el fondo del Cripto-Casino y del menú.
+// Lluvia de código estilo Matrix para el fondo de la torre (toma el color del tema del piso).
 // Se dibuja en un Web Worker con OffscreenCanvas: el hilo principal no produce fotogramas por ella
 // (ni recalcula estilos), así que el fondo animado apenas cuesta. Si el navegador no admite
 // OffscreenCanvas, se dibuja en el hilo principal con el mismo pintor (matrix-core.js).
@@ -47,6 +47,11 @@ export class MatrixRain {
     this.#settings.addEventListener('change', () => this.#sync());
     this.#reduced.addEventListener?.('change', () => this.#sync());
     this.#sync();
+  }
+
+  // Vuelve a leer el color del tema (al cambiar de piso con el tema automático).
+  refresh() {
+    if (this.#worker || this.#painter) this.#sync();
   }
 
   #size() {

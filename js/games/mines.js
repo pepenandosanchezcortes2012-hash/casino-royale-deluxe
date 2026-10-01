@@ -4,7 +4,7 @@
 // la apuesta sigue retenida y la partida continúa donde la dejaste.
 
 import { wallet } from '../engine/wallet.js';
-import { session, FREE_LIMITS, FREE_MIN_BET } from '../session.js';
+import { session } from '../session.js';
 import { audio } from '../audio.js';
 import { storage } from '../storage.js';
 import { scopedKey } from '../mode.js';
@@ -56,14 +56,14 @@ export class MinesGame {
       message: $('mn-message'),
       rules: $('mn-rules'),
     };
-    this.#bet = new BetControl($('mn-bet'), { game: 'mines', min: FREE_MIN_BET, max: FREE_LIMITS.mines.maxBet, value: 100 });
+    this.#bet = new BetControl($('mn-bet'), { game: 'mines', limits: session.limits('mines') });
     const prefs = storage.read(PREFS_KEY, null) ?? {};
     this.#mines = clampMines(prefs.mines ?? 3);
     this.#buildCount();
     this.#buildGrid();
     this.#bind();
     this.#dom.rules.textContent = `Tras k gemas el multiplicador es ${MINES_EDGE.toString().replace('.', ',')} · C(25, k) / C(25 − minas, k): exactamente 0,97 / P(sobrevivir), así que el RTP es del 97 % te retires cuando te retires. Las minas se colocan al empezar barajando las 25 casillas con el flujo verificable.`;
-    session.register('mines', { hasPendingPlay: () => this.#round !== null || this.#busy });
+    session.register('mines', { hasPendingPlay: () => this.#round !== null || this.#busy, onZone: () => this.#bet.setLimits(session.limits('mines')) });
     this.#recover();
     this.#render();
   }
@@ -106,7 +106,7 @@ export class MinesGame {
       this.pick(hidden[randomInt(hidden.length)]);
     });
     this.#bet.addEventListener('change', () => this.#render());
-    wallet.addEventListener('change', () => this.#render());
+    wallet.addEventListener('update', () => this.#render());
   }
 
   #save() {

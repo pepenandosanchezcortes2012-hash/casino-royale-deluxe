@@ -1,6 +1,8 @@
-// Panel de telemetría del Cripto-Casino: compromiso de la semilla del servidor (hash SHA-256),
-// semilla del cliente editable, nonce, rotación con revelado, RTP real y las apuestas en vivo.
-// Incluye el verificador: recalcula cualquier jugada con la semilla ya revelada.
+// Panel de telemetría de la torre: compromiso de la semilla del servidor (hash SHA-256), semilla
+// del cliente editable, nonce, rotación con revelado, RTP real y las apuestas en vivo. Incluye el
+// verificador: recalcula cualquier jugada con la semilla ya revelada. Las apuestas en vivo se
+// pintan por lotes (como mucho cada 200 ms): el disparo continuo de Cyber-Fish genera varias por
+// segundo.
 
 import { fair, isValidClientSeed } from '../provably_fair.js';
 import { verifyBet, GAME_NAMES } from '../verify.js';
@@ -10,11 +12,24 @@ import { hud, formatChips } from './hud.js';
 import { el } from './svg.js';
 
 const FEED_LIMIT = 24;
+const FLUSH_MS = 200;
+// Ejemplo de parámetros por juego para el verificador.
+const PARAMS_HINT = Object.freeze({
+  mines: '{"mines":3}',
+  towers: '{"difficulty":"easy"}',
+  dice: '{"chance":49,"direction":"under"}',
+  plinko: '{"risk":"low"}',
+  fish: '{"species":"jelly","multiplier":8}',
+  video_poker: '{"holds":[true,true,false,false,true],"coins":5}',
+});
 const pct = (value) => `${(value * 100).toFixed(2).replace('.', ',')} %`;
 const mult = (value) => `×${value.toFixed(2).replace('.', ',')}`;
 
 class Telemetry {
   #dom = null;
+  #queue = [];
+  #timer = 0;
+  #dirty = { seeds: false, stats: false, feed: false };
 
   init() {
     const $ = (id) => document.getElementById(id);
@@ -69,10 +84,40 @@ class Telemetry {
       if (event.target === d.dialog) d.dialog.close();
     });
     d.run.addEventListener('click', () => this.#runVerifier());
-    fair.addEventListener('change', () => this.#renderSeeds());
-    fair.addEventListener('bet', (event) => this.#prependFeed(event.detail.entry));
-    fair.addEventListener('rotate', () => this.#renderFeed());
-    wallet.addEventListener('change', () => this.#renderStats());
+    d.game.addEventListener('change', () => {
+      d.params.placeholder = PARAMS_HINT[d.game.value] ?? '{}';
+    });
+    fair.addEventListener('change', () => this.#schedule('seeds'));
+    fair.addEventListener('bet', (event) => {
+      this.#queue.push(event.detail.entry);
+      if (this.#queue.length > FEED_LIMIT) this.#queue.splice(0, this.#queue.length - FEED_LIMIT);
+      this.#schedule('feed');
+    });
+    fair.addEventListener('rotate', () => {
+      this.#queue = [];
+      this.#renderFeed();
+    });
+    wallet.addEventListener('update', () => this.#schedule('stats'));
+  }
+
+  // Agrupa los repintados en un solo paso cada FLUSH_MS.
+  #schedule(part) {
+    this.#dirty[part] = true;
+    if (this.#timer) return;
+    this.#timer = setTimeout(() => this.#flush(), FLUSH_MS);
+  }
+
+  #flush() {
+    this.#timer = 0;
+    const dirty = this.#dirty;
+    this.#dirty = { seeds: false, stats: false, feed: false };
+    if (dirty.seeds) this.#renderSeeds();
+    if (dirty.stats) this.#renderStats();
+    if (dirty.feed && this.#queue.length) {
+      const entries = this.#queue;
+      this.#queue = [];
+      this.#prependFeed(entries);
+    }
   }
 
   // ---------- Semillas ----------
@@ -148,12 +193,16 @@ class Telemetry {
     this.#dom.feed.replaceChildren(...history.map((entry) => this.#feedItem(entry)));
   }
 
-  #prependFeed(entry) {
+  // Añade de una vez las apuestas acumuladas (la más reciente queda arriba).
+  #prependFeed(entries) {
     const feed = this.#dom.feed;
     feed.querySelector('.tele-empty')?.remove();
-    const item = this.#feedItem(entry);
-    item.classList.add('is-new');
-    feed.prepend(item);
+    const items = entries.slice(-FEED_LIMIT).reverse().map((entry) => {
+      const item = this.#feedItem(entry);
+      item.classList.add('is-new');
+      return item;
+    });
+    feed.prepend(...items);
     while (feed.children.length > FEED_LIMIT) feed.lastElementChild.remove();
   }
 
@@ -184,6 +233,7 @@ class Telemetry {
       d.serverHash.value = entry.serverSeedHash;
       d.server.value = this.#seedFor(entry) ?? '';
       d.params.value = JSON.stringify(entry.params ?? {});
+      d.params.placeholder = PARAMS_HINT[entry.game] ?? '{}';
     } else if (!d.server.value) {
       const last = fair.revealed.at(-1);
       if (last) {

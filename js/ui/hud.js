@@ -1,5 +1,5 @@
-// HUD: créditos y fichas en juego, racks de fichas de la zona, interruptores de música y de
-// efectos, avisos y efectos visuales. La parte narrativa vive en story-ui.js.
+// HUD: créditos y fichas en juego, racks de fichas del piso, interruptores de música y de
+// efectos, avisos y efectos visuales. La parte de la escalada vive en climb-ui.js.
 
 import { wallet, DENOMINATIONS } from '../engine/wallet.js';
 import { audio } from '../audio.js';
@@ -8,7 +8,8 @@ import { scopedKey } from '../mode.js';
 import { chipSvg, chipLabel, el } from './svg.js';
 
 const CHIP_KEY = scopedKey('crd.chip.v2');
-const numberFormat = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2 });
+// Los miles siempre agrupados: 1.000 (es-ES no agrupa por defecto los números de 4 cifras).
+const numberFormat = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2, useGrouping: 'always' });
 
 export function formatChips(value) {
   return numberFormat.format(value);
@@ -42,7 +43,7 @@ class Hud {
     this.#dom.balance.textContent = formatChips(wallet.balance);
     this.#dom.inPlay.textContent = formatChips(wallet.inPlay);
 
-    wallet.addEventListener('change', () => this.#onWalletChange());
+    wallet.addEventListener('update', () => this.#onWalletChange());
     this.#bindAudio();
   }
 
@@ -77,7 +78,7 @@ class Hud {
     return rack;
   }
 
-  // Fichas que admite la zona actual (el resto se oculta).
+  // Fichas que admite el piso actual (el resto se oculta).
   setDenominations(values) {
     this.#available = DENOMINATIONS.filter((value) => values.includes(value));
     if (!this.#available.includes(this.#selected)) this.#selected = this.#available[0];
@@ -200,7 +201,7 @@ class Hud {
   }
 
   minBetNotice(minBet) {
-    this.toast(`La apuesta mínima de esta zona es ${formatChips(minBet)} créditos`, 'warn');
+    this.toast(`La apuesta mínima de este piso es ${formatChips(minBet)} créditos`, 'warn');
   }
 }
 

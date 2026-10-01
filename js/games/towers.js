@@ -4,7 +4,7 @@
 // multiplicador es 0,97 / p^n y puedes retirarte en cualquier piso. Sobrevive a una recarga.
 
 import { wallet } from '../engine/wallet.js';
-import { session, FREE_LIMITS, FREE_MIN_BET } from '../session.js';
+import { session } from '../session.js';
 import { audio } from '../audio.js';
 import { storage } from '../storage.js';
 import { scopedKey } from '../mode.js';
@@ -51,12 +51,12 @@ export class TowersGame {
       message: $('tw-message'),
       rules: $('tw-rules'),
     };
-    this.#bet = new BetControl($('tw-bet'), { game: 'towers', min: FREE_MIN_BET, max: FREE_LIMITS.towers.maxBet, value: 100 });
+    this.#bet = new BetControl($('tw-bet'), { game: 'towers', limits: session.limits('towers') });
     const prefs = storage.read(PREFS_KEY, null) ?? {};
     this.#difficulty = DIFFICULTIES[prefs.difficulty] ? prefs.difficulty : 'easy';
     this.#dom.rules.textContent = `Fácil: 3 losas y 1 trampa (${Math.round(safeChance('easy') * 100)} % de acierto). Media: 2 losas y 1 trampa (50 %). Difícil: 3 losas y 2 trampas (33 %). Tras n pisos cobras 0,97 / p^n: RTP del 97 % en cualquier piso. Las trampas de los 8 pisos se deciden al empezar con el flujo verificable.`;
     this.#bind();
-    session.register('towers', { hasPendingPlay: () => this.#round !== null || this.#busy });
+    session.register('towers', { hasPendingPlay: () => this.#round !== null || this.#busy, onZone: () => this.#bet.setLimits(session.limits('towers')) });
     this.#recover();
     this.#render();
   }
@@ -75,7 +75,7 @@ export class TowersGame {
     d.start.addEventListener('click', () => this.start());
     d.cashout.addEventListener('click', () => this.cashout());
     this.#bet.addEventListener('change', () => this.#render());
-    wallet.addEventListener('change', () => this.#render());
+    wallet.addEventListener('update', () => this.#render());
   }
 
   #save() {

@@ -878,7 +878,7 @@ export class RouletteGame {
       },
     });
     this.#store.subscribe((state, prev) => this.#render(state, prev));
-    wallet.addEventListener('change', () => this.#renderControls(this.state));
+    wallet.addEventListener('update', () => this.#renderControls(this.state));
     this.#render(this.state, null);
     this.#renderStats(this.state.history);
     this.#renderView();
@@ -993,7 +993,7 @@ export class RouletteGame {
 
   #setView(view) {
     if (view === 'track' && !this.#limits().racetrack) {
-      hud.toast('El racetrack francés se abre en el Salón de Neón', 'warn');
+      hud.toast('El racetrack francés no está disponible en este piso', 'warn');
       return;
     }
     if (this.#prefs.view === view) return;
@@ -1010,7 +1010,7 @@ export class RouletteGame {
     d.viewTable.setAttribute('aria-pressed', String(!track));
     d.viewTrack.setAttribute('aria-pressed', String(track));
     d.viewTrack.classList.toggle('is-locked', !allowed);
-    d.viewTrack.setAttribute('aria-label', allowed ? 'Racetrack francés' : 'Racetrack francés: se desbloquea en el Salón de Neón');
+    d.viewTrack.setAttribute('aria-label', allowed ? 'Racetrack francés' : 'Racetrack francés: no disponible en este piso');
     d.boardWrap.hidden = track;
     d.trackWrap.hidden = !track;
     for (const button of d.neighbors.querySelectorAll('[data-n]')) {
@@ -1048,13 +1048,13 @@ export class RouletteGame {
     for (const { key, amount } of parts) merged.set(key, money((merged.get(key) ?? 0) + amount));
     for (const [key, amount] of merged) {
       if ((bets[key] ?? 0) + amount > spotMax) {
-        hud.toast(`Máximo por casilla en esta zona: ${formatChips(spotMax)}`, 'warn');
+        hud.toast(`Máximo por casilla en este piso: ${formatChips(spotMax)}`, 'warn');
         return false;
       }
     }
     const total = money([...merged.values()].reduce((sum, amount) => sum + amount, 0));
     if (this.#total(bets) + total > tableMax) {
-      hud.toast(`Máximo de mesa en esta zona: ${formatChips(tableMax)}`, 'warn');
+      hud.toast(`Máximo de mesa en este piso: ${formatChips(tableMax)}`, 'warn');
       return false;
     }
     if (!wallet.hold('roulette', total)) {

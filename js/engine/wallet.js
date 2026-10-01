@@ -1,30 +1,25 @@
 // Monedero de créditos con depósito en garantía (escrow) por mesa.
 // Flujo de una ronda: hold (saldo → escrow) → settle (escrow → pendiente, al decidirse el azar)
 // → reveal (pendiente → saldo, al terminar la animación). Si la página se recarga, los premios
-// pendientes se abonan y las apuestas sin resolver de ruleta/slots se devuelven: recargar
-// nunca permite anular un resultado ya sorteado ni gastar dos veces el mismo crédito.
-// «El Último Crédito» empieza con un único crédito; las recompensas del Sindicato y las ayudas del
-// Club VIP entran con grant() y los tapetes de lujo se pagan con spend().
+// pendientes se abonan y las apuestas sin resolver de las mesas no reanudables (ruleta, slots,
+// Plinko, las balas en vuelo de Cyber-Fish…) se devuelven: recargar nunca permite anular un
+// resultado ya sorteado ni gastar dos veces el mismo crédito.
+// La escalada empieza con 10 créditos; las recompensas del Sindicato, la limosna y la carrera
+// entran con grant() y los cofres de reliquias se pagan con spend().
 
 import { storage } from '../storage.js';
-import { isFree } from '../mode.js';
 
-// Cada modo tiene su monedero: la leyenda empieza con 1 crédito y el Cripto-Casino con 1.000 fichas.
-export const WALLET_CONFIG = Object.freeze({
-  story: Object.freeze({ key: 'crd.wallet.v2', starting: 1, denominations: Object.freeze([1, 5, 10, 25, 100, 500, 1000, 5000, 10000]) }),
-  free: Object.freeze({ key: 'crd.cyber.wallet.v1', starting: 1000, denominations: Object.freeze([10, 25, 50, 100, 500, 1000]) }),
-});
-const CONFIG = isFree ? WALLET_CONFIG.free : WALLET_CONFIG.story;
-
-export const STARTING_BALANCE = CONFIG.starting;
-export const DENOMINATIONS = CONFIG.denominations;
-export const GAMES = Object.freeze(['blackjack', 'roulette', 'slots', 'plinko', 'crash', 'mines', 'dice', 'towers', 'video_poker', 'wheel']);
+export const WALLET_KEY = 'crd.climb.wallet.v1';
+export const STARTING_BALANCE = 10;
+// Todas las fichas de la torre: cada piso muestra las suyas.
+export const DENOMINATIONS = Object.freeze([1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10_000, 25_000, 100_000, 500_000, 1_000_000]);
+export const GAMES = Object.freeze(['blackjack', 'roulette', 'slots', 'plinko', 'crash', 'mines', 'dice', 'towers', 'video_poker', 'wheel', 'fish']);
 
 // Mesas que reanudan su jugada tras recargar (mano de blackjack, tablero de minas, torre y mano de
 // video póker a medias): su escrow se conserva. Las demás lo devuelven al arrancar.
 export const RESUMABLE = Object.freeze(['blackjack', 'mines', 'towers', 'video_poker']);
 
-const KEY = CONFIG.key;
+const KEY = WALLET_KEY;
 const EPSILON = 1e-9;
 
 export const money = (value) => Math.round(value * 100) / 100;
@@ -49,6 +44,9 @@ function sanitize(raw) {
 
 class Wallet extends EventTarget {
   #s;
+  // Mesas que pueden aceptar apuestas ahora (las del piso actual); la aplicación lo conecta.
+  #guard = () => true;
+  #updateQueued = false;
   // Apuestas ya sorteadas cuyo resultado aún se está animando: siguen "en juego" para el HUD,
   // de modo que el importe pendiente no revela el resultado antes de tiempo.
   #staked = perGame(0);
@@ -80,13 +78,27 @@ class Wallet extends EventTarget {
     storage.write(KEY, this.#s);
   }
 
+  // 'change' llega al instante (reglas de la escalada); 'update', una vez por fotograma, es el que
+  // escucha la interfaz: con el disparo continuo de Cyber-Fish hay varios cambios por fotograma.
   #emit(reason) {
     this.dispatchEvent(new CustomEvent('change', { detail: { reason } }));
+    if (this.#updateQueued) return;
+    this.#updateQueued = true;
+    const schedule = globalThis.requestAnimationFrame ?? ((callback) => setTimeout(callback, 16));
+    schedule(() => {
+      this.#updateQueued = false;
+      this.dispatchEvent(new CustomEvent('update'));
+    });
   }
 
   #game(game) {
     if (!GAMES.includes(game)) throw new Error(`Mesa desconocida: ${game}`);
     return game;
+  }
+
+  // Solo las mesas del piso actual pueden retener apuestas (defensa ante botones ocultos).
+  setGuard(guard) {
+    this.#guard = typeof guard === 'function' ? guard : () => true;
   }
 
   get balance() {
@@ -114,7 +126,7 @@ class Wallet extends EventTarget {
   // Retiene créditos del saldo en el depósito de la mesa. Atómico: o se retiene todo o nada.
   hold(game, amount) {
     this.#game(game);
-    if (!isAmount(amount) || amount <= 0 || !this.canAfford(amount)) return false;
+    if (!isAmount(amount) || amount <= 0 || !this.canAfford(amount) || !this.#guard(game)) return false;
     this.#s.balance = money(this.#s.balance - amount);
     this.#s.escrow[game] = money(this.#s.escrow[game] + amount);
     this.#save();
@@ -165,7 +177,7 @@ class Wallet extends EventTarget {
     return amount;
   }
 
-  // Créditos que no salen de una apuesta: recompensas de logros, encargos y favores.
+  // Créditos que no salen de una apuesta: encargos, logros, limosna y recompensas de la carrera.
   grant(amount, reason = 'grant') {
     if (!isAmount(amount) || amount <= 0) return 0;
     this.#s.balance = money(this.#s.balance + amount);
@@ -175,7 +187,7 @@ class Wallet extends EventTarget {
     return amount;
   }
 
-  // Compras fuera de las mesas (tapetes del Club VIP). Atómico: o se paga todo o nada.
+  // Compras fuera de las mesas (cofres de reliquias). Atómico: o se paga todo o nada.
   spend(amount, reason = 'spend') {
     if (!isAmount(amount) || amount <= 0 || !this.canAfford(amount)) return false;
     this.#s.balance = money(this.#s.balance - amount);
@@ -185,7 +197,7 @@ class Wallet extends EventTarget {
     return true;
   }
 
-  // Nueva leyenda: un crédito y nada en juego.
+  // Nueva escalada: 10 créditos y nada en juego.
   reset() {
     this.#s = fresh();
     this.#staked = perGame(0);
