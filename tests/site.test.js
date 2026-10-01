@@ -36,16 +36,16 @@ test('Carga: index.html precarga en paralelo todos los módulos de la app', () =
   for (const file of preloads) assert.ok(existsSync(new URL(file, root)), `falta ${file}`);
 });
 
-test('Sonido: la voz vive solo en js/voice.js y hay silencio, volumen e interruptores accesibles', () => {
+test('Sonido: sin síntesis de voz ni locuciones; silencio, volumen e interruptores accesibles', () => {
   const modules = moduleGraph('js/app.js');
-  assert.ok(modules.includes('js/voice.js'));
-  for (const file of modules.filter((f) => f !== 'js/voice.js')) {
+  for (const file of modules) {
     const source = read(file);
-    for (const pattern of [/speechSynthesis/, /SpeechSynthesisUtterance/]) assert.equal(pattern.test(source), false, `${file} usa ${pattern}`);
+    for (const pattern of [/speechSynthesis/, /SpeechSynthesisUtterance/, /\.speak\(/, /voice\.say\(/]) assert.equal(pattern.test(source), false, `${file} usa ${pattern}`);
   }
+  assert.equal(/btn-voice|voice-test|Probar la voz/.test(html), false, 'controles de voz en el HTML');
   assert.match(html, /id="btn-mute"[^>]*aria-pressed/);
   assert.match(html, /<input type="range" id="volume"[^>]*aria-label="Volumen general"/);
-  for (const id of ['btn-music', 'btn-sfx', 'btn-voice', 'btn-lite']) assert.match(html, new RegExp(`id="${id}"[^>]*aria-pressed`), id);
+  for (const id of ['btn-music', 'btn-sfx', 'btn-lite']) assert.match(html, new RegExp(`id="${id}"[^>]*aria-pressed`), id);
 });
 
 test('Pixel art: fuente propia autoalojada, precargada y lienzos sin suavizado', () => {

@@ -1,7 +1,7 @@
-// Motor de audio procedural con Web Audio API: ningún archivo de audio externo.
+// Motor de audio procedural con Web Audio API: ningún archivo de audio externo y ninguna voz.
 // Dos buses independientes: efectos de juego (SFX, con capa chiptune para la interfaz) y música
 // de fondo lounge/jazz (BGM), cada uno con su interruptor, más un volumen general y un silencio
-// rápido que también respetan la voz del Sindicato (js/voice.js) y su efecto de radio.
+// rápido.
 // El contexto se crea y se reanuda tras el primer gesto del usuario (política de autoplay).
 
 import { storage } from './storage.js';
@@ -115,10 +115,6 @@ class AudioEngine extends EventTarget {
     return this.#mix.muted;
   }
 
-  // Contexto activo (lo usa la voz para su efecto de radio).
-  get context() {
-    return this.unlocked ? this.#ctx : null;
-  }
 
   get unlocked() {
     return this.#ctx !== null && this.#ctx.state === 'running';
@@ -479,20 +475,6 @@ class AudioEngine extends EventTarget {
     [1, 1.25, 1.5, 2].forEach((ratio, i) => this.#tone(t + 0.35 + i * 0.08, { type: 'square', freq: base * ratio, attack: 0.002, peak: 0.035, decay: i === 3 ? 0.3 : 0.07 }));
   }
 
-  // Apertura y cierre del canal de radio de la voz: chasquido y ráfaga de estática filtrada.
-  radioIn() {
-    if (!this.#ready()) return;
-    const t = this.#time();
-    this.#tone(t, { type: 'square', freq: 2400, attack: 0.001, peak: 0.03, decay: 0.012 });
-    this.#noiseBurst(t + 0.01, { freq: 1800, q: 1.6, attack: 0.004, peak: 0.08, decay: 0.16 });
-  }
-
-  radioOut() {
-    if (!this.#ready()) return;
-    const t = this.#time();
-    this.#noiseBurst(t, { freq: 2200, freqEnd: 900, q: 1.4, attack: 0.003, peak: 0.07, decay: 0.12 });
-    this.#tone(t + 0.12, { type: 'square', freq: 1600, attack: 0.001, peak: 0.025, decay: 0.012 });
-  }
 
   // ---------- Ambiente: zona de la música, tensión y efectos dramáticos ----------
 

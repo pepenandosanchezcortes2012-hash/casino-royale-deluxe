@@ -50,7 +50,6 @@
   <link rel="modulepreload" href="js/session.js">
   <link rel="modulepreload" href="js/settings.js">
   <link rel="modulepreload" href="js/storage.js">
-  <link rel="modulepreload" href="js/ui/announcer.js">
   <link rel="modulepreload" href="js/ui/climb-ui.js">
   <link rel="modulepreload" href="js/ui/cyber-hud.js">
   <link rel="modulepreload" href="js/ui/hud.js">
@@ -84,7 +83,6 @@
   <link rel="modulepreload" href="js/ui/matrix-core.js">
   <link rel="modulepreload" href="js/ui/svg.js">
   <link rel="modulepreload" href="js/verify.js">
-  <link rel="modulepreload" href="js/voice.js">
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
@@ -314,7 +312,7 @@
         </button>
         <input type="range" id="volume" class="volume-range" min="0" max="100" step="5" value="80" aria-label="Volumen general">
       </div>
-      <button type="button" id="btn-settings" class="btn btn-toggle-icon" aria-haspopup="dialog" title="Ajustes de sonido, voz y pantalla">
+      <button type="button" id="btn-settings" class="btn btn-toggle-icon" aria-haspopup="dialog" title="Ajustes de sonido y pantalla">
         <span aria-hidden="true">⚙</span><span class="btn-toggle-text">Ajustes</span>
       </button>
     </div>
@@ -971,13 +969,7 @@
         <span class="audio-icon" aria-hidden="true">🔊</span>
         <span class="audio-text" aria-hidden="true"><span class="audio-name">Efectos: </span><span class="audio-state">ON</span></span>
       </button>
-      <button type="button" id="btn-voice" class="btn btn-audio btn-voice" aria-pressed="true" aria-label="Voz del Sindicato" title="Anuncios hablados de los anfitriones">
-        <span class="audio-icon" aria-hidden="true">🎙</span>
-        <span class="audio-text" aria-hidden="true"><span class="audio-name">Voz: </span><span class="audio-state">ON</span></span>
-      </button>
-      <button type="button" id="voice-test" class="btn">Probar la voz</button>
     </div>
-    <p class="hint" id="voice-status"></p>
     <h3 class="modal-subtitle">Pantalla</h3>
     <div class="settings-grid">
       <button type="button" id="btn-lite" class="btn btn-audio" aria-pressed="false"><span class="audio-icon" aria-hidden="true">🪶</span><span class="audio-text"><span class="audio-name">Modo ligero: </span><span class="audio-state">OFF</span></span></button>

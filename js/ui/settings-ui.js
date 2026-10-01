@@ -1,9 +1,8 @@
 // Controles de sonido y pantalla: silencio rápido (botón y tecla M) y volumen general en la
-// cabecera, y el diálogo de Ajustes (volumen, música, efectos, voz del Sindicato con prueba,
-// modo ligero, lluvia de código y scanlines). La música y los efectos los pinta hud.js.
+// cabecera, y el diálogo de Ajustes (volumen, música, efectos, modo ligero, lluvia de código y
+// scanlines). La música y los efectos los pinta hud.js.
 
 import { audio } from '../audio.js';
-import { voice, PRIORITY } from '../voice.js';
 import { settings } from '../settings.js';
 
 const percent = (value) => `${Math.round(value * 100)} %`;
@@ -21,9 +20,6 @@ class SettingsUi {
       close: $('settings-close'),
       panelVolume: $('volume-panel'),
       volumeValue: $('volume-value'),
-      voice: $('btn-voice'),
-      voiceTest: $('voice-test'),
-      voiceStatus: $('voice-status'),
       lite: $('btn-lite'),
       rain: $('btn-rain'),
       crt: $('btn-crt'),
@@ -51,14 +47,6 @@ class SettingsUi {
     d.dialog.addEventListener('click', (event) => {
       if (event.target === d.dialog) d.dialog.close();
     });
-    d.voice.addEventListener('click', () => {
-      audio.click();
-      voice.toggle();
-    });
-    d.voiceTest.addEventListener('click', () => {
-      audio.unlock();
-      voice.say('Canal del Sindicato abierto. Aquí SIBILA: la torre te observa.', { speaker: 'SIBILA', priority: PRIORITY.high, force: true });
-    });
     d.lite.addEventListener('click', () => {
       audio.click();
       settings.setLite(!settings.lite);
@@ -72,7 +60,6 @@ class SettingsUi {
       settings.setScanlines(!settings.snapshot.scanlines);
     });
     audio.addEventListener('change', () => this.#render());
-    voice.addEventListener('change', () => this.#render());
     settings.addEventListener('change', () => this.#render());
     // Silencio rápido con M fuera de los campos de texto.
     window.addEventListener('keydown', (event) => {
@@ -108,14 +95,6 @@ class SettingsUi {
       range.classList.toggle('is-muted', muted);
     }
     d.volumeValue.textContent = muted ? `${percent(audio.volume)} · silencio` : percent(audio.volume);
-    this.#toggle(d.voice, voice.enabled);
-    d.voice.disabled = !voice.supported;
-    d.voiceTest.disabled = !voice.supported;
-    d.voiceStatus.textContent = !voice.supported
-      ? 'Este navegador no admite voz sintetizada: los anuncios se quedan en la bitácora.'
-      : voice.voiceName
-        ? `Voz del sistema: ${voice.voiceName}. Cada anfitrión tiene su tono y su ritmo, con efecto de radio.`
-        : 'No hay voces en español instaladas: se usará la voz por defecto del sistema.';
     this.#toggle(d.lite, settings.lite);
     this.#toggle(d.rain, settings.matrix);
     this.#toggle(d.crt, settings.scanlines);

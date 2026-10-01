@@ -4,7 +4,7 @@
 
 Neo-Madrid, 2089. Despiertas en un callejón con **10 créditos** en tu monedero cripto. Sobre ti se alza la torre del Sindicato: cuatro pisos de mesas, cada uno más alto, más caro y más peligroso. Reúne **10.000.000 de créditos** para comprar tu libertad y tomar el control del Sindicato.
 
-Es un juego **100 % estático** para GitHub Pages: HTML5 semántico, CSS3 y módulos ES nativos, sin frameworks, dependencias, CDN ni archivos de audio. Cada resultado sale de `HMAC-SHA256` con semillas comprometidas y se puede verificar a mano (*provably fair*). La música, los efectos chiptune y el canal de radio de la voz se sintetizan con Web Audio API; los anfitriones hablan con Web Speech API. La interfaz es **pixel art** con una fuente propia y los gráficos son SVG y Canvas 2D.
+Es un juego **100 % estático** para GitHub Pages: HTML5 semántico, CSS3 y módulos ES nativos, sin frameworks, dependencias, CDN ni archivos de audio. Cada resultado sale de `HMAC-SHA256` con semillas comprometidas y se puede verificar a mano (*provably fair*). La música y los efectos chiptune se sintetizan con Web Audio API, sin voces. La interfaz es **pixel art** con una fuente propia y los gráficos son SVG y Canvas 2D.
 
 > Ficción de entretenimiento: créditos virtuales sin valor monetario, para mayores de 18 años.
 
@@ -16,7 +16,7 @@ Es un juego **100 % estático** para GitHub Pages: HTML5 semántico, CSS3 y mód
 - [Los 11 juegos](#los-11-juegos)
 - [Economía de la torre](#economía-de-la-torre)
 - [Provably fair: cómo verificar una jugada](#provably-fair-cómo-verificar-una-jugada)
-- [Pixel art, sonido y voz](#pixel-art-sonido-y-voz)
+- [Pixel art y sonido](#pixel-art-y-sonido)
 - [Terminal hacker](#terminal-hacker)
 - [Persistencia](#persistencia)
 - [Decisiones de diseño](#decisiones-de-diseño)
@@ -188,7 +188,7 @@ Cada apuesta aparece en **Apuestas en vivo** con su nonce. Al pulsarla se abre e
 
 Es una **demostración del protocolo sin servidor**: la semilla oculta vive en tu navegador, así que alguien que lea `localStorage` podría conocerla antes de rotarla. Con créditos sin valor, solo se engañaría a sí mismo.
 
-## Pixel art, sonido y voz
+## Pixel art y sonido
 
 **Dirección visual.**
 
@@ -201,17 +201,8 @@ Es una **demostración del protocolo sin servidor**: la semilla oculta vive en t
 **Sonido.**
 
 - **Volumen general y silencio:** el botón 🔊 y la tecla **M** silencian todo; el deslizador de la cabecera regula el volumen. Ambos se guardan.
-- **Ajustes (⚙):** volumen, música, efectos, voz, prueba de voz y opciones de pantalla.
+- **Ajustes (⚙):** volumen, música, efectos y opciones de pantalla.
 - **Capa chiptune** de onda cuadrada para la interfaz: clic, aviso (acción bloqueada o saldo insuficiente), recompensa (encargos y logros) y el arpegio del ascensor al cambiar de piso.
-
-**Voz del Sindicato** (`js/voice.js`, el único módulo que usa `speechSynthesis`):
-
-- **Perfil por anfitrión:** Moss grave y pausado, Vera ágil, Ferro mecánico, SIBILA sintética y profunda, y el Sindicato como locutor.
-- **Frases:** el texto se corta por la puntuación y se dice con pausas naturales.
-- **Canal de radio:** cada mensaje abre y cierra con un chasquido y una ráfaga de estática.
-- **Momentos:** solo habla en momentos clave (llegada a un piso, tarjeta de acceso, jugada crítica, limosna, encargos, logros, Kraken y victoria).
-- **Sin saturar:** los avisos importantes interrumpen; los normales esperan un enfriamiento de 3,5 s.
-- **Respeta** el volumen, el silencio, su interruptor y la pestaña oculta. Elige la mejor voz en español del sistema.
 
 **Modo ligero** (Ajustes → Pantalla): se activa solo en equipos de 4 núcleos o menos, o con 4 GB de memoria o menos. Apaga la lluvia de código, las scanlines y el ambiente animado, y reduce las partículas a menos de la mitad.
 
@@ -275,7 +266,7 @@ Todo se guarda en `localStorage` con el prefijo `crd.climb.`:
 - **Repintados agrupados**: el monedero avisa a la interfaz una vez por fotograma (evento `update`), aunque una ráfaga de balas genere varios cambios. La telemetría pinta las apuestas en vivo por lotes cada 200 ms y el historial verificable se guarda con retardo.
 - **Lluvia Matrix en un Web Worker** con OffscreenCanvas, a 15 fps y media resolución. Toma el color del tema del piso.
 - **Animaciones solo en el compositor**: las animaciones infinitas (ambiente de cada piso incluido) mueven solo `opacity` y `transform`, y una prueba lo vigila.
-- **Carga**: 58 módulos precargados en paralelo con `modulepreload` (lista generada con `npm run preload` y comprobada por las pruebas).
+- **Carga**: 56 módulos precargados en paralelo con `modulepreload` (lista generada con `npm run preload` y comprobada por las pruebas).
 
 ## Accesibilidad y móvil
 
@@ -289,7 +280,7 @@ Los módulos ES no se cargan desde `file://`, así que hay que servir la carpeta
 
 ```bash
 python -m http.server 8080      # → http://localhost:8080
-npm test                        # 95 pruebas (Node 20+, sin dependencias)
+npm test                        # 94 pruebas (Node 20+, sin dependencias)
 npm run simulate                # calibración de la escalada (150 escaladas por estilo)
 npm run slots                   # RTP de las slots con el motor real (--clover para el Trébol)
 npm run preload                 # regenera la precarga de módulos de index.html
@@ -322,12 +313,11 @@ js/climb/                     Pisos, núcleo de la escalada, encargos, logros, t
 js/session.js                 Puerta única entre las mesas y la escalada
 js/provably_fair.js · verify.js   SHA-256/HMAC, semillas, flujo, historial y verificador de los 11 juegos
 js/progression.js · relics.js     Carrera (niveles, rangos, misiones por piso) y reliquias
-js/voice.js                   Voz del Sindicato (Web Speech API) con perfiles y canal de radio
 js/terminal.js · settings.js · storage.js · audio.js · particles.js
 js/engine/                    RNG criptográfico, Store, monedero con escrow y música lounge
-js/ui/                        HUD, escalada, locutor, ajustes de sonido y pantalla, HUD cyber, telemetría, terminal, bóveda, lluvia (worker)
+js/ui/                        HUD, escalada, ajustes de sonido y pantalla, HUD cyber, telemetría, terminal, bóveda, lluvia (worker)
 js/games/*-math.js            Matemáticas puras (incluida fish-math.js)
 js/games/*.js                 Las 11 mesas
-tests/                        95 pruebas con node:test
+tests/                        94 pruebas con node:test
 tools/                        Simulación de la escalada, medición de las slots y precarga
 ```

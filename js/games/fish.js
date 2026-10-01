@@ -15,7 +15,6 @@ import { randomFloat } from '../engine/rng.js';
 import { hud, formatChips } from '../ui/hud.js';
 import { el } from '../ui/svg.js';
 import { fmtMult, outcomeTone, pushRecent, trauma } from '../ui/arcade.js';
-import { announcer } from '../ui/announcer.js';
 import { settings } from '../settings.js';
 import {
   SPECIES, FISH_RTP, FIRE_INTERVAL_MS, MAX_BULLETS, BULLET_LIFETIME_MS, VOLLEY_MS, VOLLEY_MAX,
@@ -740,7 +739,6 @@ export class FishGame {
     this.#dom.message.textContent = `¡El Mega Kraken ${fmtMult(kraken.mult)} entra en la sala! Cada impacto lo captura con un ${percent.format(captureChance(kraken.mult) * 100)} %`;
     audio.radar();
     audio.riser(1.2);
-    announcer.alert('Alerta. Mega Kraken en la sala.', 'Vera');
   }
 
   #krakenGone() {

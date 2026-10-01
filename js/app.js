@@ -23,7 +23,6 @@ import { telemetry } from './ui/telemetry.js';
 import { terminalUi } from './ui/terminal-ui.js';
 import { vaultUi } from './ui/vault-ui.js';
 import { settingsUi } from './ui/settings-ui.js';
-import { announcer } from './ui/announcer.js';
 import { MatrixRain } from './ui/matrix.js';
 import { BlackjackGame } from './games/blackjack.js';
 import { RouletteGame } from './games/roulette.js';
@@ -278,7 +277,6 @@ class App {
     vaultUi.init();
     terminalUi.init({ telemetry, travel: (id) => climbUi.travel(id), takeRescue: () => climbUi.takeRescue() });
     settingsUi.init();
-    announcer.init();
     new AbundanceTimer().start(document.getElementById('hud-abundance'));
     this.#shortcuts();
     this.#state = APP_STATES.CLIMB;
