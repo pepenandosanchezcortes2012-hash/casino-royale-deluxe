@@ -1,6 +1,6 @@
 {
   "name": "casino-royale-deluxe",
-  "version": "5.2.0",
+  "version": "6.0.0",
   "description": "Casino Royale Deluxe · The Syndicate Climb & Cyber-Fish Casino: la escalada de 10 créditos a 10.000.000 por los 4 pisos del Sindicato, con 11 juegos provably fair (incluido Cyber-Fish Hunter), encargos, misiones, niveles, reliquias y terminal hacker. 100 % estático.",
   "private": true,
   "type": "module",
@@ -10,6 +10,7 @@
     "slots": "node tools/measure-slots.mjs",
     "preload": "node tools/update-preloads.mjs",
     "sprites": "node tools/build-pixel-sprites.mjs",
+    "pwa": "node tools/build-pwa.mjs",
     "start": "python -m http.server 8080"
   },
   "license": "MIT"

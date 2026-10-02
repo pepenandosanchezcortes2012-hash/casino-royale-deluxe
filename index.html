@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
   <meta name="description" content="Casino Royale Deluxe · The Syndicate Climb & Cyber-Fish Casino: empieza con 10 créditos en el Subsuelo y sube los 4 pisos del Sindicato hasta los 10.000.000. 11 juegos provably fair (Minas, Dados, Torres, Cyber-Fish Hunter, Plinko, Slots, Crash, Ruleta Europea, Video Póker, Blackjack High-Roller y la Rueda Legendaria), encargos, misiones, reliquias y terminal hacker. Créditos virtuales sin valor monetario.">
-  <meta name="theme-color" content="#030604">
+  <meta name="theme-color" content="#0b0d14">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <meta name="color-scheme" content="dark">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -24,6 +26,7 @@
   <link rel="stylesheet" href="css/fish.css">
   <link rel="stylesheet" href="css/hacker_terminal.css">
   <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/meta.css">
   <link rel="stylesheet" href="css/pixel.css">
   <link rel="preload" href="fonts/press-start-2p.woff" as="font" type="font/woff" crossorigin>
   <link rel="preload" href="fonts/silkscreen.woff" as="font" type="font/woff" crossorigin>
@@ -52,6 +55,8 @@
   <link rel="modulepreload" href="js/session.js">
   <link rel="modulepreload" href="js/settings.js">
   <link rel="modulepreload" href="js/storage.js">
+  <link rel="modulepreload" href="js/ui/arcade-hub.js">
+  <link rel="modulepreload" href="js/ui/boss-ui.js">
   <link rel="modulepreload" href="js/ui/climb-ui.js">
   <link rel="modulepreload" href="js/ui/cyber-hud.js">
   <link rel="modulepreload" href="js/ui/hud.js">
@@ -60,10 +65,17 @@
   <link rel="modulepreload" href="js/ui/telemetry.js">
   <link rel="modulepreload" href="js/ui/terminal-ui.js">
   <link rel="modulepreload" href="js/ui/vault-ui.js">
+  <link rel="modulepreload" href="js/arcade/boss-battle.js">
+  <link rel="modulepreload" href="js/arcade/daily.js">
+  <link rel="modulepreload" href="js/arcade/hall-of-fame.js">
+  <link rel="modulepreload" href="js/arcade/pwa.js">
+  <link rel="modulepreload" href="js/arcade/shop.js">
+  <link rel="modulepreload" href="js/arcade/trophies.js">
   <link rel="modulepreload" href="js/climb/achievements.js">
   <link rel="modulepreload" href="js/climb/contracts.js">
   <link rel="modulepreload" href="js/climb/narrative.js">
   <link rel="modulepreload" href="js/climb/titles.js">
+  <link rel="modulepreload" href="js/engine/chiptune.js">
   <link rel="modulepreload" href="js/engine/music.js">
   <link rel="modulepreload" href="js/engine/rng.js">
   <link rel="modulepreload" href="js/engine/store.js">
@@ -92,7 +104,7 @@
 <body>
   <svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
     <!-- Generado por tools/build-pixel-sprites.mjs: no editar a mano. -->
-    <defs><pattern id="px-card-back" width="20" height="20" patternUnits="userSpaceOnUse"><path fill="#5e0715" d="M0 0h20v20H0z"/><path fill="#7a1020" d="M0 0h10v10H0zM10 10h10v10H10z"/><path fill="#d4af37" d="M9 9h2v2H9z"/></pattern></defs>
+    <defs><pattern id="px-card-back" width="20" height="20" patternUnits="userSpaceOnUse"><path fill="#5e0715" d="M0 0h20v20H0z"/><path fill="#7a1020" d="M0 0h10v10H0zM10 10h10v10H10z"/><path fill="#d4af37" d="M9 9h2v2H9z"/></pattern><filter id="pal-gameboy" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0"/><feComponentTransfer><feFuncR type="discrete" tableValues="0.059 0.188 0.545 0.608"/><feFuncG type="discrete" tableValues="0.22 0.384 0.675 0.737"/><feFuncB type="discrete" tableValues="0.059 0.188 0.059 0.059"/></feComponentTransfer></filter><filter id="pal-amber" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0"/><feComponentTransfer><feFuncR type="discrete" tableValues="0.04 0.25 0.5 0.75 1 1"/><feFuncG type="discrete" tableValues="0.02 0.12 0.28 0.45 0.69 0.89"/><feFuncB type="discrete" tableValues="0 0 0 0 0.1 0.63"/></feComponentTransfer></filter><filter id="pal-neon" color-interpolation-filters="sRGB"><feColorMatrix type="saturate" values="2.2"/><feComponentTransfer><feFuncR type="discrete" tableValues="0 0.55 1"/><feFuncG type="discrete" tableValues="0 0.45 1"/><feFuncB type="discrete" tableValues="0.1 0.6 1"/></feComponentTransfer></filter></defs>
     <symbol id="sym-X" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="#3a2000" d="M7 0h2v1h-2zM6 1h1v1h-1zM9 1h1v1h-1zM6 2h1v1h-1zM9 2h1v1h-1zM5 3h1v1h-1zM10 3h1v1h-1zM0 4h5v1h-5zM11 4h5v1h-5zM0 5h1v1h-1zM15 5h1v1h-1zM1 6h1v1h-1zM14 6h1v1h-1zM2 7h1v1h-1zM13 7h1v1h-1zM3 8h1v1h-1zM12 8h1v1h-1zM3 9h1v1h-1zM12 9h1v1h-1zM2 10h1v1h-1zM7 10h2v1h-2zM13 10h1v1h-1zM2 11h1v1h-1zM6 11h1v1h-1zM9 11h1v1h-1zM13 11h1v1h-1zM1 12h1v1h-1zM5 12h1v1h-1zM10 12h1v1h-1zM14 12h1v1h-1zM1 13h1v1h-1zM4 13h1v1h-1zM11 13h1v1h-1zM14 13h1v1h-1zM1 14h3v1h-3zM12 14h3v1h-3z"/><path fill="#ffcf3a" d="M7 1h2v1h-2zM8 2h1v1h-1zM6 3h1v1h-1zM8 3h1v1h-1zM5 4h1v1h-1zM7 4h3v1h-3zM1 5h1v1h-1zM6 5h7v1h-7zM2 6h10v1h-10zM3 7h8v1h-8zM4 8h7v1h-7zM4 9h7v1h-7zM3 10h4v1h-4zM9 10h3v1h-3zM3 11h2v1h-2zM10 11h2v1h-2zM2 12h2v1h-2zM11 12h1v1h-1zM2 13h1v1h-1zM12 13h1v1h-1z"/><path fill="#fff3a8" d="M7 2h1v1h-1zM7 3h1v1h-1zM6 4h1v1h-1zM2 5h4v1h-4z"/><path fill="#e08a10" d="M9 3h1v1h-1zM10 4h1v1h-1zM13 5h2v1h-2zM12 6h2v1h-2zM11 7h2v1h-2zM11 8h1v1h-1zM11 9h1v1h-1zM12 10h1v1h-1zM5 11h1v1h-1zM12 11h1v1h-1zM4 12h1v1h-1zM12 12h2v1h-2zM3 13h1v1h-1zM13 13h1v1h-1z"/></symbol>
     <symbol id="sym-W" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="#d9a92a" d="M4 1h1v1h-1zM6 1h1v1h-1zM8 1h1v1h-1zM10 1h1v1h-1zM12 1h1v1h-1zM2 3h1v1h-1zM14 3h1v1h-1zM2 5h1v1h-1zM14 5h1v1h-1zM2 7h1v1h-1zM14 7h1v1h-1zM2 9h1v1h-1zM14 9h1v1h-1zM2 11h1v1h-1zM14 11h1v1h-1zM4 13h1v1h-1zM6 13h1v1h-1zM8 13h1v1h-1zM10 13h1v1h-1zM12 13h1v1h-1z"/><path fill="#04140c" d="M3 2h11v1h-11zM3 3h1v1h-1zM13 3h1v1h-1zM3 4h1v1h-1zM13 4h1v1h-1zM3 5h1v1h-1zM13 5h1v1h-1zM3 6h1v1h-1zM13 6h1v1h-1zM3 7h1v1h-1zM13 7h1v1h-1zM3 8h1v1h-1zM13 8h1v1h-1zM3 9h1v1h-1zM13 9h1v1h-1zM3 10h1v1h-1zM13 10h1v1h-1zM3 11h1v1h-1zM13 11h1v1h-1zM3 12h11v1h-11z"/><path fill="#2f6b4a" d="M4 3h9v1h-9zM4 4h1v1h-1zM12 4h1v1h-1zM4 5h1v1h-1zM12 5h1v1h-1zM4 6h1v1h-1zM12 6h1v1h-1zM4 7h1v1h-1zM12 7h1v1h-1zM4 8h1v1h-1zM12 8h1v1h-1zM4 9h1v1h-1zM12 9h1v1h-1zM4 10h1v1h-1zM12 10h1v1h-1zM4 11h9v1h-9z"/><path fill="#173d2a" d="M5 4h7v1h-7zM5 5h1v1h-1zM11 5h1v1h-1zM5 6h1v1h-1zM11 6h1v1h-1zM5 7h1v1h-1zM11 7h1v1h-1zM5 8h1v1h-1zM11 8h1v1h-1zM5 9h1v1h-1zM11 9h1v1h-1zM5 10h7v1h-7z"/><path fill="#2bff9a" d="M6 5h1v1h-1zM10 5h1v1h-1zM6 6h1v1h-1zM10 6h1v1h-1zM6 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM6 8h2v1h-2zM9 8h2v1h-2z"/><path fill="#003d24" d="M7 5h3v1h-3zM7 6h3v1h-3zM7 7h1v1h-1zM9 7h1v1h-1zM8 8h1v1h-1zM6 9h5v1h-5z"/></symbol>
     <symbol id="sym-C" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="#071a33" d="M4 2h8v1h-8zM3 3h1v1h-1zM12 3h1v1h-1zM2 4h1v1h-1zM13 4h1v1h-1zM1 5h14v1h-14zM1 6h1v1h-1zM14 6h1v1h-1zM2 7h1v1h-1zM13 7h1v1h-1zM3 8h1v1h-1zM12 8h1v1h-1zM4 9h1v1h-1zM11 9h1v1h-1zM5 10h1v1h-1zM10 10h1v1h-1zM6 11h1v1h-1zM9 11h1v1h-1zM7 12h2v1h-2z"/><path fill="#c8f6ff" d="M4 3h2v1h-2zM3 4h1v1h-1zM5 4h2v1h-2zM2 6h2v1h-2zM3 7h1v1h-1z"/><path fill="#ffffff" d="M6 3h1v1h-1zM4 4h1v1h-1z"/><path fill="#3fd8ff" d="M7 3h3v1h-3zM7 4h2v1h-2zM4 6h6v1h-6zM4 7h5v1h-5zM4 8h4v1h-4zM5 9h3v1h-3zM6 10h2v1h-2zM7 11h1v1h-1z"/><path fill="#1d8fe0" d="M10 3h2v1h-2zM9 4h3v1h-3zM10 6h3v1h-3zM9 7h3v1h-3zM8 8h3v1h-3zM8 9h2v1h-2zM8 10h1v1h-1zM8 11h1v1h-1z"/><path fill="#0b4a9a" d="M12 4h1v1h-1zM13 6h1v1h-1zM12 7h1v1h-1zM11 8h1v1h-1zM10 9h1v1h-1zM9 10h1v1h-1z"/></symbol>
@@ -151,6 +163,15 @@
     <symbol id="npc-narrator" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="#0b0d14" d="M1 2h14v1h-14zM1 3h1v1h-1zM14 3h1v1h-1zM1 4h1v1h-1zM14 4h1v1h-1zM1 5h1v1h-1zM14 5h1v1h-1zM1 6h1v1h-1zM14 6h1v1h-1zM1 7h1v1h-1zM14 7h1v1h-1zM1 8h1v1h-1zM14 8h1v1h-1zM1 9h1v1h-1zM14 9h1v1h-1zM1 10h1v1h-1zM14 10h1v1h-1zM1 11h14v1h-14zM6 12h1v1h-1zM9 12h1v1h-1zM4 13h8v1h-8z"/><path fill="#4a5262" d="M2 3h12v1h-12zM2 4h1v1h-1zM13 4h1v1h-1zM2 5h1v1h-1zM13 5h1v1h-1zM2 6h1v1h-1zM13 6h1v1h-1zM2 7h1v1h-1zM13 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h1v1h-1zM13 9h1v1h-1zM2 10h12v1h-12zM7 12h2v1h-2z"/><path fill="#04140c" d="M3 4h10v1h-10zM3 5h1v1h-1zM5 5h8v1h-8zM3 6h2v1h-2zM6 6h7v1h-7zM3 7h1v1h-1zM5 7h2v1h-2zM11 7h2v1h-2zM3 8h10v1h-10zM3 9h10v1h-10z"/><path fill="#2bff9a" d="M4 5h1v1h-1zM5 6h1v1h-1zM4 7h1v1h-1zM7 7h4v1h-4z"/></symbol>
     <symbol id="chest-lid" viewBox="0 0 24 8" shape-rendering="crispEdges"><path fill="#0b0d14" d="M4 0h16v1h-16zM2 1h2v1h-2zM20 1h2v1h-2zM1 2h1v1h-1zM22 2h1v1h-1zM0 3h1v1h-1zM23 3h1v1h-1zM0 4h1v1h-1zM23 4h1v1h-1zM0 5h1v1h-1zM23 5h1v1h-1zM0 6h1v1h-1zM23 6h1v1h-1zM0 7h24v1h-24z"/><path fill="#c07a3a" d="M4 1h16v1h-16zM2 2h1v1h-1zM1 3h1v1h-1zM1 5h1v1h-1z"/><path fill="#8a4f1e" d="M3 2h9v1h-9zM14 2h7v1h-7zM2 3h9v1h-9zM15 3h7v1h-7zM2 5h9v1h-9zM15 5h7v1h-7zM1 6h10v1h-10zM15 6h7v1h-7z"/><path fill="#ffcf3a" d="M12 2h2v1h-2zM11 3h1v1h-1zM14 3h1v1h-1zM1 4h22v1h-22zM11 5h1v1h-1zM14 5h1v1h-1zM11 6h4v1h-4z"/><path fill="#5a3010" d="M21 2h1v1h-1zM22 3h1v1h-1zM22 5h1v1h-1zM22 6h1v1h-1z"/><path fill="#fff3a8" d="M12 3h2v1h-2zM12 5h2v1h-2z"/></symbol>
     <symbol id="chest-body" viewBox="0 0 24 11" shape-rendering="crispEdges"><path fill="#0b0d14" d="M0 0h24v1h-24zM0 1h1v1h-1zM10 1h4v1h-4zM23 1h1v1h-1zM0 2h1v1h-1zM9 2h1v1h-1zM14 2h1v1h-1zM23 2h1v1h-1zM0 3h1v1h-1zM9 3h1v1h-1zM11 3h2v1h-2zM14 3h1v1h-1zM23 3h1v1h-1zM0 4h1v1h-1zM9 4h1v1h-1zM12 4h1v1h-1zM14 4h1v1h-1zM23 4h1v1h-1zM0 5h1v1h-1zM10 5h4v1h-4zM23 5h1v1h-1zM0 6h1v1h-1zM23 6h1v1h-1zM0 7h1v1h-1zM23 7h1v1h-1zM0 8h1v1h-1zM23 8h1v1h-1zM0 9h1v1h-1zM23 9h1v1h-1zM0 10h24v1h-24z"/><path fill="#ffcf3a" d="M1 1h9v1h-9zM14 1h9v1h-9zM10 2h1v1h-1zM13 2h1v1h-1zM10 3h1v1h-1zM13 3h1v1h-1zM10 4h2v1h-2zM13 4h1v1h-1zM1 6h22v1h-22z"/><path fill="#c07a3a" d="M1 2h1v1h-1z"/><path fill="#8a4f1e" d="M2 2h7v1h-7zM15 2h7v1h-7zM1 3h8v1h-8zM15 3h7v1h-7zM1 4h8v1h-8zM15 4h7v1h-7zM1 5h9v1h-9zM14 5h8v1h-8zM1 7h21v1h-21zM1 8h21v1h-21z"/><path fill="#fff3a8" d="M11 2h2v1h-2z"/><path fill="#5a3010" d="M22 2h1v1h-1zM22 3h1v1h-1zM22 4h1v1h-1zM22 5h1v1h-1zM22 7h1v1h-1zM22 8h1v1h-1zM1 9h22v1h-22z"/></symbol>
+    <symbol id="medal-bronze" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="#7a1f2a" d="M2 0h2v1h-2zM12 0h2v1h-2zM2 1h2v1h-2zM12 1h2v1h-2zM3 2h2v1h-2zM11 2h2v1h-2zM4 3h2v1h-2zM10 3h2v1h-2zM5 4h2v1h-2zM9 4h2v1h-2z"/><path fill="#c84a5a" d="M4 1h1v1h-1zM11 1h1v1h-1zM5 2h1v1h-1zM10 2h1v1h-1zM6 3h1v1h-1zM9 3h1v1h-1zM7 4h2v1h-2z"/><path fill="#0b0d14" d="M6 5h4v1h-4zM4 6h2v1h-2zM10 6h2v1h-2zM3 7h1v1h-1zM12 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h1v1h-1zM13 9h1v1h-1zM2 10h1v1h-1zM13 10h1v1h-1zM2 11h1v1h-1zM13 11h1v1h-1zM3 12h1v1h-1zM12 12h1v1h-1zM4 13h2v1h-2zM10 13h2v1h-2zM6 14h4v1h-4z"/><path fill="#c87a3a" d="M6 6h4v1h-4zM4 7h2v1h-2zM8 7h3v1h-3zM3 8h1v1h-1zM5 8h7v1h-7zM3 9h1v1h-1zM5 9h2v1h-2zM9 9h3v1h-3zM3 10h3v1h-3zM10 10h2v1h-2zM3 11h4v1h-4zM9 11h3v1h-3zM4 12h7v1h-7z"/><path fill="#f0b080" d="M6 7h2v1h-2zM4 8h1v1h-1zM4 9h1v1h-1zM7 9h2v1h-2zM6 10h4v1h-4zM7 11h2v1h-2z"/><path fill="#7a4010" d="M11 7h1v1h-1zM12 8h1v1h-1zM12 9h1v1h-1zM12 10h1v1h-1zM12 11h1v1h-1zM11 12h1v1h-1zM6 13h4v1h-4z"/></symbol>
+    <symbol id="medal-silver" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="#1d4f9a" d="M2 0h2v1h-2zM12 0h2v1h-2zM2 1h2v1h-2zM12 1h2v1h-2zM3 2h2v1h-2zM11 2h2v1h-2zM4 3h2v1h-2zM10 3h2v1h-2zM5 4h2v1h-2zM9 4h2v1h-2z"/><path fill="#5a8cff" d="M4 1h1v1h-1zM11 1h1v1h-1zM5 2h1v1h-1zM10 2h1v1h-1zM6 3h1v1h-1zM9 3h1v1h-1zM7 4h2v1h-2z"/><path fill="#0b0d14" d="M6 5h4v1h-4zM4 6h2v1h-2zM10 6h2v1h-2zM3 7h1v1h-1zM12 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h1v1h-1zM13 9h1v1h-1zM2 10h1v1h-1zM13 10h1v1h-1zM2 11h1v1h-1zM13 11h1v1h-1zM3 12h1v1h-1zM12 12h1v1h-1zM4 13h2v1h-2zM10 13h2v1h-2zM6 14h4v1h-4z"/><path fill="#c6ccd4" d="M6 6h4v1h-4zM4 7h2v1h-2zM8 7h3v1h-3zM3 8h1v1h-1zM5 8h7v1h-7zM3 9h1v1h-1zM5 9h2v1h-2zM9 9h3v1h-3zM3 10h3v1h-3zM10 10h2v1h-2zM3 11h4v1h-4zM9 11h3v1h-3zM4 12h7v1h-7z"/><path fill="#ffffff" d="M6 7h2v1h-2zM4 8h1v1h-1zM4 9h1v1h-1zM7 9h2v1h-2zM6 10h4v1h-4zM7 11h2v1h-2z"/><path fill="#6a7584" d="M11 7h1v1h-1zM12 8h1v1h-1zM12 9h1v1h-1zM12 10h1v1h-1zM12 11h1v1h-1zM11 12h1v1h-1zM6 13h4v1h-4z"/></symbol>
+    <symbol id="medal-gold" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="#8e0f24" d="M2 0h2v1h-2zM12 0h2v1h-2zM2 1h2v1h-2zM12 1h2v1h-2zM3 2h2v1h-2zM11 2h2v1h-2zM4 3h2v1h-2zM10 3h2v1h-2zM5 4h2v1h-2zM9 4h2v1h-2z"/><path fill="#e8203a" d="M4 1h1v1h-1zM11 1h1v1h-1zM5 2h1v1h-1zM10 2h1v1h-1zM6 3h1v1h-1zM9 3h1v1h-1zM7 4h2v1h-2z"/><path fill="#0b0d14" d="M6 5h4v1h-4zM4 6h2v1h-2zM10 6h2v1h-2zM3 7h1v1h-1zM12 7h1v1h-1zM2 8h1v1h-1zM13 8h1v1h-1zM2 9h1v1h-1zM13 9h1v1h-1zM2 10h1v1h-1zM13 10h1v1h-1zM2 11h1v1h-1zM13 11h1v1h-1zM3 12h1v1h-1zM12 12h1v1h-1zM4 13h2v1h-2zM10 13h2v1h-2zM6 14h4v1h-4z"/><path fill="#ffcf3a" d="M6 6h4v1h-4zM4 7h2v1h-2zM8 7h3v1h-3zM3 8h1v1h-1zM5 8h7v1h-7zM3 9h1v1h-1zM5 9h2v1h-2zM9 9h3v1h-3zM3 10h3v1h-3zM10 10h2v1h-2zM3 11h4v1h-4zM9 11h3v1h-3zM4 12h7v1h-7z"/><path fill="#fff3a8" d="M6 7h2v1h-2zM4 8h1v1h-1zM4 9h1v1h-1zM7 9h2v1h-2zM6 10h4v1h-4zM7 11h2v1h-2z"/><path fill="#b07a0a" d="M11 7h1v1h-1zM12 8h1v1h-1zM12 9h1v1h-1zM12 10h1v1h-1zM12 11h1v1h-1zM11 12h1v1h-1zM6 13h4v1h-4z"/></symbol>
+    <symbol id="px-trophy" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M2 1h12v1h-12zM1 2h2v1h-2zM4 2h8v1h-8zM13 2h2v1h-2zM0 3h2v1h-2zM4 3h8v1h-8zM14 3h2v1h-2zM0 4h2v1h-2zM4 4h8v1h-8zM14 4h2v1h-2zM1 5h2v1h-2zM4 5h8v1h-8zM13 5h2v1h-2zM2 6h12v1h-12zM4 7h8v1h-8zM6 8h4v1h-4zM7 9h2v1h-2zM7 10h2v1h-2zM5 11h6v1h-6zM4 12h8v1h-8zM4 13h8v1h-8z"/></symbol>
+    <symbol id="px-cart" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M0 1h3v1h-3zM1 2h2v1h-2zM1 3h12v1h-12zM2 4h2v1h-2zM5 4h1v1h-1zM7 4h1v1h-1zM9 4h1v1h-1zM11 4h2v1h-2zM2 5h11v1h-11zM3 6h9v1h-9zM3 7h8v1h-8zM4 8h1v1h-1zM11 8h1v1h-1zM3 9h3v1h-3zM10 9h3v1h-3zM3 10h3v1h-3zM10 10h3v1h-3z"/></symbol>
+    <symbol id="px-calendar" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M3 1h1v1h-1zM10 1h1v1h-1zM1 2h12v1h-12zM1 3h12v1h-12zM1 4h1v1h-1zM12 4h1v1h-1zM1 5h1v1h-1zM3 5h2v1h-2zM6 5h2v1h-2zM9 5h2v1h-2zM12 5h1v1h-1zM1 6h1v1h-1zM12 6h1v1h-1zM1 7h1v1h-1zM3 7h2v1h-2zM6 7h2v1h-2zM9 7h2v1h-2zM12 7h1v1h-1zM1 8h1v1h-1zM12 8h1v1h-1zM1 9h1v1h-1zM3 9h2v1h-2zM6 9h2v1h-2zM12 9h1v1h-1zM1 10h12v1h-12z"/></symbol>
+    <symbol id="px-podium" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M6 1h4v1h-4zM6 2h1v1h-1zM9 2h1v1h-1zM6 3h1v1h-1zM9 3h1v1h-1zM1 4h4v1h-4zM6 4h1v1h-1zM9 4h1v1h-1zM1 5h1v1h-1zM4 5h1v1h-1zM6 5h1v1h-1zM9 5h1v1h-1zM11 5h4v1h-4zM1 6h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM9 6h1v1h-1zM11 6h1v1h-1zM14 6h1v1h-1zM1 7h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM9 7h1v1h-1zM11 7h1v1h-1zM14 7h1v1h-1zM0 8h16v1h-16z"/></symbol>
+    <symbol id="px-core" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M3 1h1v1h-1zM5 1h1v1h-1zM7 1h1v1h-1zM9 1h1v1h-1zM11 1h1v1h-1zM13 1h1v1h-1zM2 2h12v1h-12zM1 3h2v1h-2zM13 3h2v1h-2zM2 4h1v1h-1zM5 4h6v1h-6zM13 4h1v1h-1zM1 5h2v1h-2zM4 5h2v1h-2zM10 5h2v1h-2zM13 5h2v1h-2zM2 6h1v1h-1zM4 6h1v1h-1zM7 6h2v1h-2zM11 6h1v1h-1zM13 6h1v1h-1zM1 7h2v1h-2zM4 7h1v1h-1zM7 7h2v1h-2zM11 7h1v1h-1zM13 7h2v1h-2zM2 8h1v1h-1zM4 8h2v1h-2zM10 8h2v1h-2zM13 8h1v1h-1zM1 9h2v1h-2zM5 9h6v1h-6zM13 9h2v1h-2zM2 10h1v1h-1zM13 10h1v1h-1zM2 11h12v1h-12zM3 12h1v1h-1zM5 12h1v1h-1zM7 12h1v1h-1zM9 12h1v1h-1zM11 12h1v1h-1zM13 12h1v1h-1z"/></symbol>
+    <symbol id="px-install" viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 0h2v1h-2zM7 1h2v1h-2zM7 2h2v1h-2zM7 3h2v1h-2zM4 4h8v1h-8zM5 5h6v1h-6zM6 6h4v1h-4zM7 7h2v1h-2zM1 9h2v1h-2zM13 9h2v1h-2zM1 10h2v1h-2zM13 10h2v1h-2zM1 11h14v1h-14zM1 12h14v1h-14z"/></symbol>
   </svg>
 
   <a class="skip-link" href="#main">Saltar al contenido</a>
@@ -217,6 +238,9 @@
         <span class="mission-count" aria-label="Misiones completadas"><span aria-hidden="true">◎</span> <output id="hud-missions">0/10</output></span>
       </button>
       <div class="relic-slots" id="hud-relics" role="group" aria-label="Reliquias equipadas"></div>
+      <button type="button" id="btn-arcade" class="btn btn-toggle-icon" aria-haspopup="dialog" title="Sala arcade: trofeos, tienda, récords, desafíos diarios y el Núcleo">
+        <svg class="px-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="#px-trophy"/></svg><span class="btn-toggle-text">Arcade</span>
+      </button>
       <button type="button" id="btn-turbo" class="btn btn-toggle-icon" aria-pressed="false" title="Modo turbo: animaciones al doble de velocidad">
         <svg class="px-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="#px-bolt"/></svg><span class="btn-toggle-text">Turbo</span>
       </button>
@@ -228,6 +252,27 @@
           <span class="mute-icon" aria-hidden="true"><svg class="px-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="#px-speaker"/></svg></span><span class="btn-toggle-text">Silencio</span>
         </button>
         <input type="range" id="volume" class="volume-range" min="0" max="100" step="5" value="80" aria-label="Volumen general">
+        <button type="button" id="btn-sound-panel" class="btn btn-toggle-icon" aria-expanded="false" aria-controls="sound-panel" title="Mezcla: música, efectos y silencio">
+          <svg class="px-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="#px-music"/></svg><span class="btn-toggle-text">Mezcla</span>
+        </button>
+        <div id="sound-panel" class="sound-panel" role="group" aria-label="Mezcla de sonido" hidden>
+        <label class="volume-field" for="vol-music">
+          <span class="volume-label">Música</span>
+          <input type="range" id="vol-music" class="volume-range" data-bus="music" min="0" max="100" step="5" value="100">
+          <output class="volume-value" data-bus-value="music" for="vol-music">100 %</output>
+        </label>
+        <label class="volume-field" for="vol-sfx">
+          <span class="volume-label">Efectos</span>
+          <input type="range" id="vol-sfx" class="volume-range" data-bus="sfx" min="0" max="100" step="5" value="100">
+          <output class="volume-value" data-bus-value="sfx" for="vol-sfx">100 %</output>
+        </label>
+        <div class="seg-row" role="group" aria-label="Estilo de música">
+          <span class="seg-label">Estilo</span>
+          <button type="button" class="seg" data-style="chiptune" aria-pressed="true">Chiptune</button>
+          <button type="button" class="seg" data-style="lounge" aria-pressed="false">Lounge</button>
+        </div>
+        <button type="button" id="panel-mute" class="btn btn-small" aria-pressed="false">Silencio total</button>
+        </div>
       </div>
       <button type="button" id="btn-settings" class="btn btn-toggle-icon" aria-haspopup="dialog" title="Ajustes de sonido y pantalla">
         <svg class="px-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="#px-gear"/></svg><span class="btn-toggle-text">Ajustes</span>
@@ -877,8 +922,25 @@
       <input type="range" id="volume-panel" class="volume-range" min="0" max="100" step="5" value="80">
       <output id="volume-value" class="volume-value" for="volume-panel">80 %</output>
     </label>
+    <div class="mixer-block">
+        <label class="volume-field" for="vol-music-panel">
+          <span class="volume-label">Música</span>
+          <input type="range" id="vol-music-panel" class="volume-range" data-bus="music" min="0" max="100" step="5" value="100">
+          <output class="volume-value" data-bus-value="music" for="vol-music-panel">100 %</output>
+        </label>
+        <label class="volume-field" for="vol-sfx-panel">
+          <span class="volume-label">Efectos</span>
+          <input type="range" id="vol-sfx-panel" class="volume-range" data-bus="sfx" min="0" max="100" step="5" value="100">
+          <output class="volume-value" data-bus-value="sfx" for="vol-sfx-panel">100 %</output>
+        </label>
+        <div class="seg-row" role="group" aria-label="Estilo de música">
+          <span class="seg-label">Estilo</span>
+          <button type="button" class="seg" data-style="chiptune" aria-pressed="true">Chiptune</button>
+          <button type="button" class="seg" data-style="lounge" aria-pressed="false">Lounge</button>
+        </div>
+    </div>
     <div class="settings-grid">
-      <button type="button" id="btn-music" class="btn btn-audio btn-music" aria-pressed="true" aria-label="Música de fondo" title="Música de fondo lounge">
+      <button type="button" id="btn-music" class="btn btn-audio btn-music" aria-pressed="true" aria-label="Música de fondo" title="Música de fondo (chiptune o lounge)">
         <span class="audio-icon" aria-hidden="true"><svg class="px-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="#px-music"/></svg></span>
         <span class="audio-text" aria-hidden="true"><span class="audio-name">Música: </span><span class="audio-state">ON</span></span>
       </button>
@@ -895,6 +957,101 @@
     </div>
     <p class="hint" id="lite-status"></p>
   </dialog>
+
+  <!-- ===================== ARCADE: TROFEOS, TIENDA, RÉCORDS, DIARIOS Y NÚCLEO ===================== -->
+
+  <dialog id="arcade-dialog" class="modal cyber-modal arcade-dialog" aria-labelledby="arcade-title">
+    <div class="modal-head">
+      <h2 id="arcade-title">Sala Arcade</h2>
+      <button type="button" class="btn btn-icon" id="arcade-close" aria-label="Cerrar la sala arcade"><svg class="px-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="#px-close"/></svg></button>
+    </div>
+    <div class="arcade-tabs" role="tablist" aria-label="Secciones de la sala arcade">
+      <button type="button" role="tab" class="side-tab arcade-tab" id="arcade-tab-trophies" aria-controls="arcade-panel-trophies" aria-selected="true" tabindex="0" data-tab="trophies"><svg class="px-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="#px-trophy"/></svg><span>Trofeos</span></button>
+      <button type="button" role="tab" class="side-tab arcade-tab" id="arcade-tab-shop" aria-controls="arcade-panel-shop" aria-selected="false" tabindex="-1" data-tab="shop"><svg class="px-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="#px-cart"/></svg><span>Tienda</span></button>
+      <button type="button" role="tab" class="side-tab arcade-tab" id="arcade-tab-scores" aria-controls="arcade-panel-scores" aria-selected="false" tabindex="-1" data-tab="scores"><svg class="px-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="#px-podium"/></svg><span>Récords</span></button>
+      <button type="button" role="tab" class="side-tab arcade-tab" id="arcade-tab-daily" aria-controls="arcade-panel-daily" aria-selected="false" tabindex="-1" data-tab="daily"><svg class="px-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="#px-calendar"/></svg><span>Diarios</span></button>
+      <button type="button" role="tab" class="side-tab arcade-tab" id="arcade-tab-core" aria-controls="arcade-panel-core" aria-selected="false" tabindex="-1" data-tab="core"><svg class="px-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="#px-core"/></svg><span>Núcleo</span></button>
+    </div>
+    <section id="arcade-panel-trophies" class="arcade-panel" role="tabpanel" aria-labelledby="arcade-tab-trophies">
+      <p class="modal-text" id="trophy-summary"></p>
+      <ul id="trophy-grid" class="trophy-grid"></ul>
+    </section>
+    <section id="arcade-panel-shop" class="arcade-panel" role="tabpanel" aria-labelledby="arcade-tab-shop" hidden>
+      <p class="modal-text">Cosméticos pagados con créditos del juego (nunca dinero real). Lo que compras es tuyo para siempre, también en las próximas escaladas; el precio sale de tu saldo.</p>
+      <h3 class="modal-subtitle">Avión de Crash</h3>
+      <ul id="shop-planes" class="shop-grid"></ul>
+      <h3 class="modal-subtitle">Paleta retro</h3>
+      <ul id="shop-palettes" class="shop-grid"></ul>
+    </section>
+    <section id="arcade-panel-scores" class="arcade-panel" role="tabpanel" aria-labelledby="arcade-tab-scores" hidden>
+      <p class="modal-text">Los 10 mejores premios con las iniciales de quien los consiguió. Una partida destacada (un premio neto de al menos 25 apuestas mínimas del piso y ×5 o más, o vencer al Núcleo) te pide firmar al terminar la jugada.</p>
+      <ol id="hof-list" class="hof-list"></ol>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="hof-export">Exportar récords</button>
+        <button type="button" class="btn btn-danger" id="hof-reset">Restablecer</button>
+      </div>
+      <p class="hint" id="hof-status" role="status"></p>
+    </section>
+    <section id="arcade-panel-daily" class="arcade-panel" role="tabpanel" aria-labelledby="arcade-tab-daily" hidden>
+      <div class="daily-modifier">
+        <span class="cine-kicker" id="daily-date"></span>
+        <strong class="daily-name" id="daily-name"></strong>
+        <span class="modal-text" id="daily-text"></span>
+      </div>
+      <ul id="daily-list" class="daily-list"></ul>
+      <p class="hint">Cada reto da un cofre común; completar los tres, un cofre legendario. Los modificadores cambian el ambiente, nunca las probabilidades: todo sigue siendo provably fair. Los retos cambian a medianoche (hora de tu equipo).</p>
+    </section>
+    <section id="arcade-panel-core" class="arcade-panel" role="tabpanel" aria-labelledby="arcade-tab-core" hidden>
+      <p class="modal-text" id="core-text"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" id="core-enter">Entrar en el Núcleo</button>
+      </div>
+      <h3 class="modal-subtitle">App sin conexión</h3>
+      <p class="modal-text" id="pwa-status"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="pwa-install" hidden><svg class="px-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="#px-install"/></svg> Instalar la app</button>
+      </div>
+    </section>
+  </dialog>
+
+  <dialog id="initials-dialog" class="modal cyber-modal initials-dialog" aria-labelledby="initials-title">
+    <h2 id="initials-title" class="cine-title">¡NUEVO RÉCORD!</h2>
+    <p class="modal-text" id="initials-text"></p>
+    <div class="initials" id="initials" role="group" aria-label="Tus 3 iniciales: flechas arriba y abajo para cambiar la letra, izquierda y derecha para moverte">
+      <div class="initial"><button type="button" class="btn btn-small" data-move="up" data-slot="0" aria-label="Letra 1 siguiente">▲</button><output class="initial-char" data-slot="0">A</output><button type="button" class="btn btn-small" data-move="down" data-slot="0" aria-label="Letra 1 anterior">▼</button></div>
+      <div class="initial"><button type="button" class="btn btn-small" data-move="up" data-slot="1" aria-label="Letra 2 siguiente">▲</button><output class="initial-char" data-slot="1">A</output><button type="button" class="btn btn-small" data-move="down" data-slot="1" aria-label="Letra 2 anterior">▼</button></div>
+      <div class="initial"><button type="button" class="btn btn-small" data-move="up" data-slot="2" aria-label="Letra 3 siguiente">▲</button><output class="initial-char" data-slot="2">A</output><button type="button" class="btn btn-small" data-move="down" data-slot="2" aria-label="Letra 3 anterior">▼</button></div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn" id="initials-skip">Ahora no</button>
+      <button type="button" class="btn btn-primary" id="initials-save">Firmar</button>
+    </div>
+  </dialog>
+
+  <dialog id="boss-dialog" class="cinematic boss-dialog" aria-labelledby="boss-title">
+    <div class="boss-body">
+      <div class="boss-head">
+        <h2 id="boss-title" class="boss-title">Piso 5 · El Núcleo del Servidor</h2>
+        <button type="button" class="btn btn-icon" id="boss-close" aria-label="Salir del Núcleo"><svg class="px-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="#px-close"/></svg></button>
+      </div>
+      <div class="boss-bars">
+        <span class="hud-label">IA Central · fase <span id="boss-phase">1</span>/3</span>
+        <span class="boss-track" role="meter" aria-label="Vida de la IA Central" aria-valuemin="0" aria-valuemax="300" aria-valuenow="300" id="boss-hp-meter"><span class="boss-fill" id="boss-hp"></span></span>
+        <span class="hud-label">Vidas</span>
+        <span class="boss-lives" id="boss-lives" aria-live="polite"></span>
+        <span class="hud-label">Puntos <output id="boss-score">0</output></span>
+      </div>
+      <div class="boss-stage">
+        <canvas id="boss-canvas" class="boss-canvas" width="320" height="240" aria-label="Arena del Núcleo: tu nave abajo, la IA Central arriba"></canvas>
+        <div class="boss-overlay" id="boss-overlay">
+          <p class="modal-text" id="boss-message">Esquiva los patrones de la IA Central. Tu nave dispara sola: muévete con ← → (o A / D), arrastrando el dedo o con el ratón.</p>
+          <button type="button" class="btn btn-primary" id="boss-start">Empezar</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="trophy-toasts" class="trophy-toasts" aria-live="polite"></div>
 
   <!-- ===================== CARRERA, RELIQUIAS, VERIFICADOR Y TERMINAL ===================== -->
   <dialog id="career-dialog" class="modal cyber-modal career-dialog" aria-labelledby="career-title">

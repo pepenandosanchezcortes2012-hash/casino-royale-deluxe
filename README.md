@@ -17,6 +17,7 @@ Es un juego **100 % estático** para GitHub Pages: HTML5 semántico, CSS3 y mód
 - [Economía de la torre](#economía-de-la-torre)
 - [Provably fair: cómo verificar una jugada](#provably-fair-cómo-verificar-una-jugada)
 - [Pixel art y sonido](#pixel-art-y-sonido)
+- [Sala Arcade: trofeos, tienda, récords, diarios y el Núcleo](#sala-arcade-trofeos-tienda-récords-diarios-y-el-núcleo)
 - [Terminal hacker](#terminal-hacker)
 - [Persistencia](#persistencia)
 - [Decisiones de diseño](#decisiones-de-diseño)
@@ -230,10 +231,62 @@ Es una **demostración del protocolo sin servidor**: la semilla oculta vive en t
 **Sonido.**
 
 - **Volumen general y silencio:** el botón del altavoz y la tecla **M** silencian todo; el deslizador de la cabecera regula el volumen. Ambos se guardan.
-- **Ajustes** (botón del engranaje): volumen, música, efectos y opciones de pantalla.
+- **Ajustes** (botón del engranaje): volumen, mezcla de música y efectos, estilo de música y opciones de pantalla.
 - **Capa chiptune** de onda cuadrada para la interfaz: clic, aviso (acción bloqueada o saldo insuficiente), recompensa (encargos y logros) y el arpegio del ascensor al cambiar de piso.
 
 **Modo ligero** (Ajustes → Pantalla): se activa solo en equipos de 4 núcleos o menos, o con 4 GB de memoria o menos. Apaga la lluvia de código, las scanlines y el ambiente animado, y reduce las partículas a menos de la mitad.
+
+## Sala Arcade: trofeos, tienda, récords, diarios y el Núcleo
+
+Todo esto es permanente: sobrevive a cada nueva escalada. Se abre con el botón del trofeo de la cabecera.
+
+**Música chiptune procedural** (`js/engine/chiptune.js`, Web Audio API, sin archivos):
+
+- Cuatro canales como una consola de 8 bits: pulso al 25 %, triángulo, seno y ruido. Cada nota es un oscilador de un solo uso; con la pestaña oculta la música se para y el contexto se suspende.
+- **Torre** (la historia de la escalada): misterio tecnológico, con su tonalidad, modo y tempo en cada piso.
+- **Cyber-Fish:** melodía relajante de ondas seno en pentatónica mayor.
+- **Crash:** un arpegio que acelera (de 118 a 260 BPM) y sube de tono con el multiplicador del avión.
+- **Núcleo:** tema rápido para el combate final.
+- **Panel de mezcla** en la cabecera (botón de la nota): volumen de música, volumen de efectos, estilo (chiptune o el lounge de antes) y silencio total. Nuevos efectos: moneda y alerta de peligro.
+
+**Trofeos** (`js/arcade/trophies.js`): 12 logros con medalla pixel de bronce, plata u oro, barra de progreso y aviso flotante en la esquina. Entre ellos, As del Aire (cobra a más de ×15 en Crash), Biólogo Marino (pesca las 5 especies), Hacker de Grado (supera el piso 4) y Acceso Root (derrota a la IA Central).
+
+**Tienda cosmética** (`js/arcade/shop.js`), pagada con créditos del juego, nunca con dinero real:
+
+| Avión de Crash | Precio | Paleta retro | Precio |
+|---|---:|---|---:|
+| Caza 16 bits | de serie | Modo Clásico | de serie |
+| Avioneta clásica | 5.000 | Cyberpunk Neón | 2.500 |
+| Nave espacial arcade | 50.000 | Monitor Ámbar CRT | 10.000 |
+| Pájaro cibernético | 250.000 | Game Boy | 25.000 |
+
+Las paletas son filtros SVG que cuantizan toda la página: 4 verdes en Game Boy y 6 tonos en el ámbar. El precio sale de tu saldo, así que también te aleja de la meta.
+
+**Salón de la Fama** (`js/arcade/hall-of-fame.js`): los 10 mejores premios con 3 iniciales, a lo recreativa.
+
+- Una partida destacada (premio neto de 25 apuestas mínimas del piso y ×5 o más, o vencer al Núcleo) te pide firmar al terminar la jugada, nunca a mitad.
+- Se puede exportar a JSON o restablecer, con doble pulsación.
+
+**Desafíos diarios** (`js/arcade/daily.js`):
+
+- Cada día, según la fecha de tu equipo, trae un modificador (Día de Turbulencias, Marea Alta, Cero Comodines, Hora Punta, Suelo de la Suerte) y 3 retos jugables en tu piso.
+- Cada reto da un cofre común; los tres, un cofre legendario.
+- Los modificadores cambian el ambiente (el avión vibra, el acuario se llena de burbujas) pero **nunca las probabilidades**: todo sigue siendo provably fair.
+
+**Piso 5 secreto: el Núcleo del Servidor** (`js/arcade/boss-battle.js` + `js/ui/boss-ui.js`):
+
+- Se abre tras la victoria, en la quinta puerta del selector o desde la Sala Arcade.
+- Es un combate de reflejos contra la IA Central en 3 fases: abanicos apuntados, espiral giratoria y columnas láser avisadas.
+- Tu nave dispara sola; tú la mueves con ← → / A D, el ratón o el dedo, y tienes 3 vidas.
+- No hay apuesta. Ganar da el trofeo, un cofre legendario (dos la primera vez) y un récord.
+- La arena son 320 × 240 píxeles reales ampliados sin suavizado. El bucle se detiene al cerrar o con la pestaña oculta.
+
+**App instalable y sin conexión** (`manifest.json`, `service-worker.js`, `js/arcade/pwa.js`):
+
+- Iconos pixel de 192 y 512 px (y uno «maskable»).
+- El service worker guarda el juego entero (90 archivos) y lo sirve desde la caché, así que funciona sin internet.
+- `npm run pwa` regenera los iconos y la lista con su versión de caché (una prueba comprueba que están al día).
+- Cuando se descarga una versión nueva, se avisa para recargar al terminar la ronda.
 
 ## Terminal hacker
 
@@ -260,6 +313,8 @@ Todo se guarda en `localStorage` con el prefijo `crd.climb.`:
 - `crd.climb.v1`: estado de la escalada. Incluye el piso actual y el desbloqueado, el récord, el **enfriamiento de la limosna** (hora de la última), los encargos de cada piso, los logros, el título, las estadísticas, la bitácora y el Dueño.
 - `crd.climb.wallet.v1`: el **saldo**, con el escrow de cada mesa.
 - `crd.climb.hall.v1`: salón de la fama (escaladas, victorias, mejor tiempo, mayor fortuna y Dueños).
+- `crd.arcade.*`: trofeos, tienda, Salón de la Fama arcade, desafíos del día, iniciales y marcas del Núcleo. Nunca se borran al empezar otra escalada.
+- `crd.volume.music.v1`, `crd.volume.sfx.v1` y `crd.bgm.style.v1`: mezcla y estilo de la música.
 - Carrera, reliquias, semillas (las semillas se guardan al instante; el historial, con un pequeño retardo), ajustes, mesas a medias y preferencias de cada mesa.
 
 **Empezar otra escalada** (desde el Expediente o el epílogo) borra la escalada, el monedero y las jugadas a medias. Conserva la carrera, las reliquias, las semillas y el salón de la fama. Las partidas de las versiones anteriores (`crd.*` y `crd.cyber.*`) se quedan donde estaban, sin mezclarse.
@@ -295,7 +350,7 @@ Todo se guarda en `localStorage` con el prefijo `crd.climb.`:
 - **Repintados agrupados**: el monedero avisa a la interfaz una vez por fotograma (evento `update`), aunque una ráfaga de balas genere varios cambios. La telemetría pinta las apuestas en vivo por lotes cada 200 ms y el historial verificable se guarda con retardo.
 - **Lluvia Matrix en un Web Worker** con OffscreenCanvas, a 15 fps y media resolución. Toma el color del tema del piso.
 - **Animaciones solo en el compositor**: las animaciones infinitas (ambiente de cada piso incluido) mueven solo `opacity` y `transform`, y una prueba lo vigila.
-- **Carga**: 58 módulos precargados en paralelo con `modulepreload` (lista generada con `npm run preload` y comprobada por las pruebas).
+- **Carga**: 67 módulos precargados en paralelo con `modulepreload` (lista generada con `npm run preload` y comprobada por las pruebas).
 
 ## Accesibilidad y móvil
 
@@ -309,11 +364,12 @@ Los módulos ES no se cargan desde `file://`, así que hay que servir la carpeta
 
 ```bash
 python -m http.server 8080      # → http://localhost:8080
-npm test                        # 97 pruebas (Node 20+, sin dependencias)
+npm test                        # 107 pruebas (Node 20+, sin dependencias)
 npm run simulate                # calibración de la escalada (150 escaladas por estilo)
 npm run slots                   # RTP de las slots con el motor real (--clover para el Trébol)
 npm run preload                 # regenera la precarga de módulos de index.html
 npm run sprites                 # regenera el sprite SVG pixel art de index.html
+npm run pwa                     # regenera los iconos de la app y la caché del service worker
 ```
 
 Las pruebas cubren:
@@ -336,7 +392,9 @@ css/main.css · themes.css     Variables, layout, pestañas, arranque y los 5 te
 css/cyber.css · arcade.css    HUD cyber, telemetría, bóveda, verificador y mesas arcade
 css/floors.css                Ambiente de cada piso, selector, meta, limosna, panel lateral, bitácora, tarjetas, epílogo
 css/fish.css                  Cyber-Fish Hunter
+css/meta.css                  Sala Arcade, panel de mezcla, firma de iniciales, Núcleo y paletas retro
 css/pixel.css                 Dirección visual pixel art (se carga la última) y modo ligero
+manifest.json · service-worker.js · icons/   App instalable y sin conexión (tools/build-pwa.mjs)
 fonts/                        Press Start 2P, Silkscreen y VT323 (WOFF con sus licencias OFL)
 css/tables.css · components.css · hacker_terminal.css · animations.css
 js/app.js                     Arranque, router de pestañas con candados, abundancia y ajustes
@@ -346,9 +404,11 @@ js/provably_fair.js · verify.js   SHA-256/HMAC, semillas, flujo, historial y ve
 js/progression.js · relics.js     Carrera (niveles, rangos, misiones por piso) y reliquias
 js/terminal.js · settings.js · storage.js · audio.js · particles.js
 js/engine/                    RNG criptográfico, Store, monedero con escrow y música lounge
-js/ui/                        HUD, escalada, ajustes, HUD cyber, telemetría, terminal, bóveda, lluvia (worker) y motor + sprites pixel art
+js/arcade/                    Trofeos, tienda, Salón de la Fama, desafíos diarios, lógica del jefe y gestor PWA
+js/engine/chiptune.js         Banda sonora chiptune 8 bits reactiva
+js/ui/                        HUD, escalada, ajustes, HUD cyber, telemetría, terminal, bóveda, Sala Arcade, Núcleo, lluvia (worker) y motor + sprites pixel art
 js/games/*-math.js            Matemáticas puras (incluida fish-math.js)
 js/games/*.js                 Las 11 mesas
-tests/                        97 pruebas con node:test
-tools/                        Simulación de la escalada, medición de las slots, precarga y sprite pixel art
+tests/                        107 pruebas con node:test
+tools/                        Simulación de la escalada, medición de las slots, precarga, sprite pixel art y PWA
 ```

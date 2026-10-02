@@ -95,14 +95,19 @@ test('Música: el contrabajo se mueve entre C2 y B2, con quinta y aproximaciones
   }
 });
 
-test('Mezcla: volumen general (0–1, por defecto 0,8) y silencio guardados y saneados', () => {
+test('Mezcla: volumen general, de música y de efectos (0–1), silencio y estilo guardados y saneados', () => {
   const store = memoryStore();
-  assert.deepEqual(loadMix(store), { volume: DEFAULT_VOLUME, muted: false });
+  assert.deepEqual(loadMix(store), { volume: DEFAULT_VOLUME, music: 1, sfx: 1, muted: false, style: 'chiptune' });
   store.write(MIX_KEYS.volume, 3);
   store.write(MIX_KEYS.muted, true);
-  assert.deepEqual(loadMix(store), { volume: 1, muted: true });
+  store.write(MIX_KEYS.music, 0.4);
+  store.write(MIX_KEYS.sfx, -2);
+  store.write(MIX_KEYS.style, 'lounge');
+  assert.deepEqual(loadMix(store), { volume: 1, music: 0.4, sfx: 0, muted: true, style: 'lounge' });
   store.write(MIX_KEYS.volume, 'nada');
+  store.write(MIX_KEYS.style, 'dubstep');
   assert.equal(loadMix(store).volume, DEFAULT_VOLUME);
+  assert.equal(loadMix(store).style, 'chiptune');
 });
 
 

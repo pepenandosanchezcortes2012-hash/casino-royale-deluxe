@@ -1,6 +1,7 @@
-// Controles de sonido y pantalla: silencio rápido (botón y tecla M) y volumen general en la
-// cabecera, y el diálogo de Ajustes (volumen, música, efectos, modo ligero, lluvia de código y
-// scanlines). La música y los efectos los pinta hud.js.
+// Controles de sonido y pantalla: silencio rápido (botón y tecla M), volumen general y el panel de
+// mezcla de la cabecera (volumen de música, volumen de efectos, estilo de música y silencio), y el
+// diálogo de Ajustes (lo mismo más modo ligero, lluvia de código y scanlines). Los interruptores
+// de música y efectos los pinta hud.js.
 
 import { audio } from '../audio.js';
 import { settings } from '../settings.js';
@@ -25,6 +26,12 @@ class SettingsUi {
       rain: $('btn-rain'),
       crt: $('btn-crt'),
       liteStatus: $('lite-status'),
+      panelButton: $('btn-sound-panel'),
+      panel: $('sound-panel'),
+      panelMute: $('panel-mute'),
+      busRanges: [...document.querySelectorAll('input[data-bus]')],
+      busValues: [...document.querySelectorAll('[data-bus-value]')],
+      styles: [...document.querySelectorAll('button[data-style]')],
     };
     const d = this.#dom;
     d.mute.addEventListener('click', () => {
@@ -39,6 +46,43 @@ class SettingsUi {
       });
       range.addEventListener('change', () => audio.click());
     }
+    for (const range of d.busRanges) {
+      range.addEventListener('input', () => {
+        audio.unlock();
+        audio.setBusVolume(range.dataset.bus, Number(range.value) / 100);
+      });
+      range.addEventListener('change', () => (range.dataset.bus === 'sfx' ? audio.coin() : audio.click()));
+    }
+    for (const button of d.styles) {
+      button.addEventListener('click', () => {
+        audio.unlock();
+        audio.setStyle(button.dataset.style);
+        audio.click();
+      });
+    }
+    d.panelMute.addEventListener('click', () => {
+      audio.unlock();
+      audio.toggleMute();
+    });
+    // Panel de mezcla: se abre bajo su botón y se cierra al pulsar fuera o con Escape.
+    const closePanel = () => {
+      if (d.panel.hidden) return;
+      d.panel.hidden = true;
+      d.panelButton.setAttribute('aria-expanded', 'false');
+    };
+    d.panelButton.addEventListener('click', () => {
+      audio.click();
+      const open = d.panel.hidden;
+      d.panel.hidden = !open;
+      d.panelButton.setAttribute('aria-expanded', String(open));
+      if (open) this.#render();
+    });
+    document.addEventListener('pointerdown', (event) => {
+      if (!d.panel.hidden && !d.panel.contains(event.target) && !d.panelButton.contains(event.target)) closePanel();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closePanel();
+    });
     d.open.addEventListener('click', () => {
       audio.click();
       this.#render();
@@ -96,6 +140,16 @@ class SettingsUi {
       range.classList.toggle('is-muted', muted);
     }
     d.volumeValue.textContent = muted ? `${percent(audio.volume)} · silencio` : percent(audio.volume);
+    const bus = { music: audio.musicVolume, sfx: audio.sfxVolume };
+    for (const range of d.busRanges) {
+      const value = Math.round(bus[range.dataset.bus] * 100);
+      if (document.activeElement !== range) range.value = String(value);
+      range.setAttribute('aria-valuetext', `${value} %`);
+    }
+    for (const output of d.busValues) output.textContent = percent(bus[output.dataset.busValue]);
+    for (const button of d.styles) button.setAttribute('aria-pressed', String(audio.style === button.dataset.style));
+    d.panelMute.setAttribute('aria-pressed', String(muted));
+    d.panelMute.textContent = muted ? 'Activar sonido' : 'Silencio total';
     this.#toggle(d.lite, settings.lite);
     this.#toggle(d.rain, settings.matrix);
     this.#toggle(d.crt, settings.scanlines);

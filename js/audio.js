@@ -1,15 +1,18 @@
 // Motor de audio procedural con Web Audio API: ningún archivo de audio externo y ninguna voz.
 // Dos buses independientes: efectos de juego (SFX, con capa chiptune para la interfaz) y música
-// de fondo lounge/jazz (BGM), cada uno con su interruptor, más un volumen general y un silencio
-// rápido.
+// de fondo (BGM), cada uno con su interruptor y su volumen, más un volumen general y un silencio
+// rápido. La música es chiptune 8 bits reactiva (js/engine/chiptune.js: torre, pesca, Crash y
+// jefe) o, a elección, el lounge/jazz de js/engine/music.js.
 // El contexto se crea y se reanuda tras el primer gesto del usuario (política de autoplay).
 
 import { storage } from './storage.js';
 import { randomFloat, randomBetween } from './engine/rng.js';
 import { LoungeBgm } from './engine/music.js';
+import { ChiptuneBgm } from './engine/chiptune.js';
 
 export const SOUND_KEYS = Object.freeze({ music: 'crd.bgm.v1', sfx: 'crd.sfx.v1' });
-export const MIX_KEYS = Object.freeze({ volume: 'crd.volume.v1', muted: 'crd.mute.v1' });
+export const MIX_KEYS = Object.freeze({ volume: 'crd.volume.v1', muted: 'crd.mute.v1', music: 'crd.volume.music.v1', sfx: 'crd.volume.sfx.v1', style: 'crd.bgm.style.v1' });
+export const MUSIC_STYLES = Object.freeze(['chiptune', 'lounge']);
 export const DEFAULT_VOLUME = 0.8;
 const LEGACY_KEYS = Object.freeze(['crd.audio.v2', 'crd.audio.v1']);
 // Niveles de mezcla: la música queda de fondo, por debajo de fichas y cartas.
@@ -45,11 +48,21 @@ export function saveSoundPref(store, kind, on) {
   store.write(SOUND_KEYS[kind], on ? 'on' : 'off');
 }
 
-// Volumen general (0–1) y silencio rápido.
+const unit = (value, fallback) => {
+  const raw = Number(value);
+  return Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : fallback;
+};
+
+// Volumen general (0–1), volúmenes de música y efectos (0–1), silencio rápido y estilo de música.
 export function loadMix(store = storage) {
-  const raw = Number(store.read(MIX_KEYS.volume, DEFAULT_VOLUME));
-  const volume = Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : DEFAULT_VOLUME;
-  return { volume, muted: store.read(MIX_KEYS.muted, false) === true };
+  const style = store.read(MIX_KEYS.style, 'chiptune');
+  return {
+    volume: unit(store.read(MIX_KEYS.volume, DEFAULT_VOLUME), DEFAULT_VOLUME),
+    music: unit(store.read(MIX_KEYS.music, 1), 1),
+    sfx: unit(store.read(MIX_KEYS.sfx, 1), 1),
+    muted: store.read(MIX_KEYS.muted, false) === true,
+    style: MUSIC_STYLES.includes(style) ? style : 'chiptune',
+  };
 }
 
 class AudioEngine extends EventTarget {
@@ -61,6 +74,8 @@ class AudioEngine extends EventTarget {
   #bgm = null;
   #hidden = false;
   #mood = 'alley';
+  #scene = 'tower';
+  #intensity = 1;
   #tension = 0.12;
   #heartbeat = 0;
   #heartbeatStop = 0;
@@ -88,6 +103,50 @@ class AudioEngine extends EventTarget {
 
   get muted() {
     return this.#mix.muted;
+  }
+
+  get musicVolume() {
+    return this.#mix.music;
+  }
+
+  get sfxVolume() {
+    return this.#mix.sfx;
+  }
+
+  get style() {
+    return this.#mix.style;
+  }
+
+  // Volumen de un bus ('music' o 'sfx'), 0–1, independiente del general.
+  setBusVolume(kind, value) {
+    if (kind !== 'music' && kind !== 'sfx') return;
+    const volume = unit(value, this.#mix[kind]);
+    if (volume === this.#mix[kind]) return;
+    this.#mix = { ...this.#mix, [kind]: volume };
+    storage.write(MIX_KEYS[kind], volume);
+    this.#applyLevels();
+    this.dispatchEvent(new Event('change'));
+  }
+
+  // Estilo de la música de fondo: 'chiptune' (por defecto) o 'lounge'.
+  setStyle(style) {
+    if (!MUSIC_STYLES.includes(style) || style === this.#mix.style) return;
+    this.#mix = { ...this.#mix, style };
+    storage.write(MIX_KEYS.style, style);
+    if (this.#ctx) {
+      this.#bgm?.stop();
+      this.#bgm = this.#makeBgm();
+      this.#syncMusic();
+    }
+    this.dispatchEvent(new Event('change'));
+  }
+
+  #makeBgm() {
+    const bgm = this.#mix.style === 'lounge' ? new LoungeBgm(this.#ctx, this.#musicBus, this.#mood) : new ChiptuneBgm(this.#ctx, this.#musicBus, this.#mood);
+    bgm.setTension(this.#tension);
+    bgm.setScene?.(this.#scene);
+    bgm.setIntensity?.(this.#intensity);
+    return bgm;
   }
 
   setVolume(value) {
@@ -178,8 +237,7 @@ class AudioEngine extends EventTarget {
       const data = this.#noise.getChannelData(0);
       for (let i = 0; i < length; i++) data[i] = randomFloat() * 2 - 1;
 
-      this.#bgm = new LoungeBgm(ctx, this.#musicBus, this.#mood);
-      this.#bgm.setTension(this.#tension);
+      this.#bgm = this.#makeBgm();
     }
     if (this.#ctx.state === 'suspended' && !this.#hidden) {
       this.#ctx.resume().then(() => this.#syncMusic(), () => {});
@@ -208,9 +266,9 @@ class AudioEngine extends EventTarget {
       else param.setTargetAtTime(value, now, 0.04);
     };
     set(this.#master.gain, this.level);
-    set(this.#sfx.gain, this.#prefs.sfx ? SFX_LEVEL : 0);
+    set(this.#sfx.gain, this.#prefs.sfx ? SFX_LEVEL * this.#mix.sfx : 0);
     // El encendido y apagado de la música lo hace el propio motor con sus fundidos.
-    set(this.#musicBus.gain, MUSIC_LEVEL);
+    set(this.#musicBus.gain, Math.max(SILENCE, MUSIC_LEVEL * this.#mix.music));
   }
 
   #syncMusic() {
@@ -443,6 +501,21 @@ class AudioEngine extends EventTarget {
     this.#tone(t + 0.022, { type: 'square', freq: 2093, attack: 0.001, peak: 0.025, decay: 0.02 });
   }
 
+  // Moneda: el clásico «cling» de dos notas de onda cuadrada (premios y compras).
+  coin(delay = 0) {
+    if (!this.#ready()) return;
+    const t = this.#time(delay);
+    this.#tone(t, { type: 'square', freq: 987.8, attack: 0.001, peak: 0.05, decay: 0.06 });
+    this.#tone(t + 0.07, { type: 'square', freq: 1318.5, attack: 0.001, peak: 0.05, decay: 0.32 });
+  }
+
+  // Alerta de peligro: sirena de tres pulsos que suben y bajan.
+  danger() {
+    if (!this.#ready()) return;
+    const t = this.#time();
+    for (let i = 0; i < 3; i++) this.#tone(t + i * 0.18, { type: 'square', freq: 660, freqEnd: 990, attack: 0.004, peak: 0.05, decay: 0.15 });
+  }
+
   // Aviso: dos notas descendentes (acción bloqueada, saldo insuficiente…).
   alert() {
     if (!this.#ready()) return;
@@ -482,6 +555,23 @@ class AudioEngine extends EventTarget {
   setMood(mood) {
     this.#mood = mood;
     this.#bgm?.setMood(mood);
+  }
+
+  get scene() {
+    return this.#scene;
+  }
+
+  // Escena musical (chiptune): 'tower', 'fish', 'crash' o 'boss'.
+  setScene(scene) {
+    this.#scene = scene;
+    if (scene !== 'crash') this.#intensity = 1;
+    this.#bgm?.setScene?.(scene);
+  }
+
+  // Multiplicador del avión de Crash: el arpegio acelera y sube de tono con él.
+  setIntensity(multiplier) {
+    this.#intensity = multiplier;
+    this.#bgm?.setIntensity?.(multiplier);
   }
 
   // Con tensión alta la música se aparta para que se oigan el latido y el desenlace.

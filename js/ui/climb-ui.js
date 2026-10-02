@@ -205,7 +205,21 @@ class ClimbUi {
       button.addEventListener('click', () => this.travel(floor.id));
       return button;
     });
-    this.#dom.selector.replaceChildren(...buttons);
+    // Piso 5 secreto: el Núcleo del Servidor, que se abre tras la victoria (js/ui/boss-ui.js).
+    const secret = el('button', 'floor-door floor-door-secret is-locked');
+    secret.type = 'button';
+    secret.id = 'door-core';
+    const lock = el('span', 'floor-door-lock');
+    lock.append(pixelIcon('px-lock'));
+    secret.append(el('span', 'floor-door-num', '5'), lock);
+    secret.addEventListener('click', () => {
+      if (climb.status === 'victory') document.dispatchEvent(new CustomEvent('core:open'));
+      else {
+        audio.alert();
+        hud.toast('Piso 5 secreto: reúne 10.000.000 de créditos para abrir el Núcleo del Servidor', 'warn', 4200);
+      }
+    });
+    this.#dom.selector.replaceChildren(...buttons, secret);
   }
 
   #bindSide() {
@@ -800,6 +814,14 @@ class ClimbUi {
       else door.removeAttribute('aria-current');
       door.setAttribute('aria-label', `Piso ${floor.level}, ${floor.name}: ${current ? 'estás aquí' : open ? 'viajar' : `tarjeta de acceso a los ${formatChips(floor.unlockAt)} créditos`}`);
       door.title = `${floor.name} · ${range(floor)}`;
+    }
+    const core = this.#dom.selector.querySelector('#door-core');
+    if (core) {
+      const open = climb.status === 'victory';
+      core.classList.toggle('is-locked', !open);
+      core.classList.toggle('is-open', open);
+      core.setAttribute('aria-label', open ? 'Piso 5 secreto: el Núcleo del Servidor. Desafiar a la IA Central' : 'Piso 5 secreto: bloqueado hasta reunir 10.000.000 de créditos');
+      core.title = open ? 'El Núcleo del Servidor · combate contra la IA Central' : 'Piso 5 secreto · ???';
     }
   }
 

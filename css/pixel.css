@@ -689,6 +689,47 @@ html[data-app] .settings-dialog :is(.audio-text, .btn-toggle-text) {
   }
 }
 
+/* ---------- Sala Arcade, récords y Núcleo ---------- */
+
+html[data-app] :is(.trophy-name, .shop-name, .daily-text, .hof-initials, .hof-score, .hof-rank, .trophy-toast .trophy-name) {
+  font-family: var(--font-arcade);
+  font-size-adjust: none;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: 0;
+}
+
+html[data-app] :is(.trophy-count, .trophy-toast-kicker, .daily-date) {
+  font-family: var(--font-arcade);
+  font-size-adjust: none;
+  font-size: 8px;
+  line-height: 16px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+html[data-app] :is(.daily-name, .boss-title, #boss-score) {
+  font-family: var(--font-pixel);
+  font-size-adjust: none;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: 0;
+}
+
+html[data-app] .initial-char {
+  font-family: var(--font-pixel);
+  font-size-adjust: none;
+  font-size: 32px;
+  line-height: 40px;
+}
+
+@media (max-width: 720px) {
+  html[data-app] .boss-title {
+    font-size: 8px;
+    line-height: 16px;
+  }
+}
+
 /* ---------- Modo ligero: ambiente estático y menos capas animadas ---------- */
 
 html.is-lite .floor-scenery {

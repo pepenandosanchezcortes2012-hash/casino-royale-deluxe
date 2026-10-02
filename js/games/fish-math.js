@@ -95,8 +95,8 @@ export class Volley {
     this.returned += capture.payout;
     this.captures += 1;
     if (capture.multiplier >= BIG_CATCH) this.bigCatches += 1;
-    if (capture.species === 'shark') this.#tags.add('fish-shark');
-    if (capture.species === 'kraken') this.#tags.add('fish-kraken');
+    // Etiqueta por especie (fish-neon, fish-jelly, fish-manta, fish-shark, fish-kraken).
+    this.#tags.add(`fish-${capture.species}`);
     if (!this.#best || capture.multiplier > this.#best.multiplier) this.#best = capture;
   }
 

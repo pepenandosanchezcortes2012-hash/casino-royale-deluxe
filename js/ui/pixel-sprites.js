@@ -1063,8 +1063,287 @@ const CHEST = {
   ].map((row) => row.replace(/ /g, 'w')), { k: P.ink, W: '#c07a3a', w: '#8a4f1e', d: '#5a3010', y: P.gold, Y: P.goldHi }),
 };
 
+// ---------- Arcade: medallas, iconos del menú arcade y del Núcleo ----------
+
+const MEDAL_ROWS = [
+  '..rr........rr..',
+  '..rrR......Rrr..',
+  '...rrR....Rrr...',
+  '....rrR..Rrr....',
+  '.....rrRRrr.....',
+  '......kkkk......',
+  '....kkMMMMkk....',
+  '...kMMHHMMMmk...',
+  '..kMHMMMMMMMmk..',
+  '..kMHMMSSMMMmk..',
+  '..kMMMSSSSMMmk..',
+  '..kMMMMSSMMMmk..',
+  '...kMMMMMMMmk...',
+  '....kkmmmmkk....',
+  '......kkkk......',
+  '................',
+];
+
+export const MEDAL_TIERS = Object.freeze({
+  bronze: { r: '#7a1f2a', R: '#c84a5a', M: '#c87a3a', H: '#f0b080', m: '#7a4010', S: '#f0b080' },
+  silver: { r: '#1d4f9a', R: '#5a8cff', M: '#c6ccd4', H: '#ffffff', m: '#6a7584', S: '#ffffff' },
+  gold: { r: '#8e0f24', R: '#e8203a', M: P.gold, H: P.goldHi, m: P.goldLo, S: P.goldHi },
+});
+
+const MEDALS = Object.fromEntries(Object.entries(MEDAL_TIERS).map(([tier, colors]) => [`medal-${tier}`, sprite(MEDAL_ROWS, { k: P.ink, ...colors })]));
+
+const ARCADE_ICONS = {
+  'px-trophy': mask([
+    '................',
+    '..############..',
+    '.##.########.##.',
+    '##..########..##',
+    '##..########..##',
+    '.##.########.##.',
+    '..############..',
+    '....########....',
+    '......####......',
+    '.......##.......',
+    '.......##.......',
+    '.....######.....',
+    '....########....',
+    '....########....',
+    '................',
+    '................',
+  ]),
+  'px-cart': mask([
+    '................',
+    '###.............',
+    '.##.............',
+    '.############...',
+    '..##.#.#.#.##...',
+    '..###########...',
+    '...#########....',
+    '...########.....',
+    '....#......#....',
+    '...###....###...',
+    '...###....###...',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+  ]),
+  'px-calendar': mask([
+    '................',
+    '...#......#.....',
+    '.############...',
+    '.############...',
+    '.#..........#...',
+    '.#.##.##.##.#...',
+    '.#..........#...',
+    '.#.##.##.##.#...',
+    '.#..........#...',
+    '.#.##.##....#...',
+    '.############...',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+  ]),
+  'px-podium': mask([
+    '................',
+    '......####......',
+    '......#..#......',
+    '......#..#......',
+    '.####.#..#......',
+    '.#..#.#..#.####.',
+    '.#..#.#..#.#..#.',
+    '.#..#.#..#.#..#.',
+    '################',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+  ]),
+  'px-core': mask([
+    '................',
+    '...#.#.#.#.#.#..',
+    '..############..',
+    '.##..........##.',
+    '..#..######..#..',
+    '.##.##....##.##.',
+    '..#.#..##..#.#..',
+    '.##.#..##..#.##.',
+    '..#.##....##.#..',
+    '.##..######..##.',
+    '..#..........#..',
+    '..############..',
+    '...#.#.#.#.#.#..',
+    '................',
+    '................',
+    '................',
+  ]),
+  'px-install': mask([
+    '.......##.......',
+    '.......##.......',
+    '.......##.......',
+    '.......##.......',
+    '....########....',
+    '.....######.....',
+    '......####......',
+    '.......##.......',
+    '................',
+    '.##..........##.',
+    '.##..........##.',
+    '.##############.',
+    '.##############.',
+    '................',
+    '................',
+    '................',
+  ]),
+};
+
+// ---------- Skins del avión de Crash (mirando a la derecha, 2 fotogramas) ----------
+
+const PROP_ROWS = [
+  '.kk...................',
+  '.kRk..................',
+  '.kRRk.......kkkk......',
+  '.kRRRk.....kcCck......',
+  'kkRRRRkkkkkkkkkkkkkk.P',
+  'kRRRRRRRRRRRRRRRRRRRkP',
+  'kwwwwwwwwwwwwwwwwwwwkk',
+  'kRRRRRRRRRRRRRRRRRRRkP',
+  '.kkkkkkkkWWWWWWkkkkk.P',
+  '........kWWWWWWk......',
+  '........kkkkkkkk......',
+];
+const PROP_COLORS = { k: P.ink, R: P.red, w: '#fff3a8', c: P.cyanLo, C: P.cyanHi, W: '#c9a23a', p: P.steel };
+
+const SHIP_ROWS = [
+  '........kk..........',
+  '.......kMMk.........',
+  '......kMMMMkkk......',
+  'kkk..kMMMMMMMMkk....',
+  'kFkkkMMMMMMMcCCMkk..',
+  'kFFWWWWWWWWWWWWWWWWk',
+  'kFkkkMMMMMMMMMMMkk..',
+  'kkk..kMMMMMMMMkk....',
+  '......kMMMMkkk......',
+  '.......kMMk.........',
+  '........kk..........',
+];
+
+const BIRD_FRAMES = [
+  [
+    '.....kk................',
+    '....kCCk...............',
+    '....kCcCk..............',
+    '.....kCcCk.............',
+    '......kCcCk.....kkk....',
+    'kk.....kCcCk...kBBBk...',
+    'kTk...kkkBBBkkkBBeBBk..',
+    'kTTkkkBBBBBBBBBBBBBBkYk',
+    'kTTTTBBBBBBBBBBBBBBBkYYk',
+    '.kkkkkBBBBBBBBBBBBkkk..',
+    '......kkkkkkkkkkkk.....',
+    '.......................',
+    '.......................',
+    '.......................',
+    '.......................',
+  ],
+  [
+    '.......................',
+    '.......................',
+    '.......................',
+    '.......................',
+    '................kkk....',
+    'kk.............kBBBk...',
+    'kTk...kkkkkkkkkBBeBBk..',
+    'kTTkkkBBBBBBBBBBBBBBkYk',
+    'kTTTTBBBBBBBBBBBBBBBkYYk',
+    '.kkkkkBBBBBBBBBBBBkkk..',
+    '......kkkCcCCCCCkk.....',
+    '........kCcCCCCk.......',
+    '.........kCcCCk........',
+    '..........kCck.........',
+    '...........kk..........',
+  ],
+];
+const BIRD_COLORS = { k: P.ink, B: '#2a9dff', T: P.magenta, C: P.cyanHi, c: P.cyan, e: P.white, Y: P.gold };
+
+export const PLANE_SKINS = Object.freeze(['fighter', 'prop', 'ship', 'cyberbird']);
+
+// Fotogramas del avión de Crash según la skin equipada: [{ grid, palette }].
+export function planeFrames(skin = 'fighter') {
+  if (skin === 'prop') {
+    return [0, 1].map((f) => sprite(PROP_ROWS.map((row, y) => row.replace('P', f === 0 || y === 5 || y === 7 ? 'p' : '.')), PROP_COLORS));
+  }
+  if (skin === 'ship') {
+    return ['#fff3a8', '#ff8a1e'].map((flame) => sprite(SHIP_ROWS, { k: P.ink, M: '#b45cff', W: P.magenta, c: P.cyanLo, C: P.cyanHi, F: flame }));
+  }
+  if (skin === 'cyberbird') return BIRD_FRAMES.map((rows) => sprite(rows, BIRD_COLORS));
+  return fighterFrames();
+}
+
+// ---------- Núcleo del Servidor: la IA Central y la nave del jugador ----------
+
+const BOSS_EYES = ['#3fd8ff', '#ff3fd0', '#ff2b4a'];
+
+// IA Central en la fase 1–3 (el ojo cambia de color) y 2 fotogramas de latido.
+export function bossSprite(phase = 1, frame = 0) {
+  const g = new PixelGrid(56, 40);
+  g.poly([[10, 0], [46, 0], [56, 12], [56, 28], [46, 40], [10, 40], [0, 28], [0, 12]], 1);
+  g.bevel(1, 2, 3);
+  g.rect(12, 8, 32, 24, 4);
+  g.ellipse(28, 20, 10 - frame, 9 - frame, 5);
+  g.ellipse(28, 20, 4, 4, 6);
+  g.rect(24, 16, 2, 2, 7);
+  g.line(4, 20, 12, 20, 8).line(44, 20, 52, 20, 8).line(28, 2, 28, 8, 8).line(28, 32, 28, 38, 8);
+  g.rect(2, 16, 4, 8, 3).rect(50, 16, 4, 8, 3);
+  if (phase >= 2) g.rect(14, 10, 4, 2, 5).rect(38, 10, 4, 2, 5);
+  if (phase >= 3) g.line(12, 31, 22, 25, 6).line(44, 9, 36, 14, 6);
+  g.outline(9);
+  const eye = BOSS_EYES[Math.min(2, Math.max(0, phase - 1))];
+  return { grid: g, palette: [null, P.steel, P.steelHi, P.steelLo, '#0b0d14', eye, '#05060a', P.white, eye, '#000000'] };
+}
+
+export function playerShip() {
+  return sprite([
+    '......k......',
+    '.....kWk.....',
+    '.....kck.....',
+    '....kcWck....',
+    '...kccWcck...',
+    '..kcccWccck..',
+    '.kccckkkccck.',
+    'kcck.kyk.kcck',
+    'kkk..kyk..kkk',
+    '......y......',
+  ], { k: P.ink, W: P.cyanHi, c: P.cyan, y: P.gold });
+}
+
+// Icono de la app (24 × 24): la torre del Sindicato en verde neón con una moneda dorada.
+export function appIcon() {
+  const tower = ICONS['px-tower'].grid;
+  const coin = COLOR_ICONS['px-coin'];
+  const g = new PixelGrid(24, 24);
+  g.rect(0, 0, 24, 24, 1).rect(1, 1, 22, 22, 2);
+  for (let y = 0; y < tower.h; y++) for (let x = 0; x < tower.w; x++) if (tower.get(x, y)) g.set(x + 2, y + 3, 3);
+  const palette = [null, '#39ff88', '#0b0d14', '#39ff88'];
+  const base = palette.length;
+  palette.push(...coin.palette.slice(1));
+  for (let y = 0; y < coin.grid.h; y += 2) {
+    for (let x = 0; x < coin.grid.w; x += 2) {
+      const c = coin.grid.get(x + 1, y + 1);
+      if (c) g.set(15 + x / 2, 14 + y / 2, base + c - 1);
+    }
+  }
+  return { grid: g, palette };
+}
+
 // Todo lo que se publica como <symbol> en el sprite SVG de index.html.
-export const SVG_SPRITES = Object.freeze({ ...SLOT_SYMBOLS, ...SUITS, ...OBJECTS, ...ICONS, ...COLOR_ICONS, ...PORTRAITS, ...CHEST });
+export const SVG_SPRITES = Object.freeze({ ...SLOT_SYMBOLS, ...SUITS, ...OBJECTS, ...ICONS, ...COLOR_ICONS, ...PORTRAITS, ...CHEST, ...MEDALS, ...ARCADE_ICONS });
 
 // Retrato de cada voz de la bitácora.
 export const PORTRAIT_OF = Object.freeze({
@@ -1100,7 +1379,8 @@ const FLAME = [
   ['....', '.roy', 'royW', '.roy', '....'],
 ];
 
-export function planeFrames() {
+// Caza de serie (skin «fighter»).
+function fighterFrames() {
   const base = sprite(PLANE_ROWS, PLANE_COLORS);
   const keys = Object.keys(PLANE_COLORS).join('');
   return FLAME.map((flame) => {

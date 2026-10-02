@@ -17,6 +17,8 @@ import { fmtMult, outcomeTone, pushRecent, trauma, fitCanvas, cssVar } from '../
 import { crashPoint, multiplierAt, reachChance, MIN_CASHOUT, CRASH_MAX } from './crash-math.js';
 import { randomFloat } from '../engine/rng.js';
 import { planeFrames, PALETTE } from '../ui/pixel-sprites.js';
+import { shop } from '../arcade/shop.js';
+import { daily } from '../arcade/daily.js';
 
 const ROUND_KEY = scopedKey('crd.crash.round.v1');
 const PREFS_KEY = scopedKey('crd.crash.prefs.v1');
@@ -51,6 +53,8 @@ export class CrashGame {
   #tip = null;
   #readout = '';
   #sprites = null;
+  // Día de Turbulencias (desafío diario): el avión vibra y deja más estela. Solo es ambiente.
+  #turbulent = false;
   #cell = PIXEL;
   #trail = Array.from({ length: TRAIL }, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, size: PIXEL }));
   #trailNext = 0;
@@ -59,6 +63,11 @@ export class CrashGame {
 
   constructor(root) {
     this.#root = root;
+    // Skin del avión comprada en la tienda: se vuelve a rasterizar al cambiarla.
+    shop.addEventListener('change', () => {
+      this.#sprites = null;
+      if (this.#ctx) this.#layout();
+    });
     const $ = (id) => document.getElementById(id);
     this.#dom = {
       stage: $('cr-stage'),
@@ -180,6 +189,7 @@ export class CrashGame {
     this.#dom.stage.classList.remove('is-crashed', 'is-radar', 'is-cashed');
     this.#dom.message.textContent = auto ? `¡Despegue! Retiro automático en ${fmtMult(auto)}` : '¡Despegue! Retírate antes de que explote';
     this.#engine = audio.rocket();
+    this.#turbulent = daily.active('turbulence');
     this.#bet.setDisabled(true);
     this.#dom.auto.disabled = true;
     this.#render();
@@ -221,6 +231,7 @@ export class CrashGame {
     this.#state = 'crashed';
     this.#crashAt = performance.now();
     this.#engine?.stop();
+    audio.setIntensity(1);
     this.#engine = null;
     audio.crashBoom();
     trauma(this.#dom.stage, 3);
@@ -259,11 +270,13 @@ export class CrashGame {
     this.#t += dt;
     const multiplier = this.#current();
     this.#engine?.update(multiplier);
+    audio.setIntensity(multiplier);
     if (relics.active('radar') && !this.#radarShown && round.point >= MIN_CASHOUT && multiplier >= RADAR_THRESHOLD * round.point) {
       this.#radarShown = true;
       this.#dom.radar.hidden = false;
       this.#dom.stage.classList.add('is-radar');
       audio.radar();
+      audio.danger();
     }
     if (round.cashed === null && round.auto && round.auto <= round.point && multiplier >= round.auto) this.cashout(round.auto);
     if (multiplier >= round.point) {
@@ -315,7 +328,8 @@ export class CrashGame {
     this.#size = { width, height, accent: cssVar('--cy-accent', '#00ff66'), ink: cssVar('--cy-ink', '#d8ffe8'), danger: cssVar('--cy-danger', '#ff3b5c') };
     // El caza se dibuja a 1 o 2 píxeles de lienzo por celda según el ancho de la mesa.
     this.#cell = width >= 560 ? 2 * PIXEL : PIXEL;
-    this.#sprites ??= planeFrames().map(({ grid, palette }) => grid.toCanvas(palette));
+    this.#sprites ??= planeFrames(shop.equipped('plane')).map(({ grid, palette }) => grid.toCanvas(palette));
+    this.#turbulent = daily.active('turbulence');
     this.#draw(performance.now());
   }
 
@@ -324,7 +338,7 @@ export class CrashGame {
     const tail = this.#cell * 26;
     const bx = x - Math.cos(angle) * tail;
     const by = y - Math.sin(angle) * tail;
-    for (let n = 0; n < 2; n++) {
+    for (let n = 0; n < (this.#turbulent ? 3 : 2); n++) {
       const i = this.#trailNext;
       this.#trailNext = (i + 1) % TRAIL;
       const p = this.#trail[i];
@@ -499,7 +513,8 @@ export class CrashGame {
     const w = frame.width * this.#cell;
     const h = frame.height * this.#cell;
     ctx.save();
-    ctx.translate(snap(tipX), snap(tipY));
+    const jolt = this.#turbulent && this.#state === 'flying' ? 3 : 0;
+    ctx.translate(snap(tipX + (randomFloat() - 0.5) * 2 * jolt), snap(tipY + (randomFloat() - 0.5) * 2 * jolt));
     ctx.rotate(angle);
     ctx.drawImage(frame, -w + 4 * this.#cell, -h / 2, w, h);
     ctx.restore();

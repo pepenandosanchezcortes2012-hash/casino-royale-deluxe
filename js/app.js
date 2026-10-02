@@ -7,6 +7,8 @@
 import { storage } from './storage.js';
 import { scopedKey } from './mode.js';
 import { audio } from './audio.js';
+import { arcadeHub } from './ui/arcade-hub.js';
+import { bossUi } from './ui/boss-ui.js';
 import { bus } from './event_bus.js';
 import { settings } from './settings.js';
 import { ParticleSystem } from './particles.js';
@@ -76,6 +78,8 @@ function setupTabs(games) {
     storage.write(key, name);
     if (location.hash.slice(1) !== name) history.replaceState(null, '', `#${name}`);
     games[name].onShow();
+    // Banda sonora chiptune: pesca y Crash tienen su tema; el resto, el de la torre.
+    audio.setScene(name === 'fish' || name === 'crash' ? name : 'tower');
   };
 
   // Candados según el piso; si la mesa activa deja de estar disponible, se abre otra.
@@ -277,6 +281,8 @@ class App {
     vaultUi.init();
     terminalUi.init({ telemetry, travel: (id) => climbUi.travel(id), takeRescue: () => climbUi.takeRescue() });
     settingsUi.init();
+    arcadeHub.init();
+    bossUi.init();
     new AbundanceTimer().start(document.getElementById('hud-abundance'));
     this.#shortcuts();
     this.#state = APP_STATES.CLIMB;

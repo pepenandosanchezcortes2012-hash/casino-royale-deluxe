@@ -18,6 +18,7 @@ import { fmtMult, outcomeTone, pushRecent, trauma } from '../ui/arcade.js';
 import { settings } from '../settings.js';
 import { pixelContext } from '../ui/pixel-art.js';
 import { fishFrames, fishColor, cannonSprites, bulletSprite } from '../ui/pixel-sprites.js';
+import { daily } from '../arcade/daily.js';
 import {
   SPECIES, FISH_RTP, FIRE_INTERVAL_MS, MAX_BULLETS, BULLET_LIFETIME_MS, VOLLEY_MS, VOLLEY_MAX,
   KRAKEN_EVERY_MS, KRAKEN_STAY_MS, captureChance, resolveShot, pickSpecies, speciesById, Volley,
@@ -148,6 +149,7 @@ export class FishGame {
   #raf = 0;
   #last = 0;
   #visible = false;
+  #highTide = false;
   #flying = 0;
   #volleyCount = 0;
   #statsShown = [-1, -1];
@@ -809,7 +811,8 @@ export class FishGame {
       if (f.life <= 0) this.#floaters.release(f);
     }
     const { w, h } = this.#geo;
-    if (this.#bubbles.used < Math.min(BUBBLE_POOL, Math.round(w / 40)) && randomFloat() < dt * 6) {
+    const tide = this.#highTide ? 2 : 1;
+    if (this.#bubbles.used < Math.min(BUBBLE_POOL, Math.round((w / 40) * tide)) && randomFloat() < dt * 6 * tide) {
       const b = this.#bubbles.acquire();
       if (b) {
         b.x = randomFloat() * w;
@@ -1003,6 +1006,8 @@ export class FishGame {
 
   onShow() {
     this.#visible = true;
+    // Marea Alta (desafío diario): el doble de burbujas. Solo es ambiente.
+    this.#highTide = daily.active('high-tide');
     this.#layout();
     this.#prefill();
     this.#ensureLoop();
